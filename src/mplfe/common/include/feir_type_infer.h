@@ -52,12 +52,12 @@ class FEIRTypeMergeHelper {
 
 class FEIRTypeInfer {
  public:
-  FEIRTypeInfer(MIRSrcLang argSrcLang, const std::map<const UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &argMapDefUse);
+  FEIRTypeInfer(MIRSrcLang argSrcLang, const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &argMapDefUse);
   ~FEIRTypeInfer() = default;
   void LoadTypeDefault();
   void Reset();
   UniqueFEIRType GetTypeForVarUse(const UniqueFEIRVar &varUse);
-  UniqueFEIRType GetTypeForVarDef(const UniqueFEIRVar &varDef);
+  UniqueFEIRType GetTypeForVarDef(UniqueFEIRVar &varDef);
   UniqueFEIRType GetTypeByTransForVarUse(const UniqueFEIRVar &varUse);
   void ProcessVarDef(UniqueFEIRVar &varDef);
 
@@ -65,7 +65,7 @@ class FEIRTypeInfer {
   MIRSrcLang srcLang;
   UniqueFEIRType typeDefault;
   FEIRTypeMergeHelper mergeHelper;
-  const std::map<const UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapDefUse;
+  const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapDefUse;
   std::set<const UniqueFEIRVar*> visitVars;
   bool withCircle = false;
   bool first = false;

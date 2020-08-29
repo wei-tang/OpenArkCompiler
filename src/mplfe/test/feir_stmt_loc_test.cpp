@@ -25,8 +25,6 @@
 #include "feir_var_reg.h"
 #include "feir_var_name.h"
 #include "feir_test_base.h"
-#define protected public
-#define private public
 namespace maple {
 class FEIRStmtLOCTest : public FEIRTestBase {
  public:

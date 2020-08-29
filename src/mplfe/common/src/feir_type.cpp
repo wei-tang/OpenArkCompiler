@@ -326,7 +326,7 @@ MIRType *FEIRTypeByName::GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const
 }
 
 bool FEIRTypeByName::IsEqualToImpl(const FEIRType &argType) const {
-  if (!FEIRTypeDefault::IsEqualTo(argType)) {
+  if (!FEIRTypeDefault::IsEqualToImpl(argType)) {
     return false;
   }
   const FEIRTypeByName &argTypeName = static_cast<const FEIRTypeByName&>(argType);

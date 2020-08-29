@@ -23,6 +23,13 @@
 #include "feir_builder.h"
 #include "feir_var_type_scatter.h"
 #include "feir_dfg.h"
+#include "namemangler.h"
+
+#define protected public
+#define private public
+#include "fe_type_hierarchy.h"
+#undef protected
+#undef private
 
 namespace maple {
 class FEIRTypeHelperTest : public testing::Test, public RedirectBuffer {
@@ -33,13 +40,16 @@ class FEIRTypeHelperTest : public testing::Test, public RedirectBuffer {
 
 class FEIRTypeInferTest : public testing::Test, public RedirectBuffer {
  public:
-  FEIRTypeInfer typeInfer;
-  FEIRTypeInferTest()
-      : typeInfer(kSrcLangJava) {}
+  FEIRTypeInferTest() {};
   ~FEIRTypeInferTest() = default;
 };
 
 TEST_F(FEIRTypeHelperTest, MergeType_Parent) {
+  GStrIdx type0StrIdx =
+      GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName("Ljava/lang/Integer;"));
+  GStrIdx type1StrIdx =
+      GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName("Ljava/lang/Number;"));
+  FETypeHierarchy::GetInstance().AddParentChildRelation(type1StrIdx, type0StrIdx);
   UniqueFEIRType type0 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Integer;", false, false);
   UniqueFEIRType type1 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Number;", false, false);
   UniqueFEIRType type2 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/String;", false, false);
@@ -121,8 +131,6 @@ TEST_F(FEIRTypeHelperTest, MergeType_Child) {
 //     var0 -> var1
 //
 TEST_F(FEIRTypeInferTest, Test1) {
-  typeInfer.Reset();
-  std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> mapUseDef;
   std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> mapDefUse;
   UniqueFEIRVar var0 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
   UniqueFEIRVar var1 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
@@ -130,15 +138,15 @@ TEST_F(FEIRTypeInferTest, Test1) {
   UniqueFEIRType type1 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Object;", false, true);
   var0->SetType(type0->Clone());
   var1->SetType(type1->Clone());
-  mapUseDef[&var1].insert(&var0);
   mapDefUse[&var0].insert(&var1);
-  typeInfer.SetMapUseDef(&mapUseDef);
-  typeInfer.SetMapDefUse(&mapDefUse);
-  EXPECT_EQ(typeInfer.GetTypeForVarUse(&var1)->IsEqualTo(type1), true);
-  typeInfer.ProcessVarDef(&var0);
+
+  std::unique_ptr<FEIRTypeInfer> typeInfer = std::make_unique<FEIRTypeInfer>(kSrcLangJava, mapDefUse);
+  EXPECT_EQ(typeInfer->GetTypeForVarUse(var1)->IsEqualTo(type1), true);
+  EXPECT_EQ(typeInfer->GetTypeForVarDef(var0)->IsEqualTo(type0), true);
+  typeInfer->ProcessVarDef(var0);
   EXPECT_EQ(var0->GetKind(), FEIRVarKind::kFEIRVarTypeScatter);
   FEIRVarTypeScatter *ptrVar0 = static_cast<FEIRVarTypeScatter*>(var0.get());
-  EXPECT_EQ(ptrVar0->GetType()->IsEqualTo(type0), true);
+  EXPECT_EQ(ptrVar0->GetVar()->GetType()->IsEqualTo(type0), true);
   EXPECT_EQ(ptrVar0->GetScatterTypes().size(), 1);
   EXPECT_NE(ptrVar0->GetScatterTypes().find(FEIRTypeKey(type1)), ptrVar0->GetScatterTypes().end());
 }
@@ -155,8 +163,6 @@ TEST_F(FEIRTypeInferTest, Test1) {
 //     var2 -> var3
 //
 TEST_F(FEIRTypeInferTest, Test2) {
-  typeInfer.Reset();
-  std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> mapUseDef;
   std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> mapDefUse;
   UniqueFEIRVar var0 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
   UniqueFEIRVar var1 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
@@ -164,23 +170,21 @@ TEST_F(FEIRTypeInferTest, Test2) {
   UniqueFEIRVar var3 = FEIRBuilder::CreateVarReg(1, PTY_ref, false);
   UniqueFEIRType type0 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/String;", false, true);
   UniqueFEIRType type3 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Object;", false, true);
-  UniqueFEIRVarTrans trans0 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, &var1);
-  UniqueFEIRVarTrans trans1 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, &var2);
+  UniqueFEIRVarTrans trans0 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, var1);
+  UniqueFEIRVarTrans trans1 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, var2);
   var1->SetTrans(std::move(trans1));
   var2->SetTrans(std::move(trans0));
   var0->SetType(type0->Clone());
   var3->SetType(type3->Clone());
-  mapUseDef[&var1].insert(&var0);
-  mapUseDef[&var3].insert(&var2);
   mapDefUse[&var0].insert(&var1);
   mapDefUse[&var2].insert(&var3);
-  typeInfer.SetMapUseDef(&mapUseDef);
-  typeInfer.SetMapDefUse(&mapDefUse);
-  EXPECT_EQ(typeInfer.GetTypeForVarUse(&var1)->IsEqualTo(type3), true);
-  typeInfer.Reset();
-  EXPECT_EQ(typeInfer.GetTypeForVarUse(&var3)->IsEqualTo(type3), true);
-  typeInfer.ProcessVarDef(&var0);
-  typeInfer.ProcessVarDef(&var2);
+  std::unique_ptr<FEIRTypeInfer> typeInfer = std::make_unique<FEIRTypeInfer>(kSrcLangJava, mapDefUse);
+  EXPECT_EQ(typeInfer->GetTypeForVarUse(var1)->IsEqualTo(type3), true);
+  typeInfer->Reset();
+  EXPECT_EQ(typeInfer->GetTypeForVarUse(var3)->IsEqualTo(type3), true);
+
+  typeInfer->ProcessVarDef(var0);
+  typeInfer->ProcessVarDef(var2);
   EXPECT_EQ(var0->GetKind(), FEIRVarKind::kFEIRVarTypeScatter);
   EXPECT_EQ(var2->GetKind(), FEIRVarKind::kFEIRVarReg);
 }
@@ -194,8 +198,6 @@ TEST_F(FEIRTypeInferTest, Test2) {
 //     var3 -> var2
 //     var4 -> var2
 TEST_F(FEIRTypeInferTest, Test3) {
-  typeInfer.Reset();
-  std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> mapUseDef;
   std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> mapDefUse;
   UniqueFEIRVar var0 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
   UniqueFEIRVar var1 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
@@ -204,30 +206,29 @@ TEST_F(FEIRTypeInferTest, Test3) {
   UniqueFEIRVar var4 = FEIRBuilder::CreateVarReg(1, PTY_ref, false);
   UniqueFEIRVar var5 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
   UniqueFEIRType type0 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/String;", false, true);
-  UniqueFEIRVarTrans trans1_2 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, &var1);
-  UniqueFEIRVarTrans trans2_1 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, &var2);
-  UniqueFEIRVarTrans trans4_5 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, &var4);
-  UniqueFEIRVarTrans trans5_4 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, &var5);
-  var1->SetTrans(std::move(trans2_1));
-  var2->SetTrans(std::move(trans1_2));
-  var4->SetTrans(std::move(trans5_4));
-  var5->SetTrans(std::move(trans4_5));
+  UniqueFEIRVarTrans transFrom1To2 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, var1);
+  UniqueFEIRVarTrans transFrom2To1 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, var2);
+  UniqueFEIRVarTrans transFrom4To5 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, var4);
+  UniqueFEIRVarTrans transFrom5To4 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransDirect, var5);
+  var1->SetTrans(std::move(transFrom2To1));
+  var2->SetTrans(std::move(transFrom1To2));
+  var4->SetTrans(std::move(transFrom5To4));
+  var5->SetTrans(std::move(transFrom4To5));
   var3->SetType(type0->Clone());
-  mapUseDef[&var1].insert(&var0);
-  mapUseDef[&var1].insert(&var5);
-  mapUseDef[&var3].insert(&var2);
-  mapUseDef[&var4].insert(&var2);
-  FEIRDFG::CalculateDefUseByUseDef(mapDefUse, mapUseDef);
-  typeInfer.SetMapUseDef(&mapUseDef);
-  typeInfer.SetMapDefUse(&mapDefUse);
-  EXPECT_EQ(typeInfer.GetTypeForVarUse(&var1)->IsEqualTo(type0), true);
-  typeInfer.Reset();
-  EXPECT_EQ(typeInfer.GetTypeForVarUse(&var3)->IsEqualTo(type0), true);
-  typeInfer.Reset();
-  EXPECT_EQ(typeInfer.GetTypeForVarUse(&var4)->IsEqualTo(type0), true);
-  typeInfer.ProcessVarDef(&var0);
-  typeInfer.ProcessVarDef(&var2);
-  typeInfer.ProcessVarDef(&var5);
+  mapDefUse[&var0].insert(&var1);
+  mapDefUse[&var5].insert(&var1);
+  mapDefUse[&var2].insert(&var3);
+  mapDefUse[&var2].insert(&var4);
+  std::unique_ptr<FEIRTypeInfer> typeInfer = std::make_unique<FEIRTypeInfer>(kSrcLangJava, mapDefUse);
+  typeInfer->Reset();
+  EXPECT_EQ(typeInfer->GetTypeForVarUse(var1)->IsEqualTo(type0), true);
+  typeInfer->Reset();
+  EXPECT_EQ(typeInfer->GetTypeForVarUse(var3)->IsEqualTo(type0), true);
+  typeInfer->Reset();
+  EXPECT_EQ(typeInfer->GetTypeForVarUse(var4)->IsEqualTo(type0), true);
+  typeInfer->ProcessVarDef(var0);
+  typeInfer->ProcessVarDef(var2);
+  typeInfer->ProcessVarDef(var5);
   EXPECT_EQ(var0->GetKind(), FEIRVarKind::kFEIRVarReg);
   EXPECT_EQ(var2->GetKind(), FEIRVarKind::kFEIRVarReg);
   EXPECT_EQ(var5->GetKind(), FEIRVarKind::kFEIRVarReg);
@@ -245,8 +246,6 @@ TEST_F(FEIRTypeInferTest, Test3) {
 //     var3 -> var2
 //
 TEST_F(FEIRTypeInferTest, Test4) {
-  typeInfer.Reset();
-  std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> mapUseDef;
   std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> mapDefUse;
   UniqueFEIRVar var0 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
   UniqueFEIRVar var1 = FEIRBuilder::CreateVarReg(0, PTY_ref, false);
@@ -254,19 +253,18 @@ TEST_F(FEIRTypeInferTest, Test4) {
   UniqueFEIRVar var3 = FEIRBuilder::CreateVarReg(1, PTY_ref, false);
   UniqueFEIRType type0 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Object;", false, true);
   UniqueFEIRType type1 = FEIRTypeHelper::CreateTypeByJavaName("[Ljava/lang/Object;", false, true);
-  UniqueFEIRVarTrans trans1_2 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransArrayDimDecr, &var1);
-  UniqueFEIRVarTrans trans2_1 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransArrayDimIncr, &var2);
+  UniqueFEIRVarTrans transFrom1To2 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransArrayDimDecr, var1);
+  UniqueFEIRVarTrans transFrom2To1 = std::make_unique<FEIRVarTrans>(FEIRVarTransKind::kFEIRVarTransArrayDimIncr, var2);
   var3->SetType(type0->Clone());
-  var1->SetTrans(std::move(trans2_1));
-  var2->SetTrans(std::move(trans1_2));
-  mapUseDef[&var1].insert(&var0);
-  mapUseDef[&var3].insert(&var2);
-  FEIRDFG::CalculateDefUseByUseDef(mapDefUse, mapUseDef);
-  typeInfer.SetMapUseDef(&mapUseDef);
-  typeInfer.SetMapDefUse(&mapDefUse);
-  EXPECT_EQ(typeInfer.GetTypeForVarUse(&var1)->IsEqualTo(type1), true);
-  typeInfer.ProcessVarDef(&var0);
-  typeInfer.ProcessVarDef(&var2);
+  var1->SetTrans(std::move(transFrom2To1));
+  var2->SetTrans(std::move(transFrom1To2));
+  mapDefUse[&var0].insert(&var1);
+  mapDefUse[&var2].insert(&var3);
+  std::unique_ptr<FEIRTypeInfer> typeInfer = std::make_unique<FEIRTypeInfer>(kSrcLangJava, mapDefUse);
+  typeInfer->Reset();
+  EXPECT_EQ(typeInfer->GetTypeForVarUse(var1)->IsEqualTo(type1), true);
+  typeInfer->ProcessVarDef(var0);
+  typeInfer->ProcessVarDef(var2);
   EXPECT_EQ(var0->GetType()->IsEqualTo(type1), true);
   EXPECT_EQ(var2->GetType()->IsEqualTo(type0), true);
 }

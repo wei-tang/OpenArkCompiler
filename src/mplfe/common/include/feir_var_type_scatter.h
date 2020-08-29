@@ -28,6 +28,10 @@ class FEIRVarTypeScatter : public FEIRVar {
     return scatterTypes;
   }
 
+  const UniqueFEIRVar &GetVar() const {
+    return var;
+  }
+
  protected:
   std::string GetNameImpl(const MIRType &mirType) const override;
   std::string GetNameRawImpl() const override;
