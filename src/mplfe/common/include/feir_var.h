@@ -36,7 +36,7 @@ class FEIRVarTrans {
   FEIRVarTrans(FEIRVarTransKind argKind, std::unique_ptr<FEIRVar> &argVar, uint8 dimDelta);
   ~FEIRVarTrans() = default;
   UniqueFEIRType GetType(const UniqueFEIRType &type, PrimType primType = PTY_ref, bool usePtr = true);
-  const std::unique_ptr<FEIRVar> &GetVar() const {
+  std::unique_ptr<FEIRVar> &GetVar() const {
     return var;
   }
 
