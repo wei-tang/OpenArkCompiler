@@ -111,7 +111,6 @@ src_libcg = [
 deps_libcg = []
 deps_libcg += [ ":libcgaarch64" ]
 
-cflags_cc += [ "-DTARGAARCH64" ]
 cflags_cc -= [ "-DRC_NO_MMAP" ]
 cflags_cc -= [ "-DMIR_JAVA=1" ]
 
