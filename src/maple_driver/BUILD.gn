@@ -14,10 +14,7 @@
 #
 configs = [ "${MAPLEALL_ROOT}:mapleallcompilecfg" ]
 
-cflags_cc += [
-  "-DTARGAARCH64",
-  "-DMAPLE_ROOT=\"${MAPLE_ROOT}\"",
-]
+cflags_cc += [ "-DMAPLE_ROOT=\"${MAPLE_ROOT}\"" ]
 
 include_directories = [
   "${MAPLEALL_ROOT}",
@@ -85,7 +82,7 @@ static_library("libdriver_option") {
 
   include_dirs = [ "${MAPLEALL_ROOT}/maple_driver/include" ]
 
-  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
+  output_dir = "${root_out_dir}/ar"
 }
 
 static_library("liboption_parser") {

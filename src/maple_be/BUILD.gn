@@ -111,7 +111,6 @@ src_libcg = [
 deps_libcg = []
 deps_libcg += [ ":libcgaarch64" ]
 
-cflags_cc += [ "-DTARGAARCH64" ]
 cflags_cc -= [ "-DRC_NO_MMAP" ]
 cflags_cc -= [ "-DMIR_JAVA=1" ]
 
@@ -120,7 +119,7 @@ configs = [ "${MAPLEALL_ROOT}:mapleallcompilecfg" ]
 static_library("libmplad") {
   sources = src_libmplad
   include_dirs = include_directories
-  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
+  output_dir = "${root_out_dir}/ar"
 
   cflags_cc += [ "-DRC_NO_MMAP" ]
 }
@@ -138,7 +137,7 @@ static_library("libmplbe") {
   sources = src_libmplbe
   deps = deps_libmplbe
   include_dirs = include_directories
-  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
+  output_dir = "${root_out_dir}/ar"
 }
 
 source_set("libcgaarch64") {
@@ -150,7 +149,7 @@ static_library("libcg") {
   sources = src_libcg
   include_dirs = include_directories
   deps = deps_libcg
-  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
+  output_dir = "${root_out_dir}/ar"
 }
 
 executable("maplegen") {

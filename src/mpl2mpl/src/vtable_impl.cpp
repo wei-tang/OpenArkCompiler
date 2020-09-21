@@ -19,7 +19,9 @@
 
 // This phase is mainly to lower interfacecall into icall
 namespace {
-#ifdef USE_32BIT_REF
+#if USE_ARM32_MACRO
+constexpr char kInterfaceMethod[] = "MCC_getFuncPtrFromItabSecondHash32";
+#elif USE_32BIT_REF
 constexpr char kInterfaceMethod[] = "MCC_getFuncPtrFromItab";
 #else
 constexpr char kInterfaceMethod[] = "MCC_getFuncPtrFromItabSecondHash64";
@@ -193,7 +195,11 @@ void VtableImpl::ItabProcess(StmtNode &stmt, const ResolveFuncNode &resolveNode,
   CHECK_FATAL(currentFuncMpAllocator != nullptr, "null ptr check");
   MapleVector<BaseNode*> opnds(currentFuncMpAllocator->Adapter());
   opnds.push_back(builder->CreateExprRegread(PTY_ptr, pregItabAddress));
+#ifdef USE_ARM32_MACRO
+  opnds.push_back(builder->CreateIntConst(secondHashCode, PTY_u32));
+#else
   opnds.push_back(builder->CreateIntConst(secondHashCode, PTY_u64));
+#endif
   UStrIdx strIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(signature);
   MemPool *currentFunMp = builder->GetCurrentFuncCodeMp();
   CHECK_FATAL(currentFunMp != nullptr, "null ptr check");

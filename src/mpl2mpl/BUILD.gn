@@ -45,5 +45,5 @@ configs = [ "${MAPLEALL_ROOT}:mapleallcompilecfg" ]
 static_library("libmpl2mpl") {
   sources = src_libmpl2mpl
   include_dirs = include_directories
-  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
+  output_dir = "${root_out_dir}/ar"
 }
