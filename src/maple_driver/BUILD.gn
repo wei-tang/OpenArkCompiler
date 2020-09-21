@@ -82,7 +82,7 @@ static_library("libdriver_option") {
 
   include_dirs = [ "${MAPLEALL_ROOT}/maple_driver/include" ]
 
-  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
+  output_dir = "${root_out_dir}/ar"
 }
 
 static_library("liboption_parser") {
