@@ -97,4 +97,5 @@ static_library("liboption_parser") {
     "${MAPLEALL_ROOT}/mempool/include",
     "${MAPLEALL_ROOT}/huawei_secure_c/include",
   ]
+  output_dir = "${root_out_dir}/ar"
 }

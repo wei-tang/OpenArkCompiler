@@ -102,4 +102,5 @@ static_library("libmplme") {
 static_library("libmplmewpo") {
   sources = src_libmplmewpo
   include_dirs = include_directories
+  output_dir = "${root_out_dir}/ar"
 }
