@@ -18,4 +18,5 @@
 { "--no-pie", "", false },
 { "--verbose-asm", "", false },
 { "--fpic", "", false },
+{ "--maplelinker", "", false },
 
