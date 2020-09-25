@@ -17,4 +17,5 @@
 { "--quiet", "", false },
 { "--regnativefunc", "", false },
 { "--no-nativeopt", "", false },
+{ "--maplelinker", "", false },
 { "--emitVtableImpl", "", false },
