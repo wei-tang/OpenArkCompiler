@@ -1,16 +1,16 @@
 /*
  * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
  *
- * OpenArkCompiler is licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
+ * OpenArkCompiler is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
  *
- *     http://license.coscl.org.cn/MulanPSL
+ *     http://license.coscl.org.cn/MulanPSL2
  *
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
  * FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  */
 #include "reflection_analysis.h"
 #include <unordered_map>
@@ -155,6 +155,7 @@ std::string ReflectionAnalysis::strTabStartHot = std::string(1, '\0');
 std::string ReflectionAnalysis::strTabBothHot = std::string(1, '\0');
 std::string ReflectionAnalysis::strTabRunHot = std::string(1, '\0');
 bool ReflectionAnalysis::strTabInited = false;
+std::map<std::list<Klass*>, std::string> ReflectionAnalysis::superClasesIdxMap{};
 
 void ReflectionAnalysis::GenFieldTypeClassInfo(const MIRType &type, const Klass &klass, std::string &classInfo,
                                                const std::string fieldName, bool &isClass) {
