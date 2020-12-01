@@ -1,16 +1,16 @@
 #
 # Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
 #
-# OpenArkCompiler is licensed under the Mulan PSL v1.
-# You can use this software according to the terms and conditions of the Mulan PSL v1.
-# You may obtain a copy of Mulan PSL v1 at:
+# OpenArkCompiler is licensed under Mulan PSL v2.
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
+# You may obtain a copy of Mulan PSL v2 at:
 #
-#     http://license.coscl.org.cn/MulanPSL
+#     http://license.coscl.org.cn/MulanPSL2
 #
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
 # FIT FOR A PARTICULAR PURPOSE.
-# See the Mulan PSL v1 for more details.
+# See the Mulan PSL v2 for more details.
 #
 
 import argparse
@@ -64,7 +64,7 @@ def construct_qemu_cmd(execute_cmd, execute_option):
     execute_option["execute_files"] = ":".join(
         [str(file) for file in execute_option["execute_files"]]
     )
-    LIBZ_SO = maple_root + "/output/ops/third-party"
+    LIBZ_SO = maple_root + "/output/ops/third_party"
     RUNTIME_SO = maple_root + "/output/ops/host-x86_64-" + execute_option["mrt_type"]
     APP_SO = os.getcwd()
     MPLSH = maple_root + "/output/ops/mplsh"
@@ -80,7 +80,7 @@ def construct_qemu_cmd(execute_cmd, execute_option):
 
 
 def parse_cli():
-    parser = argparse.ArgumentParser(prog="qemu_run")
+    parser = argparse.ArgumentParser(prog="run")
     parser.add_argument(
         "--run_type",
         default="aarch64",
@@ -99,8 +99,8 @@ def parse_cli():
     parser.add_argument(
         "--mrt_type",
         dest="mrt_type",
-        default="OPS_O0",
-        choices=["OPS_O0", "OPS_O2"],
+        default="O2",
+        choices=["O0", "O2"],
         help="Add mrt type to the extra option",
     )
 
