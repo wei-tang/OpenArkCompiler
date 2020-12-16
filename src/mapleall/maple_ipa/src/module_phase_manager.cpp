@@ -1,16 +1,16 @@
 /*
  * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
  *
- * OpenArkCompiler is licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
+ * OpenArkCompiler is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
  *
- *     http://license.coscl.org.cn/MulanPSL
+ *     http://license.coscl.org.cn/MulanPSL2
  *
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
  * FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  */
 #include "module_phase_manager.h"
 #include "class_hierarchy.h"
@@ -86,7 +86,7 @@ void ModulePhaseManager::Run() {
     if (timePhases) {
       timer.Start();
     }
-    p->Run(&mirModule, arModuleMgr);
+    auto *analysisRes = p->Run(&mirModule, arModuleMgr);
     if (timePhases) {
       timer.Stop();
       phaseTimers[phaseIndex] += timer.ElapsedMicroseconds();
@@ -94,6 +94,7 @@ void ModulePhaseManager::Run() {
     if (Options::skipAfter.compare(p->PhaseName()) == 0) {
       break;
     }
+    p->ClearMemPoolsExcept(analysisRes == nullptr ? nullptr : analysisRes->GetMempool());
   }
 }
 
