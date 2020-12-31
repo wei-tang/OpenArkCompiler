@@ -28,7 +28,7 @@ include_directories = [
   "${MAPLEALL_ROOT}/mpl2mpl/include",
   "${MAPLEALL_ROOT}/maple_me/include",
   "${MAPLEALL_ROOT}/mempool/include",
-  "${MAPLEALL_ROOT}/huawei_secure_c/include",
+  "${MAPLE_ROOT}/third_party/bounds_checking_function/include",
 ]
 
 static_library("lib_mplfe_util") {
@@ -91,7 +91,7 @@ executable("mplfe") {
     ":lib_mplfe_input",
     ":lib_mplfe_jbc_input",
     ":lib_mplfe_util",
-    "${MAPLEALL_ROOT}/huawei_secure_c:libHWSecureC",
+    "${MAPLE_ROOT}/third_party/bounds_checking_function:libHWSecureC",
     "${MAPLEALL_ROOT}/maple_driver:libdriver_option",
     "${MAPLEALL_ROOT}/maple_ir:libmplir",
     "${MAPLEALL_ROOT}/mpl2mpl:libmpl2mpl",
@@ -110,7 +110,7 @@ include_jbc_input_directories = [
   "${MAPLEALL_ROOT}/maple_util/include",
   "${MAPLEALL_ROOT}/maple_driver/include",
   "${MAPLEALL_ROOT}/mempool/include",
-  "${MAPLEALL_ROOT}/huawei_secure_c/include",
+  "${MAPLE_ROOT}/third_party/bounds_checking_function/include",
 ]
 
 static_library("lib_mplfe_jbc_input") {

@@ -82,7 +82,7 @@ include_common = [
   "include",
   "public-headers",
   "${THIRD_PARTY_ROOT}/libnativehelper/include_jni",
-  "${MAPLEALL_ROOT}/huawei_secure_c/include/",
+  "${MAPLE_ROOT}/third_party/bounds_checking_function/include/",
   "${MAPLE_MRT_ROOT}/maplert/include",
   "${MAPLE_MRT_ROOT}/maplert/public-headers/",
   "${MAPLE_MRT_ROOT}/libmrtbase/include/",
