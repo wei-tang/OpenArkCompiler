@@ -56,7 +56,7 @@ sources_common = [
 include_common = [
   "${MAPLE_MRT_ROOT}/maplert/include",
   "${THIRD_PARTY_ROOT}/libnativehelper/include_jni",
-  "${MAPLEALL_ROOT}/huawei_secure_c/include/",
+  "${MAPLE_ROOT}/third_party/bounds_checking_function/include/",
   "${MAPLE_MRT_ROOT}/compiler-rt/include",
   "${MAPLE_MRT_ROOT}/compiler-rt/public-headers",
   "${MAPLE_MRT_ROOT}/maplert/public-headers",
