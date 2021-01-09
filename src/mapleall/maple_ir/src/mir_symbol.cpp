@@ -27,6 +27,8 @@
 namespace maple {
 using namespace namemangler;
 
+uint32 MIRSymbol::lastPrintedLineNum = 0;
+
 bool MIRSymbol::IsTypeVolatile(int fieldID) const {
   const MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(GetTyIdx());
   return ty->IsVolatile(fieldID);
@@ -291,9 +293,18 @@ bool MIRSymbol::IgnoreRC() const {
 }
 
 void MIRSymbol::Dump(bool isLocal, int32 indent, bool suppressInit) const {
+  if (sKind == kStVar || sKind == kStFunc) {
+    if (srcPosition.FileNum() != 0 && srcPosition.LineNum() != 0 && srcPosition.LineNum() != lastPrintedLineNum) {
+      LogInfo::MapleLogger() << "LOC " << srcPosition.FileNum() << " " << srcPosition.LineNum() << std::endl;
+      lastPrintedLineNum = srcPosition.LineNum();
+    }
+  }
   // exclude unused symbols, formal symbols and extern functions
   if (GetStorageClass() == kScUnused || GetStorageClass() == kScFormal ||
       (GetStorageClass() == kScExtern && sKind == kStFunc)) {
+    return;
+  }
+  if (GetIsImported() && !GetAppearsInCode()) {
     return;
   }
   if (GetTyIdx() >= GlobalTables::GetTypeTable().GetTypeTable().size()) {

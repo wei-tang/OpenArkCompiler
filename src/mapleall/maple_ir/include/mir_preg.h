@@ -160,12 +160,23 @@ class MIRPregTable {
     return pregTable.size();
   }
 
-  void AddPreg(MIRPreg *preg) {
+  PregIdx AddPreg(MIRPreg *preg) {
     CHECK_FATAL(preg != nullptr, "invalid nullptr in AddPreg");
     PregIdx idx = static_cast<PregIdx>(pregTable.size());
     pregTable.push_back(preg);
     ASSERT(pregNoToPregIdxMap.find(preg->GetPregNo()) == pregNoToPregIdxMap.end(), "The same pregno is already taken");
     pregNoToPregIdxMap[preg->GetPregNo()] = idx;
+    return idx;
+  }
+
+  PregIdx EnterPregNo(uint32 pregNo, PrimType ptyp, MIRType *ty = nullptr) {
+    PregIdx idx = GetPregIdxFromPregno(pregNo);
+    if (idx == 0) {
+      MIRPreg *preg = mAllocator->GetMemPool()->New<MIRPreg>(pregNo, ty);
+      preg->SetPrimType(ptyp);
+      return AddPreg(preg);
+    }
+    return idx;
   }
 
   MapleVector<MIRPreg*> &GetPregTable() {

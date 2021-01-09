@@ -23,8 +23,8 @@
 #include "mir_module.h"
 #include "mir_const.h"
 #include "maple_string.h"
+#include "src_position.h"
 #include "ptr_list_ref.h"
-#include "global_tables.h"
 
 namespace maple {
 extern MIRModule *theMIRModule;
@@ -1312,81 +1312,6 @@ class AddroflabelNode : public BaseNode {
 
  private:
   uint32 offset = 0;
-};
-
-// to store source position information
-class SrcPosition {
- public:
-  SrcPosition() {
-    u.word0 = 0;
-  }
-
-  virtual ~SrcPosition() = default;
-
-  uint32 RawData() const {
-    return u.word0;
-  }
-
-  uint32 FileNum() const {
-    return u.fileColumn.fileNum;
-  }
-
-  uint32 Column() const {
-    return u.fileColumn.column;
-  }
-
-  uint32 LineNum() const {
-    return lineNum;
-  }
-
-  uint32 MplLineNum() const {
-    return mplLineNum;
-  }
-
-  void SetFileNum(uint16 n) {
-    u.fileColumn.fileNum = n;
-  }
-
-  void SetColumn(uint16 n) {
-    u.fileColumn.column = n;
-  }
-
-  void SetLineNum(uint32 n) {
-    lineNum = n;
-  }
-
-  void SetRawData(uint32 n) {
-    u.word0 = n;
-  }
-
-  void SetMplLineNum(uint32 n) {
-    mplLineNum = n;
-  }
-
-  void CondSetLineNum(uint32 n) {
-    lineNum = lineNum ? lineNum : n;
-  }
-
-  void CondSetFileNum(uint16 n) {
-    uint16 i = u.fileColumn.fileNum;
-    u.fileColumn.fileNum = i ? i : n;
-  }
-
- private:
-  union {
-    struct {
-      uint16 fileNum;
-      uint16 column : 12;
-      uint16 stmtBegin : 1;
-      uint16 bbBegin : 1;
-      uint16 unused : 2;
-    } fileColumn;
-
-    uint32 word0;
-  } u;
-
-  uint32 lineNum = 0;     // line number of original src file, like foo.java
-  uint32 mplLineNum = 0;  // line number of mpl file
 };
 
 // for cleanuptry, catch, finally, retsub, endtry, membaracquire, membarrelease,

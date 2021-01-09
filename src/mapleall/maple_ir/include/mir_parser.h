@@ -25,6 +25,8 @@ using BaseNodePtr = BaseNode*;
 using StmtNodePtr = StmtNode*;
 using BlockNodePtr = BlockNode*;
 
+class FormalDef;
+
 class MIRParser {
  public:
   explicit MIRParser(MIRModule &md)
@@ -42,7 +44,8 @@ class MIRParser {
     mod.SetCurFunction(dummyFunction);
   }
 
-  bool ParseLoc(StmtNodePtr &stmt);
+  bool ParseLoc();
+  bool ParseLocStmt(StmtNodePtr &stmt);
   bool ParseAlias(StmtNodePtr &stmt);
   uint8 *ParseWordsInfo(uint32 size);
   bool ParseSwitchCase(int32&, LabelIdx&);
@@ -95,6 +98,7 @@ class MIRParser {
   bool ParseStorageClass(MIRSymbol &st) const;
   bool ParseDeclareVar(MIRSymbol&);
   bool ParseDeclareReg(MIRSymbol&, MIRFunction&);
+  bool ParseDeclareFormal(FormalDef *);
   bool ParsePrototypeRemaining(MIRFunction&, std::vector<TyIdx> &, std::vector<TypeAttrs>&, bool&);
 
   // Stmt Parser
@@ -260,7 +264,7 @@ class MIRParser {
   bool ParseStmtBlockForFuncInfo();
 
   // common func
-  void SetSrcPos(StmtNodePtr stmt, uint32 mplNum);
+  void SetSrcPos(SrcPosition &srcPosition, uint32 mplNum);
 
   // func for ParseExpr
   Opcode paramOpForStmt = OP_undef;
