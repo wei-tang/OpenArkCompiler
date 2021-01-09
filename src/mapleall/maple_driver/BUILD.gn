@@ -67,12 +67,9 @@ executable("maple") {
     "${MAPLEALL_ROOT}/maple_me:libmplme",
     "${MAPLEALL_ROOT}/maple_me:libmplmewpo",
     "${MAPLEALL_ROOT}/mpl2mpl:libmpl2mpl",
-  ]
-  libs = []
-  libs += [
-    "${OPENSOURCE_DEPS}/libmplphase.a",
-    "${OPENSOURCE_DEPS}/libmempool.a",
-    "${OPENSOURCE_DEPS}/libmplutil.a",
+    "${MAPLEALL_ROOT}/maple_phase:libmplphase",
+    "${MAPLEALL_ROOT}/mempool:libmempool",
+    "${MAPLEALL_ROOT}/maple_util:libmplutil",
   ]
 }
 
