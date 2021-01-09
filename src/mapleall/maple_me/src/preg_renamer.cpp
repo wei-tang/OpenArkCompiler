@@ -98,7 +98,7 @@ void PregRenamer::RunSelf() const {
       continue;
     }
     newPregIdx = (regMeExpr->GetPrimType() == PTY_ref) ?
-                 pregTab->CreateRefPreg(*pregTab->PregFromPregIdx(regMeExpr->GetRegIdx())->GetMIRType()) :
+                 pregTab->CreatePreg(PTY_ref, pregTab->PregFromPregIdx(regMeExpr->GetRegIdx())->GetMIRType()) :
                  pregTab->CreatePreg(regMeExpr->GetPrimType());
     ++renameCount;
     if (enabledDebug) {

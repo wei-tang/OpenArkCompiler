@@ -1113,12 +1113,8 @@ void BlockNode::Dump(int32 indent, const MIRSymbolTable *theSymTab, MIRPregTable
         }
       }
       // print the locally declared variables
-      if (theSymTab != nullptr) {
-        theSymTab->Dump(true, indent + 1);
-      }
-      if (thePregTab != nullptr) {
-        thePregTab->DumpRef(indent + 1);
-      }
+      theSymTab->Dump(true, indent + 1);
+      thePregTab->DumpPregsWithTypes(indent + 1);
     }
     LogInfo::MapleLogger() << '\n';
     if (theMIRModule->CurFunction()->NeedEmitAliasInfo()) {
