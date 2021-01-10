@@ -163,10 +163,8 @@ executable("maplegen") {
   ]
   deps = [
     "${MAPLE_ROOT}/third_party/bounds_checking_function:libHWSecureC",
-  ]
-  libs = [
-    "${OPENSOURCE_DEPS}/libmempool.a",
-    "${OPENSOURCE_DEPS}/libmplutil.a",
+    "${MAPLEALL_ROOT}/mempool:libmempool",
+    "${MAPLEALL_ROOT}/maple_util:libmplutil",
   ]
 
   include_dirs = [

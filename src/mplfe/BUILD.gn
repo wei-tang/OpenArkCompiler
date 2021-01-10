@@ -95,10 +95,8 @@ executable("mplfe") {
     "${MAPLEALL_ROOT}/maple_driver:libdriver_option",
     "${MAPLEALL_ROOT}/maple_ir:libmplir",
     "${MAPLEALL_ROOT}/mpl2mpl:libmpl2mpl",
-  ]
-  libs = [
-    "${OPENSOURCE_DEPS}/libmempool.a",
-    "${OPENSOURCE_DEPS}/libmplutil.a",
+    "${MAPLEALL_ROOT}/mempool:libmempool",
+    "${MAPLEALL_ROOT}/maple_util:libmplutil",
   ]
   ldflags = [ "-lz" ]
 }
