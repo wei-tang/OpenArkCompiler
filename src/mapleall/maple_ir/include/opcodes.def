@@ -93,10 +93,13 @@
   // exception handling
   OPCODE(jstry, JsTryNode, OPCODEISSTMT, 8)
   OPCODE(try, TryNode, (OPCODEISSTMT | OPCODENOTMMPL), 8)
+  OPCODE(cpptry, TryNode, (OPCODEISSTMT | OPCODENOTMMPL), 8)
 
   OPCODE(throw, UnaryStmtNode, (OPCODEISSTMT | OPCODEHASSSAUSE), 0)
-  OPCODE(jscatch, BaseNode, OPCODEISSTMT, 4)
+
+  OPCODE(jscatch, StmtNode, OPCODEISSTMT, 4)
   OPCODE(catch, CatchNode, OPCODEISSTMT, 8)
+  OPCODE(cppcatch, CppCatchNode, OPCODEISSTMT, 8)
 
   OPCODE(finally, StmtNode, OPCODEISSTMT, 6)
   OPCODE(cleanuptry, StmtNode, OPCODEISSTMT, 6)
@@ -147,8 +150,10 @@
   OPCODE(malloc, UnaryNode, OPCODENOTPURE, 0)
   OPCODE(gcmalloc, GCMallocNode, OPCODENOTPURE, 8)
   OPCODE(gcpermalloc, GCMallocNode, OPCODENOTPURE, 8)
+  OPCODE(stackmalloc, GCMallocNode, OPCODENOTPURE, 8)
   OPCODE(gcmallocjarray, JarrayMallocNode, OPCODENOTPURE, 12)
   OPCODE(gcpermallocjarray, JarrayMallocNode, OPCODENOTPURE, 12)
+  OPCODE(stackmallocjarray, JarrayMallocNode, OPCODENOTPURE, 12)
   OPCODE(resolveinterfacefunc, ResolveFuncNode, 0, 8)
   OPCODE(resolvevirtualfunc, ResolveFuncNode, 0, 8)
   // binary expression opcodes
@@ -187,3 +192,11 @@
   // Other expression opcodes
   OPCODE(extractbits, ExtractbitsNode, 0, 8)
   OPCODE(depositbits, DepositbitsNode, 0, 8)
+  // storage access
+  OPCODE(iassignpcoff, IassignPCoffNode, OPCODEISSTMT, 0)
+  OPCODE(ireadpcoff, IreadPCoffNode, 0, 0)
+  // barrier
+  OPCODE(checkpoint, StmtNode, OPCODEISSTMT, 0)
+  // leaf node
+  OPCODE(addroffpc, AddroffPCNode, 0, 0)
+  OPCODE(igoto, UnaryStmtNode, OPCODEISSTMT, 0)
