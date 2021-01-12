@@ -29,6 +29,7 @@ config("mrt_c_flags") {
     cflags_c += [
       "-O2",
       "-fno-strict-aliasing",
+      "-D_FORTIFY_SOURCE=2",
     ]
   } else if (GN_BUILD_TYPE == "DEBUG") {
     cflags_c += [
@@ -51,7 +52,6 @@ config("mrt_c_flags") {
     "-std=c99",
     "-fPIC",
     "-fstack-protector-strong",
-    "-D_FORTIFY_SOURCE=2",
     "-fno-common",
     "-pipe",
     "-Wextra",
@@ -99,6 +99,7 @@ config("mrt_cxx_flags") {
     cflags_cc += [
       "-O2",
       "-fno-strict-aliasing",
+      "-D_FORTIFY_SOURCE=2",
     ]
   } else if (GN_BUILD_TYPE == "DEBUG") {
     cflags_cc += [
@@ -120,7 +121,6 @@ config("mrt_cxx_flags") {
     "-Werror",
     "-fPIC",
     "-fstack-protector-strong",
-    "-D_FORTIFY_SOURCE=2",
     "-fno-common",
     "-pipe",
     "-Wextra",
