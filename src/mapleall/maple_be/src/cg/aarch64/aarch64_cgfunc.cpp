@@ -3664,9 +3664,13 @@ Operand *AArch64CGFunc::SelectMalloc(UnaryNode &node, Operand &opnd0) {
   opndVec.emplace_back(&opnd0);
   /* Use calloc to make sure allocated memory is zero-initialized */
   const std::string &funcName = "calloc";
-  Operand &opnd1 = CreateImmOperand(1, PTY_u32, false);
+  PrimType srcPty = PTY_u64;
+  if (opnd0.GetSize() <= k32BitSize) {
+    srcPty = PTY_u32;
+  }
+  Operand &opnd1 = CreateImmOperand(1, srcPty, false);
   opndVec.emplace_back(&opnd1);
-  SelectLibCall(funcName, opndVec, PTY_u32, retType);
+  SelectLibCall(funcName, opndVec, srcPty, retType);
   return &resOpnd;
 }
 
