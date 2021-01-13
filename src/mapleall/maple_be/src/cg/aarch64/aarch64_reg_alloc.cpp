@@ -603,6 +603,7 @@ bool DefaultO0RegAllocator::AllocateRegisters() {
       rememberRegs.clear();
     }
   }
+  cgFunc->SetIsAfterRegAlloc();
   return true;
 }
 
@@ -630,6 +631,7 @@ AnalysisResult *CgDoRegAlloc::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultM
 
   CHECK_FATAL(regAllocator != nullptr, "regAllocator is null in CgDoRegAlloc::Run");
   cgFuncResultMgr->GetAnalysisResult(kCGFuncPhaseLOOP, cgFunc);
+  cgFunc->SetIsAfterRegAlloc();
   regAllocator->AllocateRegisters();
   /* the live range info may changed, so invalid the info. */
   if (live != nullptr) {

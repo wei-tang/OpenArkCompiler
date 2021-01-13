@@ -68,6 +68,7 @@ void AArch64GenProEpilog::GenStackGuard(BB &bb) {
   if (currCG->AddStackGuard()) {
     BB *formerCurBB = cgFunc.GetCurBB();
     aarchCGFunc.GetDummyBB()->ClearInsns();
+    aarchCGFunc.GetDummyBB()->SetIsProEpilog(true);
     cgFunc.SetCurBB(*aarchCGFunc.GetDummyBB());
 
     MIRSymbol *stkGuardSym = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(
@@ -99,6 +100,7 @@ void AArch64GenProEpilog::GenStackGuard(BB &bb) {
     cgFunc.GetCurBB()->AppendInsn(tmpInsn);
 
     bb.InsertAtBeginning(*aarchCGFunc.GetDummyBB());
+    aarchCGFunc.GetDummyBB()->SetIsProEpilog(false);
     cgFunc.SetCurBB(*formerCurBB);
   }
 }
@@ -608,6 +610,7 @@ void AArch64GenProEpilog::GenerateProlog(BB &bb) {
   CG *currCG = cgFunc.GetCG();
   BB *formerCurBB = cgFunc.GetCurBB();
   aarchCGFunc.GetDummyBB()->ClearInsns();
+  aarchCGFunc.GetDummyBB()->SetIsProEpilog(true);
   cgFunc.SetCurBB(*aarchCGFunc.GetDummyBB());
   Operand &spOpnd = aarchCGFunc.GetOrCreatePhysicalRegisterOperand(RSP, k64BitSize, kRegTyInt);
   Operand &fpOpnd = aarchCGFunc.GetOrCreatePhysicalRegisterOperand(RFP, k64BitSize, kRegTyInt);
@@ -660,6 +663,7 @@ void AArch64GenProEpilog::GenerateProlog(BB &bb) {
   }
   bb.InsertAtBeginning(*aarchCGFunc.GetDummyBB());
   cgFunc.SetCurBB(*formerCurBB);
+  aarchCGFunc.GetDummyBB()->SetIsProEpilog(false);
 }
 
 void AArch64GenProEpilog::GenerateRet(BB &bb) {
@@ -949,6 +953,7 @@ void AArch64GenProEpilog::GenerateEpilog(BB &bb) {
   CG *currCG = cgFunc.GetCG();
   BB *formerCurBB = cgFunc.GetCurBB();
   aarchCGFunc.GetDummyBB()->ClearInsns();
+  aarchCGFunc.GetDummyBB()->SetIsProEpilog(true);
   cgFunc.SetCurBB(*aarchCGFunc.GetDummyBB());
 
   Operand &spOpnd = aarchCGFunc.GetOrCreatePhysicalRegisterOperand(RSP, k64BitSize, kRegTyInt);
@@ -1004,6 +1009,7 @@ void AArch64GenProEpilog::GenerateEpilog(BB &bb) {
   epilogBB.AppendBBInsns(*cgFunc.GetCurBB());
 
   cgFunc.SetCurBB(*formerCurBB);
+  aarchCGFunc.GetDummyBB()->SetIsProEpilog(false);
 }
 
 void AArch64GenProEpilog::GenerateEpilogForCleanup(BB &bb) {
