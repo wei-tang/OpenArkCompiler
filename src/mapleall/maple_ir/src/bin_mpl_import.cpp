@@ -303,7 +303,6 @@ void BinaryMplImport::ImportMethodPair(MethodPair &memPool) {
     methodSymbols.push_back(funcSt);
 
     fn = mod.GetMemPool()->New<MIRFunction>(&mod, funcSt->GetStIdx());
-    fn->Init();
     fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
     GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
     funcSt->SetFunction(fn);

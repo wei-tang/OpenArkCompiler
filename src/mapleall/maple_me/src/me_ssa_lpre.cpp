@@ -40,8 +40,8 @@ void MeSSALPre::GenerateSaveRealOcc(MeRealOcc &realOcc) {
                                                                                 *func->GetMirFunc());
     size_t i = 0;
     for (; i < func->GetMirFunc()->GetFormalCount(); ++i) {
-      if (func->GetMirFunc()->GetFormal(i) == oldFormalSt) {
-        func->GetMirFunc()->SetFormal(i, newFormalSt);
+      if (func->GetMirFunc()->GetFormalDefVec()[i].formalSym == oldFormalSt) {
+        func->GetMirFunc()->GetFormalDefVec()[i].formalSym = newFormalSt;
         break;
       }
     }

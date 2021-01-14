@@ -101,6 +101,7 @@ void CGLowerer::RegisterExternalLibraryFunctions() {
 
     MIRFunction *func = mirModule.GetMIRBuilder()->GetOrCreateFunction(extFnDescrs[i].name,
                                                                        TyIdx(extFnDescrs[i].retType));
+    func->AllocSymTab();
     MIRSymbol *funcSym = func->GetFuncSymbol();
     funcSym->SetStorageClass(kScExtern);
     /* return type */
@@ -1156,6 +1157,7 @@ StmtNode *CGLowerer::LowerCall(CallNode &callNode, StmtNode *&nextStmt, BlockNod
 
     if (needCheckStore) {
       MIRFunction *fn = mirModule.GetMIRBuilder()->GetOrCreateFunction("MCC_Reflect_Check_Arraystore", TyIdx(PTY_void));
+      fn->AllocSymTab();
       MapleVector<BaseNode*> args(mirModule.GetMIRBuilder()->GetCurrentFuncCodeMpAllocator()->Adapter());
       args.emplace_back(callNode.Opnd(0));
       args.emplace_back(callNode.Opnd(kNodeThirdOpnd));
@@ -1417,6 +1419,7 @@ std::unordered_map<std::string, size_t> CGLowerer::arrayClassCacheIndex;
 MIRFunction *CGLowerer::RegisterFunctionVoidStarToVoid(BuiltinFunctionID id, const std::string &name,
                                                        const std::string &paramName) {
   MIRFunction *func = mirBuilder->GetOrCreateFunction(name, GlobalTables::GetTypeTable().GetVoid()->GetTypeIndex());
+  func->AllocSymTab();
   MIRSymbol *funcSym = func->GetFuncSymbol();
   funcSym->SetStorageClass(kScExtern);
   MIRType *argTy = GlobalTables::GetTypeTable().GetPtr();
@@ -1456,6 +1459,7 @@ void CGLowerer::RegisterBuiltIns() {
 
     MIRFunction *func = mirBuilder->GetOrCreateFunction(cgBuiltins[i].second,
                                                         GlobalTables::GetTypeTable().GetVoid()->GetTypeIndex());
+    func->AllocSymTab();
     MIRSymbol *funcSym = func->GetFuncSymbol();
     funcSym->SetStorageClass(kScExtern);
     /* return type */
@@ -1613,6 +1617,7 @@ void CGLowerer::ProcessArrayExpr(BaseNode &expr, BlockNode &blkNode) {
                                                    arrayNode.GetNopndAt(1), lenRegreadNode);
     CondGotoNode *brFalseNode = mirBuilder->CreateStmtCondGoto(cond, OP_brfalse, labIdx);
     MIRFunction *fn = mirBuilder->GetOrCreateFunction("MCC_Array_Boundary_Check", TyIdx(PTY_void));
+    fn->AllocSymTab();
     MapleVector<BaseNode*> args(mirBuilder->GetCurrentFuncCodeMpAllocator()->Adapter());
     args.emplace_back(arrayNode.GetNopndAt(0));
     args.emplace_back(arrayNode.GetNopndAt(1));
@@ -1809,7 +1814,6 @@ StmtNode *CGLowerer::LowerIntrinsicopDassign(const DassignNode &dsNode,
   st->SetStorageClass(kScText);
   st->SetSKind(kStFunc);
   MIRFunction *fn = mirModule.GetMemPool()->New<MIRFunction>(&mirModule, st->GetStIdx());
-  fn->Init();
   MapleVector<BaseNode*> &nOpnds = intrinNode.GetNopnd();
   st->SetFunction(fn);
   std::vector<TyIdx> fnTyVec;
@@ -1864,7 +1868,6 @@ BaseNode *CGLowerer::LowerJavascriptIntrinsicop(IntrinsicopNode &intrinNode, con
   st->SetStorageClass(kScText);
   st->SetSKind(kStFunc);
   MIRFunction *fn = mirModule.GetMemPool()->New<MIRFunction>(&mirModule, st->GetStIdx());
-  fn->Init();
   MapleVector<BaseNode*> &nOpnds = intrinNode.GetNopnd();
   st->SetFunction(fn);
   std::vector<TyIdx> fnTyVec;
@@ -2049,6 +2052,7 @@ BaseNode *CGLowerer::LowerIntrinJavaArrayLength(const BaseNode &parent, Intrinsi
     MIRFunction *newFunc =
         mirBuilder->GetOrCreateFunction("MCC_ThrowNullArrayNullPointerException",
                                         GlobalTables::GetTypeTable().GetVoid()->GetTypeIndex());
+    newFunc->AllocSymTab();
     MapleVector<BaseNode*> args(mirBuilder->GetCurrentFuncCodeMpAllocator()->Adapter());
     StmtNode *call = mirBuilder->CreateStmtCallAssigned(newFunc->GetPuidx(), args, nullptr, OP_callassigned);
 
@@ -2405,7 +2409,9 @@ StmtNode *CGLowerer::LowerIntrinsicRCCall(IntrinsiccallNode &intrincall) {
   /* convert intrinsic call into function call. */
   if (intrinFuncIDs.find(intrinDesc) == intrinFuncIDs.end()) {
     /* add funcid into map */
-    intrinFuncIDs[intrinDesc] = mirBuilder->GetOrCreateFunction(intrinDesc->name, TyIdx(PTY_void))->GetPuidx();
+    MIRFunction *fn = mirBuilder->GetOrCreateFunction(intrinDesc->name, TyIdx(PTY_void));
+    fn->AllocSymTab();
+    intrinFuncIDs[intrinDesc] = fn->GetPuidx();
   }
   CallNode *callStmt = mirModule.CurFuncCodeMemPool()->New<CallNode>(mirModule, OP_call);
   callStmt->SetPUIdx(intrinFuncIDs.at(intrinDesc));
@@ -2431,6 +2437,7 @@ void CGLowerer::LowerArrayStore(IntrinsiccallNode &intrincall, BlockNode &newBlk
 
   if (needCheckStore) {
     MIRFunction *fn = mirBuilder->GetOrCreateFunction("MCC_Reflect_Check_Arraystore", TyIdx(PTY_void));
+    fn->AllocSymTab();
     MapleVector<BaseNode*> args(mirBuilder->GetCurrentFuncCodeMpAllocator()->Adapter());
     args.emplace_back(intrincall.Opnd(0));
     args.emplace_back(intrincall.Opnd(kNodeThirdOpnd));
@@ -2512,6 +2519,7 @@ StmtNode *CGLowerer::LowerIntrinsiccall(IntrinsiccallNode &intrincall, BlockNode
   st->SetStorageClass(kScText);
   st->SetSKind(kStFunc);
   MIRFunction *fn = mirBuilder->GetOrCreateFunction(intrinDesc->name, TyIdx(0));
+  fn->AllocSymTab();
   st->SetFunction(fn);
   return LowerDefaultIntrinsicCall(intrincall, *st, *fn);
 }
@@ -2583,6 +2591,7 @@ PUIdx CGLowerer::GetBuiltinToUse(BuiltinFunctionID id) const {
 void CGLowerer::LowerGCMalloc(const BaseNode &node, const GCMallocNode &gcmalloc, BlockNode &blkNode, bool perm) {
   MIRFunction *func = mirBuilder->GetOrCreateFunction((perm ? "MCC_NewPermanentObject" : "MCC_NewObj_fixed_class"),
                                                       (TyIdx)(LOWERED_PTR_TYPE));
+  func->AllocSymTab();
   /* Get the classinfo */
   MIRStructType *classType = static_cast<MIRStructType*>(
       GlobalTables::GetTypeTable().GetTypeFromTyIdx(gcmalloc.GetTyIdx()));
@@ -2599,6 +2608,7 @@ void CGLowerer::LowerGCMalloc(const BaseNode &node, const GCMallocNode &gcmalloc
   if (classSym->GetAttr(ATTR_abstract) || classSym->GetAttr(ATTR_interface)) {
     MIRFunction *funcSecond = mirBuilder->GetOrCreateFunction("MCC_Reflect_ThrowInstantiationError",
                                                              (TyIdx)(LOWERED_PTR_TYPE));
+    funcSecond->AllocSymTab();
     BaseNode *arg = mirBuilder->CreateExprAddrof(0, *classSym);
     if (node.GetOpCode() == OP_dassign) {
       auto &dsNode = static_cast<const DassignNode&>(node);
@@ -2715,6 +2725,7 @@ void CGLowerer::LowerJarrayMalloc(const StmtNode &stmt, const JarrayMallocNode &
     args.emplace_back(mirBuilder->CreateIntConst(0, PTY_u32));
   }
   MIRFunction *func = mirBuilder->GetOrCreateFunction(funcName, (TyIdx)(LOWERED_PTR_TYPE));
+  func->AllocSymTab();
   CallNode *callAssign = nullptr;
   if (stmt.GetOpCode() == OP_dassign) {
     auto &dsNode = static_cast<const DassignNode&>(stmt);
