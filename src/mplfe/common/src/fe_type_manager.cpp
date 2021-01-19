@@ -383,7 +383,6 @@ MIRFunction *FETypeManager::CreateFunction(const GStrIdx &nameIdx, const TyIdx &
   MemPool *mpModule = module.GetMemPool();
   ASSERT(mpModule, "mem pool is nullptr");
   mirFunc = mpModule->New<MIRFunction>(&module, funcSymbol->GetStIdx());
-  mirFunc->Init();
   size_t idx = GlobalTables::GetFunctionTable().GetFuncTable().size();
   CHECK_FATAL(idx < UINT32_MAX, "PUIdx is out of range");
   mirFunc->SetPuidx(static_cast<uint32>(idx));
