@@ -3075,6 +3075,7 @@ bool GraphColorRegAllocator::AllocateRegisters() {
   ASSERT(cnt <= cgFunc->GetTotalNumberOfInstructions(), "Incorrect insn count");
 #endif
 
+  cgFunc->SetIsAfterRegAlloc();
   /* EBO propgation extent the live range and might need to be turned off. */
   ComputeBlockOrder();
 

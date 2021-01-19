@@ -538,7 +538,11 @@ void HandleDassign(StmtNode &stmt, CGFunc &cgFunc) {
   ASSERT(dassignNode.GetOpCode() == OP_dassign, "expect dassign");
   BaseNode *rhs = dassignNode.GetRHS();
   ASSERT(rhs != nullptr, "get rhs of dassignNode failed");
-  if (rhs->GetPrimType() == PTY_agg) {
+  if (rhs->GetOpCode() == OP_malloc || rhs->GetOpCode() == OP_alloca) {
+    UnaryStmtNode &uNode = static_cast<UnaryStmtNode &>(stmt);
+    Operand *opnd0 = cgFunc.HandleExpr(dassignNode, *(uNode.Opnd()));
+    cgFunc.SelectDassign(dassignNode, *opnd0);
+  } else if (rhs->GetPrimType() == PTY_agg) {
     cgFunc.SelectAggDassign(dassignNode);
     return;
   }
