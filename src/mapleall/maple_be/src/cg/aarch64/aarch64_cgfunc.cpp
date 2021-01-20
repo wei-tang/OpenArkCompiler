@@ -1349,7 +1349,7 @@ void AArch64CGFunc::SelectAddrof(Operand &result, StImmOperand &stImm) {
         offset = &CreateImmOperand(GetBaseOffset(*symLoc) + stImm.GetOffset(), k64BitSize, false);
         immOpndsRequiringOffsetAdjustmentForRefloc[symLoc] = offset;
       }
-    } else {
+    } else if (mirModule.IsJavaModule()) {
       auto it = immOpndsRequiringOffsetAdjustment.find(symLoc);
       if ((it != immOpndsRequiringOffsetAdjustment.end()) && (symbol->GetType()->GetPrimType() != PTY_agg)) {
         offset = (*it).second;
@@ -1359,6 +1359,9 @@ void AArch64CGFunc::SelectAddrof(Operand &result, StImmOperand &stImm) {
           immOpndsRequiringOffsetAdjustment[symLoc] = offset;
         }
       }
+    } else {
+      // Do not cache modified symbol location
+      offset = &CreateImmOperand(GetBaseOffset(*symLoc) + stImm.GetOffset(), 64, false);
     }
 
     SelectAdd(result, *GetBaseReg(*symLoc), *offset, PTY_u64);
@@ -1997,6 +2000,11 @@ void AArch64CGFunc::SelectAdd(Operand &resOpnd, Operand &opnd0, Operand &opnd1, 
     int32 head0bitNum = GetHead0BitNum(immVal);
     const int32 bitNum = k64BitSize - head0bitNum - tail0bitNum;
     RegOperand &regOpnd = CreateRegisterOperandOfType(primType);
+    if (isAfterRegAlloc) {
+      RegType regty = GetRegTyFromPrimTy(primType);
+      uint8 bytelen = GetPrimTypeSize(primType);
+      regOpnd = GetOrCreatePhysicalRegisterOperand((AArch64reg)(R16), bytelen, regty);
+    }
 
     if (bitNum <= k16ValidBit) {
       int64 newImm = (static_cast<uint64>(immVal) >> static_cast<uint32>(tail0bitNum)) & 0xFFFF;
@@ -2100,6 +2108,11 @@ void AArch64CGFunc::SelectSub(Operand &resOpnd, Operand &opnd0, Operand &opnd1, 
   int32 head0bitNum = GetHead0BitNum(immVal);
   const int32 bitNum = k64BitSize - head0bitNum - tail0bitNum;
   RegOperand &regOpnd = CreateRegisterOperandOfType(primType);
+  if (isAfterRegAlloc) {
+    RegType regty = GetRegTyFromPrimTy(primType);
+    uint8 bytelen = GetPrimTypeSize(primType);
+    regOpnd = GetOrCreatePhysicalRegisterOperand((AArch64reg)(R16), bytelen, regty);
+  }
 
   if (bitNum <= k16ValidBit) {
     int64 newImm = (static_cast<uint64>(immVal) >> static_cast<uint32>(tail0bitNum)) & 0xFFFF;
@@ -3664,9 +3677,13 @@ Operand *AArch64CGFunc::SelectMalloc(UnaryNode &node, Operand &opnd0) {
   opndVec.emplace_back(&opnd0);
   /* Use calloc to make sure allocated memory is zero-initialized */
   const std::string &funcName = "calloc";
-  Operand &opnd1 = CreateImmOperand(1, PTY_u32, false);
+  PrimType srcPty = PTY_u64;
+  if (opnd0.GetSize() <= k32BitSize) {
+    srcPty = PTY_u32;
+  }
+  Operand &opnd1 = CreateImmOperand(1, srcPty, false);
   opndVec.emplace_back(&opnd1);
-  SelectLibCall(funcName, opndVec, PTY_u32, retType);
+  SelectLibCall(funcName, opndVec, srcPty, retType);
   return &resOpnd;
 }
 
@@ -5211,13 +5228,20 @@ MemOperand &AArch64CGFunc::GetOrCreateMemOpnd(const MIRSymbol &symbol, int32 off
     ASSERT((!IsFPLRAddedToCalleeSavedList() ||
             ((it != memOpndsRequiringOffsetAdjustment.end()) || (storageClass == kScFormal))),
            "Memory operand of this symbol should have been added to the hash table");
+    int32 stOffset = GetBaseOffset(*symLoc);
     if (it != memOpndsRequiringOffsetAdjustment.end()) {
       if (GetMemlayout()->IsLocalRefLoc(symbol)) {
         if (!forLocalRef) {
           return *(it->second);
         }
-      } else {
+      } else if (mirModule.IsJavaModule()) {
         return *(it->second);
+      } else {
+        Operand *offOpnd = (it->second)->GetOffset();
+        if (((static_cast<AArch64OfstOperand*>(offOpnd))->GetOffsetValue() == (stOffset + offset)) &&
+            (it->second->GetSize() == size)) {
+          return *(it->second);
+        }
       }
     }
     it = memOpndsForStkPassedArguments.find(idx);
@@ -5232,7 +5256,6 @@ MemOperand &AArch64CGFunc::GetOrCreateMemOpnd(const MIRSymbol &symbol, int32 off
     }
 
     AArch64RegOperand *baseOpnd = static_cast<AArch64RegOperand*>(GetBaseReg(*symLoc));
-    int32 stOffset = GetBaseOffset(*symLoc);
     int32 totalOffset = stOffset + offset;
     /* needs a fresh copy of OfstOperand as we may adjust its offset at a later stage. */
     AArch64OfstOperand *offsetOpnd = memPool->New<AArch64OfstOperand>(totalOffset, k64BitSize);

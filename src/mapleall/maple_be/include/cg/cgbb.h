@@ -511,6 +511,12 @@ class BB {
   void SetIsCleanup(bool arg) {
     isCleanup = arg;
   }
+  bool IsProEpilog() const {
+    return isProEpilog;
+  }
+  void SetIsProEpilog(bool arg) {
+    isProEpilog = arg;
+  }
   long GetInternalFlag1() const {
     return internalFlag1;
   }
@@ -675,6 +681,7 @@ class BB {
    * are some overlap here.
    */
   bool isCleanup = false;  /* true if the bb is cleanup bb. otherwise, false. */
+  bool isProEpilog = false;  /* Temporary tag for modifying prolog/epilog bb. */
   /*
    * Different meaning for each data flow analysis.
    * For aarchregalloc.cpp, the bb is part of cleanup at end of function.

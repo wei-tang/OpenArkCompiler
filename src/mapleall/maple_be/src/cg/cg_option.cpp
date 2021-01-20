@@ -1095,7 +1095,7 @@ void CGOptions::ParseCyclePattern(const std::string &fileName) {
 /* Set default options according to different languages. */
 void CGOptions::SetDefaultOptions(const maple::MIRModule &mod) {
   if (mod.IsJavaModule()) {
-    generateFlag = generateFlag | kGenYieldPoint | kGenLocalRc;
+    generateFlag = generateFlag | kGenYieldPoint | kGenLocalRc | kGrootList | kPrimorList;
   }
   insertYieldPoint = GenYieldPoint();
 }

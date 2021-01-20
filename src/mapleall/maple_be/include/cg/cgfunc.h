@@ -775,6 +775,14 @@ class CGFunc {
     volReleaseInsn = insn;
   }
 
+  bool IsAfterRegAlloc() {
+    return isAfterRegAlloc;
+  }
+
+  void SetIsAfterRegAlloc() {
+    isAfterRegAlloc = true;
+  }
+
   const MapleString &GetShortFuncName() const {
     return shortFuncName;
   }
@@ -800,6 +808,7 @@ class CGFunc {
   bool hasProEpilogue = false;
   bool isVolLoad = false;
   bool isVolStore = false;
+  bool isAfterRegAlloc = false;
   uint32 frequency = 0;
   DebugInfo *debugInfo = nullptr;  /* debugging info */
   ReachingDefinition *reachingDef = nullptr;
