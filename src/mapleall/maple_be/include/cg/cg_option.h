@@ -119,7 +119,7 @@ class CGOptions : public MapleDriverOptionBase {
    * Generate yieldpoints for GC.
    * Do not generate separate GCTIB file.
    */
-  static const GenerateFlag kDefaultGflags = GenerateFlag(kGrootList | kPrimorList);
+  static const GenerateFlag kDefaultGflags = GenerateFlag(0);
 
  public:
   static CGOptions &GetInstance();
