@@ -28,12 +28,14 @@ using namespace maple;
  * This assumes that all nesting of statements has been removed,
  * so that all the statements are at only one block level.
  */
-uint32 MemLayout::FindLargestActualArea() {
+uint32 MemLayout::FindLargestActualArea(int32 &aggCopySize) {
   StmtNode *stmt = mirFunction->GetBody()->GetFirst();
   if (stmt == nullptr) {
     return 0;
   }
   uint32 maxActualSize = 0;
+  uint32 maxParamStackSize = 0;  // Size of parameter stack requirement
+  uint32 maxCopyStackSize = 0;   // Size of aggregate param stack copy requirement
   for (; stmt != nullptr; stmt = stmt->GetNext()) {
     Opcode opCode = stmt->GetOpCode();
     if (opCode < OP_call || opCode > OP_xintrinsiccallassigned) {
@@ -53,11 +55,19 @@ uint32 MemLayout::FindLargestActualArea() {
      * that is not supported yet
      */
     DCHECK((opCode == OP_call || opCode == OP_icall), "Not lowered to call or icall?");
-    uint32 size = ComputeStackSpaceRequirementForCall(*stmt, opCode == OP_icall);
-    if (size > maxActualSize) {
-      maxActualSize = size;
+    int32 copySize;
+    uint32 size = ComputeStackSpaceRequirementForCall(*stmt, copySize, opCode == OP_icall);
+    if (size > maxParamStackSize) {
+      maxParamStackSize = size;
+    }
+    if (copySize > maxCopyStackSize) {
+      maxCopyStackSize = copySize;
+    }
+    if ((maxParamStackSize + maxCopyStackSize) > maxActualSize) {
+      maxActualSize = maxParamStackSize + maxCopyStackSize;
     }
   }
+  aggCopySize = maxCopyStackSize;
   /* kSizeOfPtr * 2's pow 2 is 4, set the low 4 bit of maxActualSize to 0 */
   maxActualSize = RoundUp(maxActualSize, kSizeOfPtr * 2);
   return maxActualSize;

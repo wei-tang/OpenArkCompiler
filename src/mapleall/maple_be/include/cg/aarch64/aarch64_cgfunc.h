@@ -552,6 +552,12 @@ class AArch64CGFunc : public CGFunc {
     return (o.IsRegister() ? static_cast<RegOperand&>(o) : SelectCopy(o, oty, oty));
   }
 
+  void SelectParmListDreadSmallAggregate(MIRSymbol &sym, AArch64ListOperand &srcOpnds, ParmLocator &parmLocator,
+                                         int32 &structCopyOffset);
+  void SelectParmListDreadLargeAggregate(MIRSymbol &sym, AArch64ListOperand &srcOpnds, ParmLocator &parmLocator,
+                                         int32 &structCopyOffset);
+  void SelectParmListForAggregate(BaseNode &argExpr, AArch64ListOperand &srcOpnds, ParmLocator &parmLocator,
+                                  int32 &structCopyOffset);
   void SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOpnds, bool isCallNative = false);
   Operand *SelectClearStackCallParam(const AddrofNode &expr, int64 &offsetValue);
   void SelectClearStackCallParmList(const StmtNode &naryNode, AArch64ListOperand &srcOpnds,

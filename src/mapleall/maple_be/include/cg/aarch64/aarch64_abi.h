@@ -82,7 +82,8 @@ class ParmLocator {
 
   ~ParmLocator() = default;
 
-  void LocateNextParm(MIRType &mirType, PLocInfo &pLoc);
+  // Return size of aggregate structure copy on stack.
+  int32 LocateNextParm(MIRType &mirType, PLocInfo &ploc);
 
  private:
   BECommon &beCommon;
@@ -112,7 +113,7 @@ class ParmLocator {
     nextGeneralRegNO = static_cast<int32>((nextGeneralRegNO + 1) & ~static_cast<int32>(1));
   }
 
-  void ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &pLoc, uint64 &typeSize, int32 typeAlign);
+  int32 ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &pLoc, uint64 &typeSize, int32 typeAlign);
 };
 
 /* given the type of the return value, determines the return mechanism */

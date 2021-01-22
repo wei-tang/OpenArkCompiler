@@ -375,7 +375,7 @@ bool IsSpillRegInRA(AArch64reg regNO, bool has3RegOpnd) {
  * starting from the beginning, one call per parameter in sequence; it returns
  * the information on how each parameter is passed in pLoc
  */
-void ParmLocator::LocateNextParm(MIRType &mirType, PLocInfo &pLoc) {
+int32 ParmLocator::LocateNextParm(MIRType &mirType, PLocInfo &pLoc) {
   uint64 typeSize = beCommon.GetTypeSize(mirType.GetTypeIndex());
   int32 typeAlign = beCommon.GetTypeAlign(mirType.GetTypeIndex());
   pLoc.reg0 = kRinvalid;
@@ -392,6 +392,7 @@ void ParmLocator::LocateNextParm(MIRType &mirType, PLocInfo &pLoc) {
   pLoc.memSize = static_cast<int32>(typeSize);
   ++paramNum;
 
+  int32 aggCopySize = 0;
   switch (mirType.GetPrimType()) {
     case PTY_u1:
     case PTY_u8:
@@ -444,7 +445,7 @@ void ParmLocator::LocateNextParm(MIRType &mirType, PLocInfo &pLoc) {
      */
     /* case PTY_agg */
     case PTY_agg: {
-      ProcessPtyAggWhenLocateNextParm(mirType, pLoc, typeSize, typeAlign);
+      aggCopySize = ProcessPtyAggWhenLocateNextParm(mirType, pLoc, typeSize, typeAlign);
       break;
     }
     default:
@@ -456,9 +457,10 @@ void ParmLocator::LocateNextParm(MIRType &mirType, PLocInfo &pLoc) {
     /* being passed in memory */
     nextStackArgAdress = pLoc.memOffset + typeSize;
   }
+  return aggCopySize;
 }
 
-void ParmLocator::ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &pLoc, uint64 &typeSize,
+int32 ParmLocator::ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &pLoc, uint64 &typeSize,
                                                   int32 typeAlign) {
   /*
    * In AArch64, integer-float or float-integer
@@ -470,6 +472,11 @@ void ParmLocator::ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &pL
   int32 saveIntParmNum = nextGeneralRegNO;
   int32 saveFloatParmNum = nextFloatRegNO;
 #endif
+  typeSize = beCommon.GetTypeSize(mirType.GetTypeIndex().GetIdx());
+  int32 aggCopySize = 0;
+  if (typeSize > k16ByteSize) {
+    aggCopySize = RoundUp(typeSize, kSizeOfPtr);
+  }
   /*
    * alignment requirement
    * Note. This is one of a few things iOS diverges from
@@ -524,6 +531,7 @@ void ParmLocator::ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &pL
     /* passed in memory */
     typeSize = RoundUp(pLoc.memSize, k8ByteSize);
   }
+  return aggCopySize;
 }
 
 /*

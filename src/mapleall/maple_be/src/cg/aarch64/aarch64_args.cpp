@@ -42,6 +42,10 @@ void AArch64MoveRegArgs::CollectRegisterArgs(std::map<uint32, AArch64reg> &argsL
     }
     argsList[i] = ploc.reg0;
     indexList.emplace_back(i);
+    if (ploc.reg1 == kRinvalid) {
+      continue;
+    }
+    aarchCGFunc->PushElemIntoFormalRegList(ploc.reg1);
   }
 }
 
