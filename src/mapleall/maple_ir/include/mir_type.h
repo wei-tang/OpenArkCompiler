@@ -57,6 +57,14 @@ inline bool IsAddress(PrimitiveType primitiveType) {
   return primitiveType.IsAddress();
 }
 
+inline bool IsPossible64BitAddress(PrimType tp) {
+  return (tp == PTY_ptr || tp == PTY_ref || tp == PTY_u64 || tp == PTY_a64);
+}
+
+inline bool IsPossible32BitAddress(PrimType tp) {
+  return (tp == PTY_ptr || tp == PTY_ref || tp == PTY_u32 || tp == PTY_a32);
+}
+
 inline bool IsPrimitivePureScalar(PrimitiveType primitiveType) {
   return primitiveType.IsInteger() && !primitiveType.IsAddress() && !primitiveType.IsDynamic();
 }

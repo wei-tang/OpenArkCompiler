@@ -88,9 +88,9 @@ class ConstantFold : public FuncOptimizeImpl {
                                     const ConstvalNode &const1) const;
   ConstvalNode *FoldConstBinary(Opcode opcode, PrimType resultType, const ConstvalNode &const0,
                                 const ConstvalNode &const1) const;
-  ConstvalNode *FoldIntConstComparison(Opcode opcode, PrimType resultType, const ConstvalNode &const0,
+  ConstvalNode *FoldIntConstComparison(Opcode opcode, PrimType resultType, PrimType opndType, const ConstvalNode &const0,
                                        const ConstvalNode &const1) const;
-  MIRIntConst *FoldIntConstComparisonMIRConst(Opcode, PrimType, const MIRIntConst&, const MIRIntConst&) const;
+  MIRIntConst *FoldIntConstComparisonMIRConst(Opcode, PrimType, PrimType, const MIRIntConst&, const MIRIntConst&) const;
   ConstvalNode *FoldIntConstBinary(Opcode opcode, PrimType resultType, const ConstvalNode &const0,
                                    const ConstvalNode &const1) const;
   ConstvalNode *FoldFPConstComparison(Opcode opcode, PrimType resultType, PrimType opndType, const ConstvalNode &const0,
