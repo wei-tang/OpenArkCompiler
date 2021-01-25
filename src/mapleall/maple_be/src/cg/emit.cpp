@@ -281,8 +281,13 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
       emit(align);
 #else /* ELF */
       /* output align, symbol name begin with "classInitProtectRegion" align is 4096 */
+      MIRTypeKind kind = mirSymbol.GetType()->GetKind();
+      MIRStorageClass storage = mirSymbol.GetStorageClass();
       if (symName.find("classInitProtectRegion") == 0) {
         Emit(4096);
+      } else if ((kind == kTypeStruct || kind == kTypeClass || kind == kTypeArray || kind == kTypeUnion) &&
+                 (storage == kScGlobal || storage == kScPstatic || storage == kScFstatic)) {
+        Emit(std::to_string(k8ByteSize));
       } else {
         Emit(std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeAlign(mirType->GetTypeIndex())));
       }
