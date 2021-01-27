@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020 - 2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -101,6 +101,44 @@ void AArch64MemLayout::SetSegmentSize(AArch64SymbolAlloc &symbolAlloc, MemSegmen
   symbolAlloc.SetOffset(segment.GetSize());
   segment.SetSize(segment.GetSize() + static_cast<int32>(be.GetTypeSize(typeIdx)));
   segment.SetSize(static_cast<int32>(RoundUp(static_cast<uint64>(segment.GetSize()), kSizeOfPtr)));
+}
+
+void AArch64MemLayout::LayoutVarargParams() {
+  uint32 nIntRegs = 0;
+  uint32 nFpRegs = 0;
+  ParmLocator parmlocator(be);
+  PLocInfo ploc;
+  MIRFunction *func = mirFunction;
+  if (be.GetMIRModule().IsCModule() && func->GetAttr(FUNCATTR_varargs)) {
+    for (uint32 i = 0; i < func->GetFormalCount(); i++) {
+      if (i == 0) {
+        if (be.HasFuncReturnType(*func)) {
+          TyIdx tidx = be.GetFuncReturnType(*func);
+          if (be.GetTypeSize(tidx.GetIdx()) <= 16) {
+            continue;
+          }
+        }
+      }
+      MIRType *ty = func->GetNthParamType(i);
+      parmlocator.LocateNextParm(*ty, ploc);
+      if (ploc.reg0 != kRinvalid) {
+        if (ploc.reg0 >= R0 && ploc.reg0 <= R7) {
+          nIntRegs++;
+        } else if (ploc.reg0 >= V0 && ploc.reg0 <= V7) {
+          nFpRegs++;
+        }
+      }
+      if (ploc.reg1 != kRinvalid) {
+        if (ploc.reg1 >= R0 && ploc.reg1 <= R7) {
+          nIntRegs++;
+        } else if (ploc.reg1 >= V0 && ploc.reg1 <= V7) {
+          nFpRegs++;
+        }
+      }
+    }
+    SetSizeOfGRSaveArea((k8BitSize - nIntRegs) * kSizeOfPtr);
+    SetSizeOfVRSaveArea((k8BitSize - nFpRegs) * kSizeOfPtr * 2);
+  }
 }
 
 void AArch64MemLayout::LayoutFormalParams() {
@@ -257,6 +295,7 @@ void AArch64MemLayout::LayoutActualParams() {
 }
 
 void AArch64MemLayout::LayoutStackFrame() {
+  LayoutVarargParams();
   LayoutFormalParams();
   /*
    * We do need this as LDR/STR with immediate
@@ -334,6 +373,13 @@ int32 AArch64MemLayout::StackFrameSize() {
   int32 total = segArgsRegPassed.GetSize() + static_cast<AArch64CGFunc*>(cgFunc)->SizeOfCalleeSaved() +
                 GetSizeOfRefLocals() + locals().GetSize() + GetSizeOfSpillReg();
 
+  if (GetSizeOfGRSaveArea() > 0) {
+    total += RoundUp(GetSizeOfGRSaveArea(), kAarch64StackPtrAlignment);
+  }
+  if (GetSizeOfVRSaveArea() > 0) {
+    total += RoundUp(GetSizeOfVRSaveArea(), kAarch64StackPtrAlignment);
+  }
+
   /*
    * if the function does not have VLA nor alloca,
    * we allocate space for arguments to stack-pass
@@ -359,4 +405,20 @@ int32 AArch64MemLayout::GetRefLocBaseLoc() const {
   }
   return beforeSize + kSizeOfFplr;
 }
+
+int32 AArch64MemLayout::GetGRSaveAreaBaseLoc() {
+  int32 total = RealStackFrameSize() -
+                RoundUp(GetSizeOfGRSaveArea(), kAarch64StackPtrAlignment);
+  total -= SizeOfArgsToStackPass();
+  return total;
+}
+
+int32 AArch64MemLayout::GetVRSaveAreaBaseLoc() {
+  int32 total = RealStackFrameSize() -
+                RoundUp(GetSizeOfGRSaveArea(), kAarch64StackPtrAlignment) -
+                RoundUp(GetSizeOfVRSaveArea(), kAarch64StackPtrAlignment);
+  total -= SizeOfArgsToStackPass();
+  return total;
+}
+
 }  /* namespace maplebe */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020 - 2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -30,7 +30,8 @@ BECommon::BECommon(MIRModule &mod)
           mirModule.GetMPAllocator().Adapter()),
       structFieldCountTable(GlobalTables::GetTypeTable().GetTypeTable().size(),
                             0, mirModule.GetMPAllocator().Adapter()),
-      jClassLayoutTable(mirModule.GetMPAllocator().Adapter()) {
+      jClassLayoutTable(mirModule.GetMPAllocator().Adapter()),
+      funcReturnType(mirModule.GetMPAllocator().Adapter()) {
     for (uint32 i = 1; i < GlobalTables::GetTypeTable().GetTypeTable().size(); ++i) {
       MIRType *ty = GlobalTables::GetTypeTable().GetTypeTable()[i];
       ComputeTypeSizesAligns(*ty);
@@ -595,6 +596,11 @@ void BECommon::AddAndComputeSizeAlign(MIRType &ty) {
 void BECommon::AddElementToJClassLayout(MIRClassType &klass, JClassFieldInfo info) {
   JClassLayout &layout = *(jClassLayoutTable.at(&klass));
   layout.emplace_back(info);
+}
+
+void BECommon::AddElementToFuncReturnType(MIRFunction &func, TyIdx tyIdx) {
+  TyIdx &ty = funcReturnType.at(&func);
+  ty = tyIdx;
 }
 
 MIRType *BECommon::BeGetOrCreatePointerType(const MIRType &pointedType) {

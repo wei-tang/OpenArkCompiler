@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020 - 2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -47,6 +47,11 @@ enum MemSegmentKind : uint8 {
    *    (or we may allocate them in caller-saved; may be this is better...)
    */
   kMsArgsRegPassed,
+  /*
+   * GR/VR Save areas for unnamed arguments under vararg functions
+   */
+  kMsGrSaveArea,
+  kMsVrSaveArea,
   /* local (auto) variables */
   kMsRefLocals,
   kMsLocals,

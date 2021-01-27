@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020 - 2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -41,6 +41,7 @@ class AArch64GenProEpilog : public GenProEpilog {
   void AppendInstructionAllocateCallFrame(AArch64reg reg0, AArch64reg reg1, RegType rty);
   void AppendInstructionAllocateCallFrameDebug(AArch64reg reg0, AArch64reg reg1, RegType rty);
   void GeneratePushRegs();
+  void GeneratePushUnnamedVarargRegs();
   void AppendInstructionStackCheck(AArch64reg reg, RegType rty, int offset);
   void GenerateProlog(BB&);
 
