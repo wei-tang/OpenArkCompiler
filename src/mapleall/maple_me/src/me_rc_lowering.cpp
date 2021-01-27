@@ -171,7 +171,11 @@ IntrinsiccallMeStmt *RCLowering::GetIvarRHSHandleStmt(const MeStmt &stmt) {
   }
   // load global into temp and update rhs to temp
   std::vector<MeExpr*> opnds;
-  MIRIntrinsicID rcCallId = ivar->IsVolatile() ? PrepareVolatileCall(stmt, INTRN_MCCLoadRefVol) : INTRN_MCCLoadRef;
+  bool isRCWeak = ivar->IsRCWeak();
+  // @Weak annotation handling
+  MIRIntrinsicID rcCallId =
+      ivar->IsVolatile() ? PrepareVolatileCall(stmt, isRCWeak ? INTRN_MCCLoadWeakVol : INTRN_MCCLoadRefVol)
+                         : (isRCWeak ? INTRN_MCCLoadWeak : INTRN_MCCLoadRef);
   opnds.push_back(&ivar->GetBase()->GetAddrExprBase());
   opnds.push_back(irMap.CreateAddrofMeExpr(*ivar));
   // rhs is not special, skip
