@@ -18,41 +18,31 @@
 #include "ver_symbol.h"
 #include "ssa_tab.h"
 #include "me_ir.h"
-#include "dominance.h"
 #include "me_builder.h"
 
 namespace maple {
+class IRMapBuild;
+
 class IRMap : public AnalysisResult {
+  friend IRMapBuild;
  public:
-  IRMap(SSATab &ssaTab, Dominance &dom, MemPool &memPool, MemPool &tmpMemPool, uint32 hashTableSize)
+  IRMap(SSATab &ssaTab, MemPool &memPool, uint32 hashTableSize)
       : AnalysisResult(&memPool),
         ssaTab(ssaTab),
         mirModule(ssaTab.GetModule()),
-        dom(dom),
         irMapAlloc(&memPool),
-        tempAlloc(&tmpMemPool),
         mapHashLength(hashTableSize),
         hashTable(mapHashLength, nullptr, irMapAlloc.Adapter()),
         vst2MeExprTable(ssaTab.GetVersionStTableSize(), nullptr, irMapAlloc.Adapter()),
         regMeExprTable(irMapAlloc.Adapter()),
         lpreTmps(irMapAlloc.Adapter()),
         vst2Decrefs(irMapAlloc.Adapter()),
-        meBuilder(irMapAlloc) {
-    static auto stmtBuildPolicyLoader = InitMeStmtFactory();
-    (void)stmtBuildPolicyLoader;
-  }
+        meBuilder(irMapAlloc) {}
 
   virtual ~IRMap() = default;
   virtual BB *GetBB(BBId id) = 0;
   virtual BB *GetBBForLabIdx(LabelIdx lidx, PUIdx pidx = 0) = 0;
-
-  Dominance &GetDominance() {
-    return dom;
-  }
-
   MeExpr *HashMeExpr(MeExpr &meExpr);
-  void BuildBB(BB &bb, std::vector<bool> &bbIRMapProcessed);
-  MeExpr *BuildExpr(BaseNode&);
   IvarMeExpr *BuildIvarFromOpMeExpr(OpMeExpr &opMeExpr);
   IvarMeExpr *BuildLHSIvarFromIassMeStmt(IassignMeStmt &iassignMeStmt);
   IvarMeExpr *BuildLHSIvar(MeExpr &baseAddr, IassignMeStmt &iassignMeStmt, FieldID fieldID);
@@ -94,6 +84,15 @@ class IRMap : public AnalysisResult {
   void InsertMeStmtBefore(BB&, MeStmt&, MeStmt&);
   MePhiNode *CreateMePhi(ScalarMeExpr&);
 
+  void DumpBB(const BB &bb) {
+    int i = 0;
+    for (const auto &meStmt : bb.GetMeStmts()) {
+      if (GetDumpStmtNum()) {
+        LogInfo::MapleLogger() << "(" << i++ << ") ";
+      }
+      meStmt.Dump(this);
+    }
+  }
   virtual void Dump() = 0;
   virtual void SetCurFunction(const BB&) {}
 
@@ -136,11 +135,6 @@ class IRMap : public AnalysisResult {
   MapleAllocator &GetIRMapAlloc() {
     return irMapAlloc;
   }
-
-  MapleAllocator &GetTempAlloc() {
-    return tempAlloc;
-  }
-
   int32 GetExprID() const {
     return exprID;
   }
@@ -216,9 +210,7 @@ class IRMap : public AnalysisResult {
  private:
   SSATab &ssaTab;
   MIRModule &mirModule;
-  Dominance &dom;
   MapleAllocator irMapAlloc;
-  MapleAllocator tempAlloc;
   int32 exprID = 0;                                // for allocating exprid_ in MeExpr
   uint32 mapHashLength;                            // size of hashTable
   MapleVector<MeExpr*> hashTable;                  // the value number hash table
@@ -232,32 +224,9 @@ class IRMap : public AnalysisResult {
   MeBuilder meBuilder;
 
   bool ReplaceMeExprStmtOpnd(uint32, MeStmt&, const MeExpr&, MeExpr&);
-  MeExpr *BuildLHSVar(const VersionSt &vst, DassignMeStmt &defMeStmt);
   void PutToBucket(uint32, MeExpr&);
-  MeStmt *BuildMeStmtWithNoSSAPart(StmtNode &stmt);
-  MeStmt *BuildMeStmt(StmtNode&);
-  MeExpr *BuildLHSReg(const VersionSt &vst, RegassignMeStmt &defMeStmt, const RegassignNode &regassign);
   RegMeExpr *CreateRefRegMeExpr(const MIRSymbol&);
-  VarMeExpr *GetOrCreateVarFromVerSt(const VersionSt &vst);
-  RegMeExpr *GetOrCreateRegFromVerSt(const VersionSt &vst);
-  void BuildChiList(MeStmt&, TypeOfMayDefList&, MapleMap<OStIdx, ChiMeNode*>&);
-  void BuildMustDefList(MeStmt &meStmt, TypeOfMustDefList&, MapleVector<MustDefMeNode>&);
-  void BuildMuList(TypeOfMayUseList&, MapleMap<OStIdx, VarMeExpr*>&);
-  void BuildPhiMeNode(BB&);
   BB *GetFalseBrBB(const CondGotoMeStmt&);
-  void SetMeExprOpnds(MeExpr &meExpr, BaseNode &mirNode);
-  static bool InitMeStmtFactory();
-  MeStmt *BuildDassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildRegassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildIassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildMaydassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildCallMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildNaryMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildRetMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildWithMuMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildGosubMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildThrowMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
-  MeStmt *BuildSyncMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
   MeExpr *ReplaceMeExprExpr(MeExpr &origExpr, MeExpr &newExpr, size_t opndsSize, const MeExpr &meExpr, MeExpr &repExpr);
 };
 }  // namespace maple

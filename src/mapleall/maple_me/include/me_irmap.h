@@ -22,8 +22,8 @@ namespace maple {
 class MeIRMap : public IRMap {
  public:
   static const uint32 kHmapHashLength = 5107;
-  MeIRMap(MeFunction &f, Dominance &dom, MemPool &memPool, MemPool &tmpMemPool)
-      : IRMap(*f.GetMeSSATab(), dom, memPool, tmpMemPool, kHmapHashLength), func(f) {
+  MeIRMap(MeFunction &f, MemPool &memPool)
+      : IRMap(*f.GetMeSSATab(), memPool, kHmapHashLength), func(f) {
     SetDumpStmtNum(MeOption::stmtNum);
   }
 
@@ -37,10 +37,7 @@ class MeIRMap : public IRMap {
     return func.GetLabelBBAt(lidx);
   }
 
-  void DumpBB(const BB &bb);
   void Dump() override;
-  void EmitBB(BB&, BlockNode&);
-  void EmitBBStmts(BB&, BlockNode&);
 
   MeFunction &GetFunc() const {
     return func;
@@ -50,16 +47,5 @@ class MeIRMap : public IRMap {
   MeFunction &func;
 };
 
-class MeDoIRMap : public MeFuncPhase {
- public:
-  explicit MeDoIRMap(MePhaseID id) : MeFuncPhase(id) {}
-
-  ~MeDoIRMap() = default;
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr *moduleResMgr) override;
-  std::string PhaseName() const override {
-    return "irmap";
-  }
-};
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_IRMAP_H

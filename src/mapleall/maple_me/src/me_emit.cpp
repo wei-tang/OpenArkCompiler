@@ -41,7 +41,7 @@ AnalysisResult *MeDoEmit::Run(MeFunction *func, MeFuncResultMgr*, ModuleResultMg
     }
     for (BB *bb : layoutBBs) {
       ASSERT(bb != nullptr, "Check bblayout phase");
-      func->GetIRMap()->EmitBB(*bb, *mirFunction->GetBody());
+      bb->EmitBB(*func->GetMeSSATab(), *mirFunction->GetBody(), false);
     }
     if (DEBUGFUNC(func)) {
       LogInfo::MapleLogger() << "\n==============after meemit =============" << '\n';

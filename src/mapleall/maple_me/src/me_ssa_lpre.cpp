@@ -356,7 +356,7 @@ AnalysisResult *MeDoSSALPre::Run(MeFunction *irFunc, MeFuncResultMgr *funcMgr, M
   }
   auto *dom = static_cast<Dominance*>(funcMgr->GetAnalysisResult(MeFuncPhase_DOMINANCE, irFunc));
   CHECK_NULL_FATAL(dom);
-  auto *irMap = static_cast<MeIRMap*>(funcMgr->GetAnalysisResult(MeFuncPhase_IRMAP, irFunc));
+  auto *irMap = static_cast<MeIRMap*>(funcMgr->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, irFunc));
   CHECK_NULL_FATAL(irMap);
   auto *identLoops = static_cast<IdentifyLoops*>(funcMgr->GetAnalysisResult(MeFuncPhase_MELOOP, irFunc));
   CHECK_NULL_FATAL(identLoops);

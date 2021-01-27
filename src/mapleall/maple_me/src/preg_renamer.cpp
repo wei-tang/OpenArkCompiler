@@ -118,7 +118,7 @@ void PregRenamer::RunSelf() const {
 }
 
 AnalysisResult *MeDoPregRename::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  auto *irMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAP, func));
+  auto *irMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   PregRenamer pregRenamer(*NewMemPool(), *func, *irMap, DEBUGFUNC(func));
   pregRenamer.RunSelf();
   if (DEBUGFUNC(func)) {

@@ -436,7 +436,7 @@ AnalysisResult *MeDoAnalyzeRC::Run(MeFunction *func, MeFuncResultMgr *m, ModuleR
   ASSERT(dom != nullptr, "dominance phase has problem");
   auto *aliasClass = static_cast<AliasClass*>(m->GetAnalysisResult(MeFuncPhase_ALIASCLASS, func));
   ASSERT(aliasClass != nullptr, "aliasClass phase has problem");
-  ASSERT_NOT_NULL(m->GetAnalysisResult(MeFuncPhase_IRMAP, func));
+  ASSERT_NOT_NULL(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   if (DEBUGFUNC(func)) {
     LogInfo::Info() << " Processing " << func->GetMirFunc()->GetName() << '\n';
   }
