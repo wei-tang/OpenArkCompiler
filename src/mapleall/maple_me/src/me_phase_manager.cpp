@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -51,6 +51,7 @@
 #include "gen_check_cast.h"
 #include "me_ssa_tab.h"
 #include "mpl_timer.h"
+#include "constantfold.h"
 
 #define JAVALANG (mirModule.IsJavaModule())
 
@@ -153,6 +154,10 @@ void MeFuncPhaseManager::Run(MIRFunction *mirFunc, uint64 rangeNum, const std::s
   globalMIRModule = &mirModule;
   globalFunc = &func;
 #endif
+  // call constant folding
+  maple::ConstantFold cf(mirModule);
+  (void)cf.Simplify(mirFunc->GetBody());
+
   func.Prepare(rangeNum);
   if (timePhases) {
     funcPrepareTimer.Stop();
