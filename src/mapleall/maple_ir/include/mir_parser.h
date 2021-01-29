@@ -25,6 +25,8 @@ using BaseNodePtr = BaseNode*;
 using StmtNodePtr = StmtNode*;
 using BlockNodePtr = BlockNode*;
 
+class FormalDef;
+
 class MIRParser {
  public:
   explicit MIRParser(MIRModule &md)
@@ -34,15 +36,13 @@ class MIRParser {
 
   ~MIRParser() = default;
 
-  MIRPreg *CreateMirPreg(uint32 pregNo) const;
-  PregIdx LookupOrCreatePregIdx(uint32 pregNo, bool isref, MIRFunction &curfunc);
-  void ResetMaxPregNo(MIRFunction&);
   MIRFunction *CreateDummyFunction();
   void ResetCurrentFunction() {
     mod.SetCurFunction(dummyFunction);
   }
 
-  bool ParseLoc(StmtNodePtr &stmt);
+  bool ParseLoc();
+  bool ParseLocStmt(StmtNodePtr &stmt);
   bool ParseAlias(StmtNodePtr &stmt);
   uint8 *ParseWordsInfo(uint32 size);
   bool ParseSwitchCase(int32&, LabelIdx&);
@@ -88,13 +88,13 @@ class MIRParser {
   bool ParseStatement(StmtNodePtr &stmt);
   bool ParseSpecialReg(PregIdx &pregIdx);
   bool ParsePseudoReg(PrimType pty, PregIdx &pregIdx);
-  bool ParseRefPseudoReg(PregIdx&);
   bool ParseStmtBlock(BlockNodePtr &blk);
   bool ParsePrototype(MIRFunction &fn, MIRSymbol &funcSt, TyIdx &funcTyIdx);
   bool ParseFunction(uint32 fileIdx = 0);
   bool ParseStorageClass(MIRSymbol &st) const;
   bool ParseDeclareVar(MIRSymbol&);
   bool ParseDeclareReg(MIRSymbol&, MIRFunction&);
+  bool ParseDeclareFormal(FormalDef *);
   bool ParsePrototypeRemaining(MIRFunction&, std::vector<TyIdx> &, std::vector<TypeAttrs>&, bool&);
 
   // Stmt Parser
@@ -260,7 +260,7 @@ class MIRParser {
   bool ParseStmtBlockForFuncInfo();
 
   // common func
-  void SetSrcPos(StmtNodePtr stmt, uint32 mplNum);
+  void SetSrcPos(SrcPosition &srcPosition, uint32 mplNum);
 
   // func for ParseExpr
   Opcode paramOpForStmt = OP_undef;
@@ -279,7 +279,6 @@ class MIRParser {
   uint32 lastLineNum = 0;                    // to remember second number after LOC
   uint32 firstLineNum = 0;                   // to track function starting line
   std::map<TyIdx, TyIdx> typeDefIdxMap;      // map previous declared tyIdx
-  uint32 maxPregNo = 0;                      // max pregNo seen so far in current function
   bool firstImport = true;                   // Mark the first imported mplt file
   bool paramParseLocalType = false;          // param for ParseTypedef
   uint32 paramFileIdx = 0;                   // param for ParseMIR()

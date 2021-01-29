@@ -34,13 +34,6 @@ enum FuncProp : uint32_t {
 }  // namespace
 
 namespace maple {
-void MIRFunction::Init() {
-  symTab = module->GetMemPool()->New<MIRSymbolTable>(module->GetMPAllocator());
-  if (!module->IsWithMe()) {
-    pregTab = module->GetMemPool()->New<MIRPregTable>(module, &module->GetMPAllocator());
-  }
-  return;
-}
 
 const MIRSymbol *MIRFunction::GetFuncSymbol() const {
   return GlobalTables::GetGsymTable().GetSymbolFromStidx(symbolTableIdx.Idx());
@@ -97,12 +90,13 @@ MIRType *MIRFunction::GetNthParamType(size_t i) {
 MIRFuncType *MIRFunction::ReconstructFormals(const std::vector<MIRSymbol*> &symbols, bool clearOldArgs) {
   auto *newFuncType = static_cast<MIRFuncType*>(funcType->CopyMIRTypeNode());
   if (clearOldArgs) {
-    formals.clear();
+    formalDefVec.clear();
     newFuncType->GetParamTypeList().clear();
     newFuncType->GetParamAttrsList().clear();
   }
   for (auto *symbol : symbols) {
-    formals.push_back(symbol);
+    FormalDef formalDef(symbol->GetNameStrIdx(), symbol, symbol->GetTyIdx(), symbol->GetAttrs());
+    formalDefVec.push_back(formalDef);
     newFuncType->GetParamTypeList().push_back(symbol->GetTyIdx());
     newFuncType->GetParamAttrsList().push_back(symbol->GetAttrs());
   }
@@ -229,28 +223,33 @@ void MIRFunction::DumpFlavorLoweredThanMmpl() const {
   LogInfo::MapleLogger() << " (";
 
   // Dump arguments
-  size_t argSize = GetParamSize();
-  for (size_t i = 0; i < argSize; ++i) {
-    const MIRSymbol *symbol = formals[i];
-    if (symbol != nullptr) {
+  bool hasPrintedFormal = false;
+  for (uint32 i = 0; i < formalDefVec.size(); i++) {
+    MIRSymbol *symbol = formalDefVec[i].formalSym;
+    if (symbol == nullptr && (formalDefVec[i].formalStrIdx.GetIdx() == 0 ||
+                              GlobalTables::GetStrTable().GetStringFromStrIdx(formalDefVec[i].formalStrIdx).empty())) {
+      break;
+    }
+    hasPrintedFormal = true;
+    if (symbol == nullptr) {
+      LogInfo::MapleLogger() << "var %" << GlobalTables::GetStrTable().GetStringFromStrIdx(formalDefVec[i].formalStrIdx) << " ";
+    } else {
       if (symbol->GetSKind() != kStPreg) {
         LogInfo::MapleLogger() << "var %" << symbol->GetName() << " ";
       } else {
         LogInfo::MapleLogger() << "reg %" << symbol->GetPreg()->GetPregNo() << " ";
       }
     }
-    constexpr int kIndent = 2;
-    const MIRType *type = GetNthParamType(i);
-    type->Dump(kIndent);
-    if (symbol->GetAttr(ATTR_localrefvar)) {
-      LogInfo::MapleLogger() << " localrefvar";
-    }
-    if (i != (argSize - 1)) {
+    MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(formalDefVec[i].formalTyIdx);
+    ty->Dump(2);
+    TypeAttrs tA = formalDefVec[i].formalAttrs;
+    tA.DumpAttributes();
+    if (i != (formalDefVec.size() - 1)) {
       LogInfo::MapleLogger() << ", ";
     }
   }
   if (IsVarargs()) {
-    if (argSize == 0) {
+    if (!hasPrintedFormal) {
       LogInfo::MapleLogger() << "...";
     } else {
       LogInfo::MapleLogger() << ", ...";
@@ -266,7 +265,7 @@ void MIRFunction::Dump(bool withoutBody) {
   // class and interface decls.  these has nothing in formals
   // they do have paramtypelist_. this can not skip ones without args
   // but for them at least the func decls are valid
-  if (GetParamSize() != formals.size() || GetAttr(FUNCATTR_optimized)) {
+  if (GetParamSize() != formalDefVec.size() || GetAttr(FUNCATTR_optimized)) {
     return;
   }
 
@@ -276,6 +275,12 @@ void MIRFunction::Dump(bool withoutBody) {
 
   MIRSymbol *symbol = GlobalTables::GetGsymTable().GetSymbolFromStidx(symbolTableIdx.Idx());
   ASSERT(symbol != nullptr, "symbol MIRSymbol is null");
+  if (!withoutBody) {
+    if (symbol->GetSrcPosition().FileNum() != 0 && symbol->GetSrcPosition().LineNum() != 0 && symbol->GetSrcPosition().LineNum() != MIRSymbol::lastPrintedLineNum) {
+      LogInfo::MapleLogger() << "LOC " << symbol->GetSrcPosition().FileNum() << " " << symbol->GetSrcPosition().LineNum() << std::endl;
+      MIRSymbol::lastPrintedLineNum = symbol->GetSrcPosition().LineNum();
+    }
+  }
   LogInfo::MapleLogger() << "func " << "&" << symbol->GetName();
   theMIRModule = module;
   funcAttrs.DumpAttributes();
@@ -504,7 +509,7 @@ const MIRType *MIRFunction::GetNodeType(const BaseNode &node) const {
   }
   if (node.GetOpCode() == OP_regread) {
     const auto &nodeReg = static_cast<const RegreadNode&>(node);
-    const MIRPreg *pReg = GetPregTab()->PregFromPregIdx(nodeReg.GetRegIdx());
+    MIRPreg *pReg = GetPregTab()->PregFromPregIdx(nodeReg.GetRegIdx());
     if (pReg->GetPrimType() == PTY_ref) {
       return pReg->GetMIRType();
     }
@@ -524,11 +529,46 @@ void MIRFunction::NewBody() {
   MIRPregTable *oldPregTable = GetPregTab();
   MIRTypeNameTable *oldTypeNameTable = typeNameTab;
   MIRLabelTable *oldLabelTable = GetLabelTab();
+
   symTab = module->GetMemPool()->New<MIRSymbolTable>(module->GetMPAllocator());
   pregTab = module->GetMemPool()->New<MIRPregTable>(module, &module->GetMPAllocator());
   typeNameTab = module->GetMemPool()->New<MIRTypeNameTable>(module->GetMPAllocator());
   labelTab = module->GetMemPool()->New<MIRLabelTable>(module->GetMPAllocator());
-  if (oldSymTable != nullptr) {
+
+  if (oldSymTable == nullptr) {
+    // formals not yet entered into symTab; enter them now
+    for (size_t i = 0; i < formalDefVec.size(); i++) {
+      FormalDef &formalDef = formalDefVec[i];
+      formalDef.formalSym = symTab->CreateSymbol(kScopeLocal);
+      formalDef.formalSym->SetStorageClass(kScFormal);
+      formalDef.formalSym->SetNameStrIdx(formalDef.formalStrIdx);
+      formalDef.formalSym->SetTyIdx(formalDef.formalTyIdx);
+      formalDef.formalSym->SetAttrs(formalDef.formalAttrs);
+      const std::string formalName = GlobalTables::GetStrTable().GetStringFromStrIdx(formalDef.formalStrIdx);
+      if (!isdigit(formalName.front())) {
+        formalDef.formalSym->SetSKind(kStVar);
+        symTab->AddToStringSymbolMap(*formalDef.formalSym);
+      } else {
+        formalDef.formalSym->SetSKind(kStPreg);
+        uint32 thepregno = std::stoi(formalName);
+        MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(formalDef.formalTyIdx);
+        PrimType pType = mirType->GetPrimType();
+        // if mirType info is not needed, set mirType to nullptr
+        if (mirType->GetPrimType() != PTY_ref && mirType->GetPrimType() != PTY_ptr) {
+          mirType = nullptr;
+        } else if (mirType->GetPrimType() == PTY_ptr) {
+          MIRType *pointedType = static_cast<MIRPtrType *>(mirType)->GetPointedType();
+          if (pointedType == nullptr || pointedType->GetKind() != kTypeFunction) {
+            mirType = nullptr;
+          }
+        }
+        PregIdx pregIdx = pregTab->EnterPregNo(thepregno, pType, mirType);
+        MIRPreg *preg = pregTab->PregFromPregIdx(pregIdx);
+        formalDef.formalSym->SetPreg(preg);
+      }
+    }
+  }
+  else {
     for (size_t i = 1; i < oldSymTable->GetSymbolTableSize(); ++i) {
       (void)GetSymTab()->AddStOutside(oldSymTable->GetSymbolFromStIdx(i));
     }

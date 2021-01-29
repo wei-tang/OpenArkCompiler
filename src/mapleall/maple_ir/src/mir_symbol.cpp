@@ -27,6 +27,8 @@
 namespace maple {
 using namespace namemangler;
 
+uint32 MIRSymbol::lastPrintedLineNum = 0;
+
 bool MIRSymbol::IsTypeVolatile(int fieldID) const {
   const MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(GetTyIdx());
   return ty->IsVolatile(fieldID);
@@ -291,9 +293,18 @@ bool MIRSymbol::IgnoreRC() const {
 }
 
 void MIRSymbol::Dump(bool isLocal, int32 indent, bool suppressInit) const {
+  if (sKind == kStVar || sKind == kStFunc) {
+    if (srcPosition.FileNum() != 0 && srcPosition.LineNum() != 0 && srcPosition.LineNum() != lastPrintedLineNum) {
+      LogInfo::MapleLogger() << "LOC " << srcPosition.FileNum() << " " << srcPosition.LineNum() << std::endl;
+      lastPrintedLineNum = srcPosition.LineNum();
+    }
+  }
   // exclude unused symbols, formal symbols and extern functions
   if (GetStorageClass() == kScUnused || GetStorageClass() == kScFormal ||
       (GetStorageClass() == kScExtern && sKind == kStFunc)) {
+    return;
+  }
+  if (GetIsImported() && !GetAppearsInCode()) {
     return;
   }
   if (GetTyIdx() >= GlobalTables::GetTypeTable().GetTypeTable().size()) {
@@ -388,25 +399,5 @@ bool MIRLabelTable::AddToStringLabelMap(LabelIdx labelIdx) {
   GStrIdx strIdx = labelTable[labelIdx];
   strIdxToLabIdxMap[strIdx] = labelIdx;
   return true;
-}
-
-void MIRPregTable::DumpRef(int32 indent) {
-  MapleVector<MIRPreg*> &pRegTable = pregTable;
-  for (size_t i = 1; i < pRegTable.size(); ++i) {
-    MIRPreg *mirPReg = pRegTable[i];
-    if (mirPReg->GetPrimType() != PTY_ref) {
-      continue;
-    }
-    if (mirPReg->GetMIRType() == nullptr) {
-      continue;
-    }
-    PrintIndentation(indent);
-    LogInfo::MapleLogger() << "reg ";
-    LogInfo::MapleLogger() << "%" << mirPReg->GetPregNo();
-    LogInfo::MapleLogger() << " ";
-    mirPReg->GetMIRType()->Dump(0);
-    LogInfo::MapleLogger() << " " << (mirPReg->NeedRC() ? 1 : 0);
-    LogInfo::MapleLogger() << "\n";
-  }
 }
 }  // namespace maple
