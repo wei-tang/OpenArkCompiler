@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -17,7 +17,7 @@
 #include <sstream>
 #include "mir_const.h"
 #include "mir_preg.h"
-#include "global_tables.h"
+#include "src_position.h"
 
 constexpr int kScopeLocal = 2;   // the default scope level for function variables
 constexpr int kScopeGlobal = 1;  // the scope level for global variables
@@ -46,6 +46,7 @@ enum MIRStorageClass : uint8 {
   kScTypeInfo,      // used for eh type st
   kScTypeInfoName,  // used for eh type st name
   kScTypeCxxAbi,    // used for eh inherited from c++ __cxxabiv1
+  kScEHRegionSupp,  // used for tables that control C++ exception handling
   kScUnused
 };
 
@@ -123,6 +124,14 @@ class MIRSymbol {
 
   bool IsTmpUnused() const {
     return isTmpUnused;
+  }
+
+  void SetAppearsInCode(bool appears) {
+    appearsInCode = appears;
+  }
+
+  bool GetAppearsInCode() const {
+    return appearsInCode;
   }
 
   void SetTyIdx(TyIdx tyIdx) {
@@ -298,6 +307,14 @@ class MIRSymbol {
     this->value = value;
   }
 
+  SrcPosition &GetSrcPosition() {
+    return srcPosition;
+  }
+
+  void SetSrcPosition(const SrcPosition &position) {
+    srcPosition = position;
+  }
+
   MIRPreg *GetPreg() {
     ASSERT(IsPreg(), "must be Preg");
     return value.preg;
@@ -402,6 +419,14 @@ class MIRSymbol {
     return nameStrIdx < msym.nameStrIdx;
   }
 
+  static uint32 LastPrintedLineNum() {
+    return lastPrintedLineNum;
+  }
+
+  static void SetLastPrintedLineNum(uint32 val) {
+    lastPrintedLineNum = val;
+  }
+
   // Please keep order of the fields, avoid paddings.
  private:
   TyIdx tyIdx{ 0 };
@@ -417,13 +442,16 @@ class MIRSymbol {
   bool isImported = false;
   bool isImportedDecl = false;
   bool isTmpUnused = false;  // when parse the mplt_inline file, mark all the new symbol as tmpunused
+  bool appearsInCode = false;  // only used for kStFunc
   StIdx stIdx { 0, 0 };
   TypeAttrs typeAttrs;
   GStrIdx nameStrIdx{ 0 };
   SymbolType value = { nullptr };
+  SrcPosition srcPosition;      // where the symbol is defined
   static GStrIdx reflectClassNameIdx;
   static GStrIdx reflectMethodNameIdx;
   static GStrIdx reflectFieldNameIdx;
+  static uint32 lastPrintedLineNum;     // used during printing ascii output
 };
 
 class MIRSymbolTable {
@@ -510,7 +538,8 @@ class MIRLabelTable {
   explicit MIRLabelTable(MapleAllocator &allocator)
       : mAllocator(allocator),
         strIdxToLabIdxMap(std::less<GStrIdx>(), mAllocator.Adapter()),
-        labelTable(mAllocator.Adapter()) {
+        labelTable(mAllocator.Adapter()),
+        addrTakenLabels(mAllocator.Adapter()) {
     labelTable.push_back(GStrIdx(kDummyLabel));  // push dummy label index 0
   }
 
@@ -580,6 +609,7 @@ class MIRLabelTable {
   MapleAllocator mAllocator;
   MapleMap<GStrIdx, LabelIdx> strIdxToLabIdxMap;
   MapleVector<GStrIdx> labelTable;  // map label idx to label name
+  MapleUnorderedSet<LabelIdx> addrTakenLabels; // those appeared in addroflabel or MIRLblConst
 };
 }  // namespace maple
 #endif  // MAPLE_IR_INCLUDE_MIR_SYMBOL_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -200,7 +200,7 @@ RegMeExpr *IRMap::CreateRefRegMeExpr(const MIRSymbol &mirSt) {
   MIRType *stType = mirSt.GetType();
   PrimType pType = stType->GetPrimType();
   ASSERT(pType == PTY_ref, "only PTY_ref needed");
-  PregIdx regIdx = mirFunc->GetPregTab()->CreateRefPreg(*stType);
+  PregIdx regIdx = mirFunc->GetPregTab()->CreatePreg(PTY_ref, stType);
   ASSERT(regIdx <= 0xffff, "register oversized");
   MIRPreg *preg = mirFunc->GetPregTab()->PregFromPregIdx(regIdx);
   if (!mirSt.IgnoreRC()) {
@@ -226,7 +226,7 @@ RegMeExpr *IRMap::CreateRegMeExpr(PrimType pType) {
 
 RegMeExpr *IRMap::CreateRegRefMeExpr(MIRType &mirType) {
   MIRFunction *mirFunc = mirModule.CurFunction();
-  PregIdx regIdx = mirFunc->GetPregTab()->CreateRefPreg(mirType);
+  PregIdx regIdx = mirFunc->GetPregTab()->CreatePreg(PTY_ref, &mirType);
   ASSERT(regIdx <= 0xffff, "register oversized");
   OriginalSt *ost = ssaTab.GetOriginalStTable().CreatePregOriginalSt(regIdx, mirFunc->GetPuidx());
   auto *regReadExpr = NewInPool<RegMeExpr>(exprID++, regIdx, mirFunc->GetPuidx(), ost->GetIndex(), 0);

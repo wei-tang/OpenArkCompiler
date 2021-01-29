@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -65,7 +65,32 @@ enum : uint8 {
   kBinEaCgRefNode = 39,
   kBinEaCgObjNode = 40,
   kBinEaCgStart = 41,
-  kBinEaStart = 42
+  kBinEaStart = 42,
+  kBinNodeBlock = 43,
+  kBinOpStatement = 44,
+  kBinOpExpression = 45,
+  kBinReturnvals = 46,
+  kBinTypeTabStart = 47,
+  kBinSymStart = 48,
+  kBinSymTabStart = 49,
+  kBinFuncIdInfoStart = 50,
+  kBinFormalStart = 51,
+  kBinPreg = 52,
+  kBinPregStart = 53,
+  kBinLabelStart = 54,
+  kBinTypenameStart = 55,
+  kBinHeaderStart = 56,
+  kBinAliasMapStart = 57,
+  kBinKindTypeViaTypename = 58,
+  kBinKindSymViaSymname = 59,
+  kBinKindFuncViaSymname = 60,
+  kBinFunctionBodyStart = 61,
+  kBinFormalWordsTypeTagged = 62,
+  kBinFormalWordsRefCounted = 63,
+  kBinLocalWordsTypeTagged = 64,
+  kBinLocalWordsRefCounter = 65,
+  kBinKindConstAddrofLabel = 66,
+  kBinKindConstAddrofLocal = 67,
 };
 
 // this value is used to check wether a file is a binary mplt file

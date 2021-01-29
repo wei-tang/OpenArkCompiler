@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -127,16 +127,13 @@ MIRFunction *Clone::CloneFunction(MIRFunction &originalFunction, const std::stri
     CloneLabels(*newFunc, originalFunction);
     mirBuilder.SetCurrentFunction(*originalCurrFunction);
   }
-  // clone pregIndex
-  if (newFunc->GetPregTab() != nullptr && originalFunction.GetPregTab() != nullptr) {
-    newFunc->GetPregTab()->SetIndex(originalFunction.GetPregTab()->GetIndex());
-  }
   return newFunc;
 }
 
 void Clone::CloneArgument(MIRFunction &originalFunction, ArgVector &argument) const {
   for (size_t i = 0; i < originalFunction.GetFormalCount(); ++i) {
-    argument.push_back(ArgPair(originalFunction.GetFormal(i)->GetName(), originalFunction.GetNthParamType(i)));
+    auto &formalName = originalFunction.GetFormalName(i);
+    argument.push_back(ArgPair(formalName, originalFunction.GetNthParamType(i)));
   }
 }
 

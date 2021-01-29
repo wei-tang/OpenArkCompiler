@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -133,7 +133,7 @@ static constexpr const char kClinvocation[] = ".clinvocation";
 static constexpr const char kPackageNameSplitterStr[] = "_2F";
 static constexpr const char kFileNameSplitterStr[] = "$$";
 static constexpr const char kNameSplitterStr[] = "_7C";  // 7C is the ascii code for |
-static constexpr const char kRigthBracketStr[] = "_29";  // 29 is the ascii code for )
+static constexpr const char kRightBracketStr[] = "_29";  // 29 is the ascii code for )
 static constexpr const char kClassNameSplitterStr[] = "_3B_7C";
 static constexpr const char kJavaLangClassStr[] = "Ljava_2Flang_2FClass_3B";
 static constexpr const char kJavaLangObjectStr[] = "Ljava_2Flang_2FObject_3B";

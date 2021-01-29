@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -154,16 +154,16 @@ class FormalRenaming final {
         MIRType &irTy = utils::ToRef(irFunc.GetNthParamType(i));
         MIRPregTable &irPregTbl = utils::ToRef(irFunc.GetPregTab());
         PregIdx16 regIdx = (irTy.GetPrimType() == PTY_ref) ?
-            static_cast<PregIdx16>(irPregTbl.CreateRefPreg(irTy)) :
+            static_cast<PregIdx16>(irPregTbl.CreatePreg(PTY_ref, &irTy)) :
             static_cast<PregIdx16>(irPregTbl.CreatePreg(irTy.GetPrimType()));
-        irFunc.SetFormal(i, irBuilder.CreatePregFormalSymbol(irTy.GetTypeIndex(), regIdx, irFunc));
+        irFunc.GetFormalDefVec()[i].formalSym = irBuilder.CreatePregFormalSymbol(irTy.GetTypeIndex(), regIdx, irFunc);
       } else {
         RegMeExpr *regExpr = renamedReg[i];
         if (regExpr != nullptr) {
           PregIdx16 regIdx = regExpr->GetRegIdx();
           MIRSymbol &irSym = utils::ToRef(irFunc.GetFormal(i));
           MIRSymbol *newIrSym = irBuilder.CreatePregFormalSymbol(irSym.GetTyIdx(), regIdx, irFunc);
-          irFunc.SetFormal(i, newIrSym);
+          irFunc.GetFormalDefVec()[i].formalSym = newIrSym;
         }
       }
     }

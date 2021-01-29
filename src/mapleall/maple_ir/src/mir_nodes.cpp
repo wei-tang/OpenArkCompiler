@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -240,6 +240,17 @@ void CatchNode::Dump(int32 indent) const {
 
 void CatchNode::Dump() const {
   this->BaseNode::Dump();
+}
+
+void CppCatchNode::Dump(int32 indent) const {
+  PrintIndentation(indent);
+  LogInfo::MapleLogger() << kOpcodeInfo.GetName(op);
+  if (exceptionTyIdx.GetIdx() != 0) {
+    LogInfo::MapleLogger() << " { ";
+    GlobalTables::GetTypeTable().GetTypeFromTyIdx(exceptionTyIdx)->Dump(indent + 1);
+    LogInfo::MapleLogger() << " }";
+  }
+  LogInfo::MapleLogger() << std::endl;
 }
 
 void UnaryNode::DumpOpnd(const MIRModule&, int indent) const {
@@ -1113,12 +1124,8 @@ void BlockNode::Dump(int32 indent, const MIRSymbolTable *theSymTab, MIRPregTable
         }
       }
       // print the locally declared variables
-      if (theSymTab != nullptr) {
-        theSymTab->Dump(true, indent + 1);
-      }
-      if (thePregTab != nullptr) {
-        thePregTab->DumpRef(indent + 1);
-      }
+      theSymTab->Dump(true, indent + 1);
+      thePregTab->DumpPregsWithTypes(indent + 1);
     }
     LogInfo::MapleLogger() << '\n';
     if (theMIRModule->CurFunction()->NeedEmitAliasInfo()) {

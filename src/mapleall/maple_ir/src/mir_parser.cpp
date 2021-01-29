@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -98,12 +98,6 @@ bool MIRParser::ParseStmtRegassign(StmtNodePtr &stmt) {
         Error("inconsistent preg primitive dynamic type at ");
         return false;
       }
-    } else if (preg->GetPrimType() != expr->GetPrimType()) {
-      if (!IsRefOrPtrAssign(preg->GetPrimType(), expr->GetPrimType()) &&
-          !IsNoCvtNeeded(preg->GetPrimType(), expr->GetPrimType())) {
-        Error("inconsistent preg primitive type or need a cvt ");
-        return false;
-      }
     }
   }
   stmt = regAssign;
@@ -200,7 +194,9 @@ bool MIRParser::ParseStmtDoloop(StmtNodePtr &stmt) {
   stmt = doLoopNode;
   lexer.NextToken();
   if (lexer.GetTokenKind() == TK_preg) {
-    PregIdx pregIdx = LookupOrCreatePregIdx(static_cast<uint32>(lexer.GetTheIntVal()), false, *mod.CurFunction());
+    uint32 pregNo = static_cast<uint32>(lexer.GetTheIntVal());
+    MIRFunction *mirFunc = mod.CurFunction();
+    PregIdx pregIdx = mirFunc->GetPregTab()->EnterPregNo(pregNo, kPtyInvalid);
     doLoopNode->SetIsPreg(true);
     doLoopNode->SetDoVarStFullIdx(pregIdx);
     // let other appearances handle the preg primitive type
@@ -696,7 +692,6 @@ PUIdx MIRParser::EnterUndeclaredFunction(bool isMcount) {
   funcSt->SetStorageClass(kScText);
   funcSt->SetSKind(kStFunc);
   auto *fn = mod.GetMemPool()->New<MIRFunction>(&mod, funcSt->GetStIdx());
-  fn->Init();
   fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
   GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
   funcSt->SetFunction(fn);
@@ -1342,7 +1337,7 @@ bool MIRParser::ParseNaryStmtSyncExit(StmtNodePtr &stmt) {
   return ParseNaryStmt(stmt, OP_syncexit);
 }
 
-bool MIRParser::ParseLoc(StmtNodePtr&) {
+bool MIRParser::ParseLoc() {
   if (lexer.NextToken() != TK_intconst) {
     Error("expect intconst in LOC but get ");
     return false;
@@ -1358,6 +1353,10 @@ bool MIRParser::ParseLoc(StmtNodePtr&) {
   }
   lexer.NextToken();
   return true;
+}
+
+bool MIRParser::ParseLocStmt(StmtNodePtr&) {
+  return ParseLoc();
 }
 
 bool MIRParser::ParseStatement(StmtNodePtr &stmt) {
@@ -1412,7 +1411,7 @@ bool MIRParser::ParseStmtBlock(BlockNodePtr &blk) {
         return false;
       }
       if (stmt != nullptr) {  // stmt is nullptr if it is a LOC
-        SetSrcPos(stmt, mplNum);
+        SetSrcPos(stmt->GetSrcPos(), mplNum);
         blk->AddStatement(stmt);
       }
     } else {
@@ -1445,7 +1444,7 @@ void MIRParser::ParseStmtBlockForSeenComment(BlockNodePtr blk, uint32 mplNum) {
     for (size_t i = 0; i < lexer.seenComments.size(); ++i) {
       auto *cmnt = mod.CurFuncCodeMemPool()->New<CommentNode>(mod);
       cmnt->SetComment(lexer.seenComments[i]);
-      SetSrcPos(cmnt, mplNum);
+      SetSrcPos(cmnt->GetSrcPos(), mplNum);
       blk->AddStatement(cmnt);
     }
     lexer.seenComments.clear();
@@ -1457,6 +1456,7 @@ bool MIRParser::ParseStmtBlockForVar(TokenKind stmtTK) {
   MIRSymbol *st = fn->GetSymTab()->CreateSymbol(kScopeLocal);
   st->SetStorageClass(kScAuto);
   st->SetSKind(kStVar);
+  SetSrcPos(st->GetSrcPosition(), lexer.GetLineNum());
   if (stmtTK == TK_tempvar) {
     st->SetIsTmp(true);
   }
@@ -1485,7 +1485,7 @@ bool MIRParser::ParseStmtBlockForReg() {
     return false;
   }
   PregIdx pregIdx;
-  if (!ParseRefPseudoReg(pregIdx)) {
+  if (!ParsePseudoReg(PTY_ref, pregIdx)) {
     return false;
   }
   MIRPreg *preg = mod.CurFunction()->GetPregTab()->PregFromPregIdx(pregIdx);
@@ -1783,6 +1783,7 @@ bool MIRParser::ParseDeclaredFunc(PUIdx &puidx) {
   }
   MIRFunction *func = st->GetFunction();
   puidx = func->GetPuidx();
+  st->SetAppearsInCode(true);
   return true;
 }
 
@@ -1847,17 +1848,10 @@ bool MIRParser::ParseExprRegread(BaseNodePtr &expr) {
     return isSuccess;
   }
   if (lexer.GetTokenKind() == TK_preg) {
-    if (expr->GetPrimType() == PTY_ptr || expr->GetPrimType() == PTY_ref) {
-      PregIdx tempPregIdx = regRead->GetRegIdx();
-      bool isSuccess = ParseRefPseudoReg(tempPregIdx);
-      regRead->SetRegIdx(tempPregIdx);
-      return isSuccess;
-    } else {
-      PregIdx tempPregIdx = regRead->GetRegIdx();
-      bool isSuccess = ParsePseudoReg(expr->GetPrimType(), tempPregIdx);
-      regRead->SetRegIdx(tempPregIdx);
-      return isSuccess;
-    }
+    PregIdx tempPregIdx = regRead->GetRegIdx();
+    bool isSuccess = ParsePseudoReg(regRead->GetPrimType(), tempPregIdx);
+    regRead->SetRegIdx(tempPregIdx);
+    return isSuccess;
   }
   Error("expect special or pseudo register but get ");
   return false;
@@ -2841,7 +2835,7 @@ std::map<TokenKind, MIRParser::FuncPtrParseStmt> MIRParser::InitFuncPtrMapForPar
   funcPtrMap[TK_assertge] = &MIRParser::ParseBinaryStmtAssertGE;
   funcPtrMap[TK_assertlt] = &MIRParser::ParseBinaryStmtAssertLT;
   funcPtrMap[TK_label] = &MIRParser::ParseStmtLabel;
-  funcPtrMap[TK_LOC] = &MIRParser::ParseLoc;
+  funcPtrMap[TK_LOC] = &MIRParser::ParseLocStmt;
   funcPtrMap[TK_ALIAS] = &MIRParser::ParseAlias;
   return funcPtrMap;
 }
@@ -2865,9 +2859,9 @@ std::map<TokenKind, MIRParser::FuncPtrParseStmtBlock> MIRParser::InitFuncPtrMapF
   return funcPtrMap;
 }
 
-void MIRParser::SetSrcPos(StmtNodePtr stmt, uint32 mplNum) {
-  stmt->GetSrcPos().SetFileNum(lastFileNum);
-  stmt->GetSrcPos().SetLineNum(lastLineNum);
-  stmt->GetSrcPos().SetMplLineNum(mplNum);
+void MIRParser::SetSrcPos(SrcPosition &srcPosition, uint32 mplNum) {
+  srcPosition.SetFileNum(lastFileNum);
+  srcPosition.SetLineNum(lastLineNum);
+  srcPosition.SetMplLineNum(mplNum);
 }
 }  // namespace maple
