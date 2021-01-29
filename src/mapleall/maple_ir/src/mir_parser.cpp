@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -195,8 +195,8 @@ bool MIRParser::ParseStmtDoloop(StmtNodePtr &stmt) {
   lexer.NextToken();
   if (lexer.GetTokenKind() == TK_preg) {
     uint32 pregNo = static_cast<uint32>(lexer.GetTheIntVal());
-    MIRFunction *curfunc = mod.CurFunction();
-    PregIdx pregIdx = curfunc->GetPregTab()->EnterPregNo(pregNo, kPtyInvalid);
+    MIRFunction *mirFunc = mod.CurFunction();
+    PregIdx pregIdx = mirFunc->GetPregTab()->EnterPregNo(pregNo, kPtyInvalid);
     doLoopNode->SetIsPreg(true);
     doLoopNode->SetDoVarStFullIdx(pregIdx);
     // let other appearances handle the preg primitive type
@@ -1843,7 +1843,7 @@ bool MIRParser::ParseExprRegread(BaseNodePtr &expr) {
   expr->SetPrimType(GlobalTables::GetTypeTable().GetPrimTypeFromTyIdx(tyidx));
   if (lexer.GetTokenKind() == TK_specialreg) {
     PregIdx tempPregIdx = regRead->GetRegIdx();
-    bool isSuccess =  ParseSpecialReg(tempPregIdx);
+    bool isSuccess = ParseSpecialReg(tempPregIdx);
     regRead->SetRegIdx(tempPregIdx);
     return isSuccess;
   }

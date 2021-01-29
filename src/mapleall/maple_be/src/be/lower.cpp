@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -1249,7 +1249,7 @@ void CGLowerer::LowerEntry(MIRFunction &func) {
   }
 }
 
-void CGLowerer::LowerPseudoRegs(MIRFunction &func) {
+void CGLowerer::LowerPseudoRegs(const MIRFunction &func) const {
   for (uint32 i = 1; i < func.GetPregTab()->Size(); ++i) {
     MIRPreg *ipr = func.GetPregTab()->PregFromPregIdx(i);
     PrimType primType = ipr->GetPrimType();

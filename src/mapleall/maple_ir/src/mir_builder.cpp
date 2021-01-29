@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -226,9 +226,9 @@ MIRFunction *MIRBuilder::GetOrCreateFunction(const std::string &str, TyIdx retTy
     strIdx = GetOrCreateStringIndex(str);
     funcSt = CreateSymbol(TyIdx(0), strIdx, kStFunc, kScText, nullptr, kScopeGlobal);
   }
-  MIRFunction *fn = mirModule->GetMemPool()->New<MIRFunction>(mirModule, funcSt->GetStIdx());
+  auto *fn = mirModule->GetMemPool()->New<MIRFunction>(mirModule, funcSt->GetStIdx());
   fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
-  MIRFuncType *funcType = mirModule->GetMemPool()->New<MIRFuncType>(mirModule->GetMPAllocator());
+  auto *funcType = mirModule->GetMemPool()->New<MIRFuncType>(mirModule->GetMPAllocator());
   fn->SetMIRFuncType(funcType);
   fn->SetReturnTyIdx(retTyIdx);
   GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);

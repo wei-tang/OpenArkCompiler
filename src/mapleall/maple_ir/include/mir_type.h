@@ -24,9 +24,6 @@
 #include "mempool_allocator.h"
 #endif  // MIR_FEATURE_FULL
 
-#define POINTER_SIZE 8
-#define POINTER_P2SIZE 3
-
 namespace maple {
 constexpr int kTypeHashLength = 12289;  // hash length for mirtype, ref: planetmath.org/goodhashtableprimes
 
@@ -42,7 +39,7 @@ const std::string kJstrTypeName = "constStr";
 extern bool VerifyPrimType(PrimType primType1, PrimType primType2);       // verify if primType1 and primType2 match
 extern uint32 GetPrimTypeSize(PrimType primType);                         // answer in bytes; 0 if unknown
 extern uint32 GetPrimTypeP2Size(PrimType primType);                       // answer in bytes in power-of-two.
-extern const PrimType GetSignedPrimType(PrimType pty);                    // return signed version
+extern PrimType GetSignedPrimType(PrimType pty);                          // return signed version
 extern const char *GetPrimTypeName(PrimType primType);
 extern const char *GetPrimTypeJavaName(PrimType primType);
 
@@ -663,7 +660,8 @@ class MIRArrayType : public MIRType {
       CHECK_FATAL(i < kMaxArrayDim, "array index out of range");
       hIdx += (sizeArray[i] << i);
     }
-    hIdx += (typeAttrs.GetAttrFlag() << 3) + typeAttrs.GetAlignValue();
+    constexpr uint8 attrShift = 3;
+    hIdx += (typeAttrs.GetAttrFlag() << attrShift) + typeAttrs.GetAlignValue();
     return hIdx % kTypeHashLength;
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -530,7 +530,7 @@ class IreadFPoffNode : public BaseNode {
 };
 
 class IreadPCoffNode : public IreadFPoffNode {
-  public:
+ public:
 
   IreadPCoffNode(Opcode o, PrimType typ, uint8 numopns) {
     op = o;
@@ -1688,10 +1688,10 @@ class CatchNode : public StmtNode {
 // cppcatch
 class CppCatchNode : public StmtNode {
  public:
-  explicit CppCatchNode(TyIdx idx) : StmtNode(OP_cppcatch), exceptionTyIdx(idx) {}
+  explicit CppCatchNode(const TyIdx &idx) : StmtNode(OP_cppcatch), exceptionTyIdx(idx) {}
   explicit CppCatchNode() : CppCatchNode(TyIdx(0)) {}
 
-  CppCatchNode(CppCatchNode &node) = delete;
+  CppCatchNode(const CppCatchNode &node) = delete;
   CppCatchNode &operator=(const CppCatchNode &node) = delete;
   ~CppCatchNode() = default;
 
@@ -1704,8 +1704,8 @@ class CppCatchNode : public StmtNode {
     return node;
   }
 
-  CppCatchNode *CloneTree(MIRModule *mod) const {
-    return CppCatchNode::CloneTree(*mod->CurFuncCodeMemPoolAllocator());
+  CppCatchNode *CloneTree(const MIRModule &mod) const {
+    return CppCatchNode::CloneTree(*mod.CurFuncCodeMemPoolAllocator());
   }
  public:
   TyIdx exceptionTyIdx;

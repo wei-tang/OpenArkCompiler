@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -221,14 +221,16 @@ bool MIRParser::ParsePseudoReg(PrimType primType, PregIdx &pRegIdx) {
   MIRPreg *preg = curfunc->GetPregTab()->PregFromPregIdx(pRegIdx);
   if (primType != kPtyInvalid) {
     if (preg->GetPrimType() != primType) {
-      if ((primType == PTY_ref || primType == PTY_ptr) && (preg->GetPrimType() == PTY_ref || preg->GetPrimType() == PTY_ptr))
+      if ((primType == PTY_ref || primType == PTY_ptr) &&
+          (preg->GetPrimType() == PTY_ref || preg->GetPrimType() == PTY_ptr)) {
         ;  // PTY_ref and PTY_ptr are compatible with each other
-      else {
+      } else {
         Error("inconsistent preg primitive type at ");
         return false;
       }
     }
   }
+
   lexer.NextToken();
   return true;
 }
@@ -719,7 +721,7 @@ bool MIRParser::ParseFields(MIRStructType &type) {
       return false;
     }
     // tyIdx does not work. Calling EqualTo does not work either.
-    MIRFuncType *funcType = static_cast<MIRFuncType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(funcTyIdx));
+    auto *funcType = static_cast<MIRFuncType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(funcTyIdx));
     fn->SetMIRFuncType(funcType);
     fn->SetReturnStruct(*GlobalTables::GetTypeTable().GetTypeFromTyIdx(funcType->GetRetTyIdx()));
     funcSymbol->SetTyIdx(funcTyIdx);
@@ -1581,7 +1583,7 @@ bool MIRParser::ParseStorageClass(MIRSymbol &symbol) const {
   return false;
 }
 
-bool MIRParser::ParseDeclareReg(MIRSymbol &symbol, MIRFunction &func) {
+bool MIRParser::ParseDeclareReg(MIRSymbol &symbol, const MIRFunction &func) {
   TokenKind tk = lexer.GetTokenKind();
   // i.e, reg %1 u1
   if (tk != TK_reg) {  // reg
@@ -1714,7 +1716,7 @@ bool MIRParser::ParseDeclareVar(MIRSymbol &symbol) {
   return true;
 }
 
-bool MIRParser::ParseDeclareFormal(FormalDef *formalDef) {
+bool MIRParser::ParseDeclareFormal(FormalDef &formalDef) {
   TokenKind tk = lexer.GetTokenKind();
   if (tk != TK_var && tk != TK_reg) {
     return false;
@@ -1725,24 +1727,25 @@ bool MIRParser::ParseDeclareFormal(FormalDef *formalDef) {
       Error("expect local name but get ");
       return false;
     }
-    formalDef->formalStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
+    formalDef.formalStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
   } else {  // tk == TK_reg
     if (nameTk != TK_preg) {
       Error("expect preg but get ");
       return false;
     }
-    formalDef->formalStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(std::to_string(lexer.GetTheIntVal()));
+    formalDef.formalStrIdx =
+        GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(std::to_string(lexer.GetTheIntVal()));
   }
-  tk = lexer.NextToken();
-  if (!ParseType(formalDef->formalTyIdx)) {
+  (void)lexer.NextToken();
+  if (!ParseType(formalDef.formalTyIdx)) {
     Error("ParseDeclareFormal failed when parsing the type");
     return false;
   }
-  if (GlobalTables::GetTypeTable().GetTypeFromTyIdx(formalDef->formalTyIdx)->GetKind() == kTypeByName) {
+  if (GlobalTables::GetTypeTable().GetTypeFromTyIdx(formalDef.formalTyIdx)->GetKind() == kTypeByName) {
     Error("type in var declaration cannot be forward-referenced at ");
     return false;
   }
-  if (!ParseTypeAttrs(formalDef->formalAttrs)) {
+  if (!ParseTypeAttrs(formalDef.formalAttrs)) {
     Error("ParseDeclareFormal failed when parsing type attributes");
     return false;
   }
@@ -1758,7 +1761,7 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
     // mmpl flavor has no prototype declaration, return normally
     return true;
   }
-  std::vector<TyIdx> vecTy;    // for storing the parameter types
+  std::vector<TyIdx> vecTy;       // for storing the parameter types
   std::vector<TypeAttrs> vecAt;  // for storing the parameter type attributes
   // this part for parsing the argument list and return type
   if (lexer.GetTokenKind() != TK_lparen) {
@@ -1768,7 +1771,6 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
   // parse parameters
   bool varArgs = false;
   TokenKind pmTk = lexer.NextToken();
-
   while (pmTk != TK_rparen) {
     if (pmTk == TK_dotdotdot) {
       varArgs = true;
@@ -1781,7 +1783,7 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
       break;
     } else {
       FormalDef formalDef;
-      if (!ParseDeclareFormal(&formalDef)) {
+      if (!ParseDeclareFormal(formalDef)) {
         Error("ParsePrototype expects formal parameter declaration");
         return false;
       }
@@ -1807,7 +1809,8 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
   }
   MIRType *retType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
   func.SetReturnStruct(*retType);
-  MIRType *funcType = GlobalTables::GetTypeTable().GetOrCreateFunctionType(mod, tyIdx, vecTy, vecAt, varArgs, false);
+  MIRType *funcType =
+      GlobalTables::GetTypeTable().GetOrCreateFunctionType(mod, tyIdx, vecTy, vecAt, varArgs, false);
   funcTyIdx = funcType->GetTypeIndex();
   funcSymbol.SetTyIdx(funcTyIdx);
   func.SetMIRFuncType(static_cast<MIRFuncType*>(funcType));
@@ -1900,7 +1903,6 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
     maple::MIRBuilder mirBuilder(&mod);
     funcSymbol = mirBuilder.CreateSymbol(TyIdx(0), strIdx, kStFunc, kScText, nullptr, kScopeGlobal);
     SetSrcPos(funcSymbol->GetSrcPosition(), lexer.GetLineNum());
-
     func = mod.GetMemPool()->New<MIRFunction>(&mod, funcSymbol->GetStIdx());
     func->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
     GlobalTables::GetFunctionTable().GetFuncTable().push_back(func);
@@ -1909,16 +1911,13 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
   }
   func->SetFileIndex(fileIdx);
   curFunc = func;
-
   if (mod.IsJavaModule()) {
     func->SetBaseClassFuncNames(funcSymbol->GetNameStrIdx());
   }
-
   TyIdx funcTyidx;
   if (!ParsePrototype(*func, *funcSymbol, funcTyidx)) {
     return false;
   }
-
   if (lexer.GetTokenKind() == TK_lbrace) {  // #2 parse Function body
     funcSymbol->SetAppearsInCode(true);
     definedLabels.clear();

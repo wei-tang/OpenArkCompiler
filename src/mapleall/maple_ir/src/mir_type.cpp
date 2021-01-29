@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -230,7 +230,7 @@ uint32 GetPrimTypeP2Size(PrimType primType) {
 }
 
 // return the signed version that has the same size
-const PrimType GetSignedPrimType(PrimType pty) {
+PrimType GetSignedPrimType(PrimType pty) {
   switch (pty) {
     case PTY_ptr:
     case PTY_ref:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -53,8 +53,9 @@ class FormalDef {
   TypeAttrs formalAttrs = TypeAttrs();  // the formal's type attributes
 
   FormalDef() {};
-  FormalDef(MIRSymbol *s, TyIdx tidx, TypeAttrs at) : formalSym(s), formalTyIdx(tidx), formalAttrs(at) {}
-  FormalDef(GStrIdx sidx, MIRSymbol *s, TyIdx tidx, TypeAttrs at) : formalStrIdx(sidx), formalSym(s), formalTyIdx(tidx), formalAttrs(at) {}
+  FormalDef(MIRSymbol *s, const TyIdx &tidx, const TypeAttrs &at) : formalSym(s), formalTyIdx(tidx), formalAttrs(at) {}
+  FormalDef(const GStrIdx &sidx, MIRSymbol *s, const TyIdx &tidx, const TypeAttrs &at)
+      : formalStrIdx(sidx), formalSym(s), formalTyIdx(tidx), formalAttrs(at) {}
 };
 
 class MeFunction;  // circular dependency exists, no other choice
@@ -155,6 +156,10 @@ class MIRFunction {
     formalDefVec.push_back(formalDef);
   }
 
+  void AddFormalDef(const FormalDef &formalDef) {
+    formalDefVec.push_back(formalDef);
+  }
+
   size_t GetParamSize() const {
     CHECK_FATAL(funcType != nullptr, "funcType is nullptr");
     return funcType->GetParamTypeList().size();
@@ -175,7 +180,8 @@ class MIRFunction {
 
   const TypeAttrs &GetNthParamAttr(size_t i) const {
     ASSERT(i < formalDefVec.size(), "array index out of range");
-    return formalDefVec[i].formalAttrs;
+    ASSERT(formalDefVec[i].formalSym != nullptr, "null ptr check");
+    return formalDefVec[i].formalSym->GetAttrs();
   }
 
   void UpdateFuncTypeAndFormals(const std::vector<MIRSymbol*> &symbols, bool clearOldArgs = false);
@@ -368,8 +374,8 @@ class MIRFunction {
   uint32 GetInfo(GStrIdx strIdx) const;
   uint32 GetInfo(const std::string &str) const;
   bool IsAFormal(const MIRSymbol *st) const {
-    for (MapleVector<FormalDef>::const_iterator it = formalDefVec.begin(); it != formalDefVec.end(); it++) {
-      if (st == it->formalSym) {
+    for (const auto &formalDef : formalDefVec) {
+      if (st == formalDef.formalSym) {
         return true;
       }
     }
@@ -377,10 +383,11 @@ class MIRFunction {
   }
 
   uint32 GetFormalIndex(const MIRSymbol *symbol) const {
-    for (size_t i = 0; i < formalDefVec.size(); ++i)
+    for (size_t i = 0; i < formalDefVec.size(); ++i) {
       if (formalDefVec[i].formalSym == symbol) {
         return i;
       }
+    }
     return 0xffffffff;
   }
 
@@ -415,6 +422,7 @@ class MIRFunction {
     return codeMemPoolAllocator;
   }
 
+  void EnterFormals();
   void NewBody();
 
   MIRModule *GetModule() {
@@ -489,15 +497,17 @@ class MIRFunction {
       labelTab = module->GetMemPool()->New<MIRLabelTable>(module->GetMPAllocator());
     }
   }
+
   MIRPregTable *GetPregTab() const {
     return pregTab;
   }
+
   void SetPregTab(MIRPregTable *tab) {
     pregTab = tab;
   }
   void AllocPregTab() {
     if (pregTab == nullptr) {
-      pregTab = module->GetMemPool()->New<MIRPregTable>(module, &module->GetMPAllocator());
+      pregTab = module->GetMemPool()->New<MIRPregTable>(&module->GetMPAllocator());
     }
   }
   MIRPreg *GetPregItem(PregIdx idx) {
@@ -520,7 +530,8 @@ class MIRFunction {
   SrcPosition &GetSrcPosition() {
     return GetFuncSymbol()->GetSrcPosition();
   }
-  void SetSrcPosition(SrcPosition &position) {
+
+  void SetSrcPosition(const SrcPosition &position) {
     GetFuncSymbol()->SetSrcPosition(position);
   }
 
@@ -705,15 +716,31 @@ class MIRFunction {
   void SetFormalDefVec(const MapleVector<FormalDef> &currFormals) {
     formalDefVec = currFormals;
   }
+
   MapleVector<FormalDef> &GetFormalDefVec() {
     return formalDefVec;
   }
+
+  const MIRSymbol *GetFormal(size_t i) const {
+    return formalDefVec[i].formalSym;
+  }
+
   MIRSymbol *GetFormal(size_t i) {
     return formalDefVec[i].formalSym;
   }
+
+  const std::string &GetFormalName(size_t i) const {
+    auto *formal = formalDefVec[i].formalSym;
+    if (formal != nullptr) {
+      return formal->GetName();
+    }
+    return GlobalTables::GetStrTable().GetStringFromStrIdx(formalDefVec[i].formalStrIdx);
+  }
+
   size_t GetFormalCount() const {
     return formalDefVec.size();
   }
+
   void ClearFormals() {
     formalDefVec.clear();
   }
@@ -841,7 +868,7 @@ class MIRFunction {
   TyIdx inferredReturnTyIdx{0};     // the actual return type of of this function (may be a
                                     // subclass of the above). 0 means can not be inferred.
   TyIdx classTyIdx{0};              // class/interface type this function belongs to
-  MapleVector<FormalDef> formalDefVec{module->GetMPAllocator().Adapter()};  // the formals in func definition
+  MapleVector<FormalDef> formalDefVec{module->GetMPAllocator().Adapter()};  // the formals in function definition
   MapleSet<MIRSymbol*> retRefSym{module->GetMPAllocator().Adapter()};
 
   MapleVector<GenericDeclare*> genericDeclare{module->GetMPAllocator().Adapter()};
