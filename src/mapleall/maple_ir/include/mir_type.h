@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -55,6 +55,14 @@ PrimType GetNonDynType(PrimType primType);
 
 inline bool IsAddress(PrimitiveType primitiveType) {
   return primitiveType.IsAddress();
+}
+
+inline bool IsPossible64BitAddress(PrimType tp) {
+  return (tp == PTY_ptr || tp == PTY_ref || tp == PTY_u64 || tp == PTY_a64);
+}
+
+inline bool IsPossible32BitAddress(PrimType tp) {
+  return (tp == PTY_ptr || tp == PTY_ref || tp == PTY_u32 || tp == PTY_a32);
 }
 
 inline bool IsPrimitivePureScalar(PrimitiveType primitiveType) {
