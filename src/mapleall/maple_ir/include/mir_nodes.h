@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -23,8 +23,8 @@
 #include "mir_module.h"
 #include "mir_const.h"
 #include "maple_string.h"
+#include "src_position.h"
 #include "ptr_list_ref.h"
-#include "global_tables.h"
 
 namespace maple {
 extern MIRModule *theMIRModule;
@@ -528,6 +528,18 @@ class IreadFPoffNode : public BaseNode {
  private:
   int32 offset = 0;
 };
+
+class IreadPCoffNode : public IreadFPoffNode {
+ public:
+
+  IreadPCoffNode(Opcode o, PrimType typ, uint8 numopns) {
+    op = o;
+    ptyp = typ;
+    numOpnds = numopns;
+  }
+};
+
+typedef IreadPCoffNode AddroffPCNode;
 
 class BinaryOpnds {
  public:
@@ -1311,85 +1323,10 @@ class AddroflabelNode : public BaseNode {
   }
 
  private:
-  uint32 offset = 0;
+  LabelIdx offset = 0;
 };
 
-// to store source position information
-class SrcPosition {
- public:
-  SrcPosition() {
-    u.word0 = 0;
-  }
-
-  virtual ~SrcPosition() = default;
-
-  uint32 RawData() const {
-    return u.word0;
-  }
-
-  uint32 FileNum() const {
-    return u.fileColumn.fileNum;
-  }
-
-  uint32 Column() const {
-    return u.fileColumn.column;
-  }
-
-  uint32 LineNum() const {
-    return lineNum;
-  }
-
-  uint32 MplLineNum() const {
-    return mplLineNum;
-  }
-
-  void SetFileNum(uint16 n) {
-    u.fileColumn.fileNum = n;
-  }
-
-  void SetColumn(uint16 n) {
-    u.fileColumn.column = n;
-  }
-
-  void SetLineNum(uint32 n) {
-    lineNum = n;
-  }
-
-  void SetRawData(uint32 n) {
-    u.word0 = n;
-  }
-
-  void SetMplLineNum(uint32 n) {
-    mplLineNum = n;
-  }
-
-  void CondSetLineNum(uint32 n) {
-    lineNum = lineNum ? lineNum : n;
-  }
-
-  void CondSetFileNum(uint16 n) {
-    uint16 i = u.fileColumn.fileNum;
-    u.fileColumn.fileNum = i ? i : n;
-  }
-
- private:
-  union {
-    struct {
-      uint16 fileNum;
-      uint16 column : 12;
-      uint16 stmtBegin : 1;
-      uint16 bbBegin : 1;
-      uint16 unused : 2;
-    } fileColumn;
-
-    uint32 word0;
-  } u;
-
-  uint32 lineNum = 0;     // line number of original src file, like foo.java
-  uint32 mplLineNum = 0;  // line number of mpl file
-};
-
-// for cleanuptry, catch, finally, retsub, endtry, membaracquire, membarrelease,
+// for cleanuptry, jscatch, finally, retsub, endtry, membaracquire, membarrelease,
 // membarstoreload, membarstorestore
 class StmtNode : public BaseNode, public PtrListNodeBase<StmtNode> {
  public:
@@ -1584,7 +1521,7 @@ class GotoNode : public StmtNode {
   uint32 offset = 0;
 };
 
-// try
+// jstry
 class JsTryNode : public StmtNode {
  public:
   JsTryNode() : StmtNode(OP_jstry) {}
@@ -1623,7 +1560,7 @@ class JsTryNode : public StmtNode {
   uint16 finallyOffset = 0;
 };
 
-// try
+// try, cpptry
 class TryNode : public StmtNode {
  public:
   explicit TryNode(MapleAllocator &allocator) : StmtNode(OP_try), offsets(allocator.Adapter()) {}
@@ -1746,6 +1683,32 @@ class CatchNode : public StmtNode {
  private:
   // TyIdx exception_tyidx;
   MapleVector<TyIdx> exceptionTyIdxVec;
+};
+
+// cppcatch
+class CppCatchNode : public StmtNode {
+ public:
+  explicit CppCatchNode(const TyIdx &idx) : StmtNode(OP_cppcatch), exceptionTyIdx(idx) {}
+  explicit CppCatchNode() : CppCatchNode(TyIdx(0)) {}
+
+  CppCatchNode(const CppCatchNode &node) = delete;
+  CppCatchNode &operator=(const CppCatchNode &node) = delete;
+  ~CppCatchNode() = default;
+
+  void Dump(int32 indent) const override;
+
+  CppCatchNode *CloneTree(MapleAllocator &allocator) const override {
+    CppCatchNode *node = allocator.GetMemPool()->New<CppCatchNode>();
+    node->SetStmtID(stmtIDNext++);
+    node->exceptionTyIdx = exceptionTyIdx;
+    return node;
+  }
+
+  CppCatchNode *CloneTree(const MIRModule &mod) const {
+    return CppCatchNode::CloneTree(*mod.CurFuncCodeMemPoolAllocator());
+  }
+ public:
+  TyIdx exceptionTyIdx;
 };
 
 using CasePair = std::pair<int32, LabelIdx>;
@@ -1908,7 +1871,7 @@ class MultiwayNode : public StmtNode {
   MCaseVector multiWayTable;
 };
 
-// eval, throw, free, decref, incref, decrefreset, assertnonnull
+// eval, throw, free, decref, incref, decrefreset, assertnonnull, igoto
 class UnaryStmtNode : public StmtNode {
  public:
   explicit UnaryStmtNode(Opcode o) : StmtNode(o, 1) {}
@@ -2649,6 +2612,8 @@ class IassignFPoffNode : public UnaryStmtNode {
   int32 offset = 0;
 };
 
+typedef IassignFPoffNode IassignPCoffNode;
+
 // used by return, syncenter, syncexit
 class NaryStmtNode : public StmtNode, public NaryOpnds {
  public:
@@ -2717,21 +2682,13 @@ class NaryStmtNode : public StmtNode, public NaryOpnds {
   }
 };
 
-class ReturnValuePart {
- public:
-  explicit ReturnValuePart(MapleAllocator &allocator) : returnValues(allocator.Adapter()) {}
-
-  virtual ~ReturnValuePart() = default;
-
- private:
-  CallReturnVector returnValues;
-};
-
 // used by call, virtualcall, virtualicall, superclasscall, interfacecall,
 // interfaceicall, customcall
+// polymorphiccall
 // callassigned, virtualcallassigned, virtualicallassigned,
 // superclasscallassigned, interfacecallassigned, interfaceicallassigned,
 // customcallassigned
+// polymorphiccallassigned
 class CallNode : public NaryStmtNode {
  public:
   CallNode(MapleAllocator &allocator, Opcode o) : NaryStmtNode(allocator, o), returnValues(allocator.Adapter()) {}
@@ -3011,8 +2968,7 @@ class IntrinsiccallNode : public NaryStmtNode {
 };
 
 // used by callinstant, virtualcallinstant, superclasscallinstant and
-// interfacecallinstant
-// for callinstantassigned, virtualcallinstantassigned,
+// interfacecallinstant, callinstantassigned, virtualcallinstantassigned,
 // superclasscallinstantassigned and interfacecallinstantassigned
 class CallinstantNode : public CallNode {
  public:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -84,43 +84,6 @@ MIRFunction *MIRParser::CreateDummyFunction() {
   func->SetBaseClassFuncNames(strIdx);
   funcSt->SetFunction(func);
   return func;
-}
-
-void MIRParser::ResetMaxPregNo(MIRFunction &func) {
-  for (uint32 i = 0; i < func.GetFormalCount(); ++i) {
-    MIRSymbol *formalSt = func.GetFormal(i);
-    if (formalSt->IsPreg()) {
-      // no special register appears in the formals
-      uint32 pRegNO = static_cast<uint32>(formalSt->GetPreg()->GetPregNo());
-      if (pRegNO > maxPregNo) {
-        maxPregNo = pRegNO;
-      }
-    }
-  }
-}
-
-MIRPreg *MIRParser::CreateMirPreg(uint32 pregNo) const {
-  return mod.GetMemPool()->New<MIRPreg>(pregNo);
-}
-
-PregIdx MIRParser::LookupOrCreatePregIdx(uint32 pregNo, bool isRef, MIRFunction &func) {
-  MIRPregTable *pRegTab = func.GetPregTab();
-  PregIdx idx = pRegTab->GetPregIdxFromPregno(pregNo);
-  if (idx == 0) {
-    if (pregNo > maxPregNo) {
-      maxPregNo = pregNo;
-    }
-    MIRPreg *preg = CreateMirPreg(pregNo);
-    if (isRef) {
-      preg->SetPrimType(PTY_ref);
-    }
-    size_t pregIndex = pRegTab->GetPregTable().size();
-    CHECK_FATAL(pregIndex <= INT_MAX, "pregIndex out of range");
-    idx = static_cast<PregIdx>(pregIndex);
-    pRegTab->GetPregTable().push_back(preg);
-    pRegTab->SetPregNoToPregIdxMapItem(pregNo, idx);
-  }
-  return idx;
 }
 
 bool MIRParser::IsDelimitationTK(TokenKind tk) const {
@@ -250,41 +213,26 @@ bool MIRParser::ParseSpecialReg(PregIdx &pRegIdx) {
   return false;
 }
 
-bool MIRParser::ParseRefPseudoReg(PregIdx &pRegIdx) {
-  uint32 pRegNO = static_cast<uint32>(lexer.GetTheIntVal());
-  ASSERT(pRegNO <= 0xffff, "preg number must be 16 bits");
-  pRegIdx = LookupOrCreatePregIdx(pRegNO, true, *mod.CurFunction());
+bool MIRParser::ParsePseudoReg(PrimType primType, PregIdx &pRegIdx) {
+  uint32 pregNo = static_cast<uint32>(lexer.GetTheIntVal());
+  ASSERT(pregNo <= 0xffff, "preg number must be 16 bits");
+  MIRFunction *curfunc = mod.CurFunction();
+  pRegIdx = curfunc->GetPregTab()->EnterPregNo(pregNo, primType);
+  MIRPreg *preg = curfunc->GetPregTab()->PregFromPregIdx(pRegIdx);
+  if (primType != kPtyInvalid) {
+    if (preg->GetPrimType() != primType) {
+      if ((primType == PTY_ref || primType == PTY_ptr) &&
+          (preg->GetPrimType() == PTY_ref || preg->GetPrimType() == PTY_ptr)) {
+        ;  // PTY_ref and PTY_ptr are compatible with each other
+      } else {
+        Error("inconsistent preg primitive type at ");
+        return false;
+      }
+    }
+  }
+
   lexer.NextToken();
   return true;
-}
-
-bool MIRParser::ParsePseudoReg(PrimType primType, PregIdx &pRegIdx) {
-  MIRFunction *func = mod.CurFunction();
-  ASSERT(func != nullptr, "func nullptr check");
-  pRegIdx = LookupOrCreatePregIdx(static_cast<uint32>(lexer.GetTheIntVal()), false, *func);
-  MIRPreg *preg = func->GetPregTab()->PregFromPregIdx(pRegIdx);
-
-  if (primType == kPtyInvalid || preg->GetPrimType() == primType) {
-    lexer.NextToken();
-    return true;
-  }
-
-  // check type consistenency for the preg
-  if (preg->GetPrimType() == kPtyInvalid) {
-    preg->SetPrimType(primType);
-    lexer.NextToken();
-    return true;
-  }
-
-  if ((primType == PTY_ref || primType == PTY_ptr) &&
-      (preg->GetPrimType() == PTY_ref || preg->GetPrimType() == PTY_ptr)) {
-    // PTY_ref and PTY_ptr are compatible with each other
-    lexer.NextToken();
-    return true;
-  }
-
-  Error("inconsistent preg primitive type at ");
-  return false;
 }
 
 bool MIRParser::CheckPrimAndDerivedType(TokenKind tokenKind, TyIdx &tyIdx) {
@@ -752,8 +700,9 @@ bool MIRParser::ParseFields(MIRStructType &type) {
     maple::MIRBuilder mirBuilder(&mod);
     MIRSymbol *funcSymbol = mirBuilder.CreateSymbol(TyIdx(0), strIdx, kStFunc, kScText, nullptr, kScopeGlobal);
     ASSERT(funcSymbol != nullptr, "Failed to create MIRSymbol");
-    auto *fn = mod.GetMemPool()->New<MIRFunction>(&mod, funcSymbol->GetStIdx());
-    fn->Init();
+    SetSrcPos(funcSymbol->GetSrcPosition(), lexer.GetLineNum());
+
+    MIRFunction *fn = mod.GetMemPool()->New<MIRFunction>(&mod, funcSymbol->GetStIdx());
     fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
     GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
     funcSymbol->SetFunction(fn);
@@ -776,6 +725,12 @@ bool MIRParser::ParseFields(MIRStructType &type) {
     fn->SetMIRFuncType(funcType);
     fn->SetReturnStruct(*GlobalTables::GetTypeTable().GetTypeFromTyIdx(funcType->GetRetTyIdx()));
     funcSymbol->SetTyIdx(funcTyIdx);
+
+    for (size_t i = 0; i < funcType->GetParamTypeList().size(); i++) {
+      FormalDef formalDef(nullptr, funcType->GetParamTypeList()[i], funcType->GetParamAttrsList()[i]);
+      fn->GetFormalDefVec().push_back(formalDef);
+    }
+
     MethodPair p = MethodPair(funcSymbol->GetStIdx(), TyidxFuncAttrPair(funcTyIdx, FuncAttrs(tA)));
     type.GetMethods().push_back(p);
     tk = lexer.GetTokenKind();
@@ -1628,7 +1583,7 @@ bool MIRParser::ParseStorageClass(MIRSymbol &symbol) const {
   return false;
 }
 
-bool MIRParser::ParseDeclareReg(MIRSymbol &symbol, MIRFunction &func) {
+bool MIRParser::ParseDeclareReg(MIRSymbol &symbol, const MIRFunction &func) {
   TokenKind tk = lexer.GetTokenKind();
   // i.e, reg %1 u1
   if (tk != TK_reg) {  // reg
@@ -1655,10 +1610,9 @@ bool MIRParser::ParseDeclareReg(MIRSymbol &symbol, MIRFunction &func) {
   }
   symbol.SetTyIdx(tyIdx);
   MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
-  PregIdx pRegIdx = LookupOrCreatePregIdx(thePRegNO, mirType->GetPrimType() == PTY_ref, func);
+  PregIdx pRegIdx = func.GetPregTab()->EnterPregNo(thePRegNO, mirType->GetPrimType(), mirType);
   MIRPregTable *pRegTab = func.GetPregTab();
   MIRPreg *preg = pRegTab->PregFromPregIdx(pRegIdx);
-  preg->SetIsRef(mirType->GetPrimType() == PTY_ref);
   preg->SetPrimType(mirType->GetPrimType());
   symbol.SetPreg(preg);
   if (!ParseVarTypeAttrs(symbol)) {
@@ -1762,6 +1716,42 @@ bool MIRParser::ParseDeclareVar(MIRSymbol &symbol) {
   return true;
 }
 
+bool MIRParser::ParseDeclareFormal(FormalDef &formalDef) {
+  TokenKind tk = lexer.GetTokenKind();
+  if (tk != TK_var && tk != TK_reg) {
+    return false;
+  }
+  TokenKind nameTk = lexer.NextToken();
+  if (tk == TK_var) {
+    if (nameTk != TK_lname) {
+      Error("expect local name but get ");
+      return false;
+    }
+    formalDef.formalStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
+  } else {  // tk == TK_reg
+    if (nameTk != TK_preg) {
+      Error("expect preg but get ");
+      return false;
+    }
+    formalDef.formalStrIdx =
+        GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(std::to_string(lexer.GetTheIntVal()));
+  }
+  (void)lexer.NextToken();
+  if (!ParseType(formalDef.formalTyIdx)) {
+    Error("ParseDeclareFormal failed when parsing the type");
+    return false;
+  }
+  if (GlobalTables::GetTypeTable().GetTypeFromTyIdx(formalDef.formalTyIdx)->GetKind() == kTypeByName) {
+    Error("type in var declaration cannot be forward-referenced at ");
+    return false;
+  }
+  if (!ParseTypeAttrs(formalDef.formalAttrs)) {
+    Error("ParseDeclareFormal failed when parsing type attributes");
+    return false;
+  }
+  return true;
+}
+
 bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &funcTyIdx) {
   if (lexer.GetTokenKind() == TK_lbrace) {
     if (mod.GetFlavor() < kMmpl) {
@@ -1771,8 +1761,8 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
     // mmpl flavor has no prototype declaration, return normally
     return true;
   }
-  std::vector<TyIdx> vecType;       // for storing the parameter types
-  std::vector<TypeAttrs> vecAttrs;  // for storing the parameter type attributes
+  std::vector<TyIdx> vecTy;       // for storing the parameter types
+  std::vector<TypeAttrs> vecAt;  // for storing the parameter type attributes
   // this part for parsing the argument list and return type
   if (lexer.GetTokenKind() != TK_lparen) {
     Error("expect ( for func but get ");
@@ -1781,7 +1771,7 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
   // parse parameters
   bool varArgs = false;
   TokenKind pmTk = lexer.NextToken();
-  if (pmTk != TK_rparen) {
+  while (pmTk != TK_rparen) {
     if (pmTk == TK_dotdotdot) {
       varArgs = true;
       func.SetVarArgs();
@@ -1790,39 +1780,27 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
         Error("expect ) after ... but get");
         return false;
       }
+      break;
     } else {
-      MIRSymbol *symbol = func.GetSymTab()->CreateSymbol(kScopeLocal);
-      ASSERT(symbol != nullptr, "Failed to create MIRSymbol");
-      symbol->SetStorageClass(kScFormal);
-      TokenKind symbolTK = lexer.GetTokenKind();
-      if (symbolTK == TK_reg) {
-        symbol->SetSKind(kStPreg);
-        if (!ParseDeclareReg(*symbol, func)) {
-          Error("ParseFunction expect preg for parameter");
-          return false;
-        }
-        func.AddFormal(symbol);
-        vecType.push_back(symbol->GetTyIdx());
-        vecAttrs.push_back(symbol->GetAttrs());
-        if (!ParsePrototypeRemaining(func, vecType, vecAttrs, varArgs)) {
-          return false;
-        }
-      } else {
-        symbol->SetSKind(kStVar);
-        if (!ParseDeclareVar(*symbol)) {
-          Error("ParseFunction expect scalar value");
-          return false;
-        }
-        (void)func.GetSymTab()->AddToStringSymbolMap(*symbol);
-        func.AddFormal(symbol);
-        vecType.push_back(symbol->GetTyIdx());
-        vecAttrs.push_back(symbol->GetAttrs());
-        if (!ParsePrototypeRemaining(func, vecType, vecAttrs, varArgs)) {
+      FormalDef formalDef;
+      if (!ParseDeclareFormal(formalDef)) {
+        Error("ParsePrototype expects formal parameter declaration");
+        return false;
+      }
+      func.GetFormalDefVec().push_back(formalDef);
+      vecTy.push_back(formalDef.formalTyIdx);
+      vecAt.push_back(formalDef.formalAttrs);
+      pmTk = lexer.GetTokenKind();
+      if (pmTk == TK_coma) {
+        pmTk = lexer.NextToken();
+        if (pmTk == TK_rparen) {
+          Error("\',\' cannot be followed by");
           return false;
         }
       }
     }
   }
+
   // parse return type
   lexer.NextToken();
   TyIdx tyIdx(0);
@@ -1832,7 +1810,7 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
   MIRType *retType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
   func.SetReturnStruct(*retType);
   MIRType *funcType =
-      GlobalTables::GetTypeTable().GetOrCreateFunctionType(mod, tyIdx, vecType, vecAttrs, varArgs, false);
+      GlobalTables::GetTypeTable().GetOrCreateFunctionType(mod, tyIdx, vecTy, vecAt, varArgs, false);
   funcTyIdx = funcType->GetTypeIndex();
   funcSymbol.SetTyIdx(funcTyIdx);
   func.SetMIRFuncType(static_cast<MIRFuncType*>(funcType));
@@ -1875,9 +1853,9 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
       // is indeed another definition, we will throw error.
       MIRSymbol *tmpSymbol = mod.GetMemPool()->New<MIRSymbol>();
       tmpSymbol->SetStorageClass(kScText);
+      tmpSymbol->SetAppearsInCode(true);
       tmpSymbol->SetSKind(kStFunc);
       MIRFunction *tmpFunc = mod.GetMemPool()->New<MIRFunction>(&mod, tmpSymbol->GetStIdx());
-      tmpFunc->Init();
       tmpSymbol->SetFunction(tmpFunc);
       TyIdx tmpTyIdx;
       if (!ParsePrototype(*tmpFunc, *tmpSymbol, tmpTyIdx)) {
@@ -1892,7 +1870,7 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
     // Skip attribute checking
     func = funcSymbol->GetFunction();
     func->ClearFormals();
-    func->Init();
+
     // update with current attr
     if (funcAttrs.GetAttrFlag()) {
       if (func->IsIpaSeen()) {
@@ -1924,8 +1902,8 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
   } else {
     maple::MIRBuilder mirBuilder(&mod);
     funcSymbol = mirBuilder.CreateSymbol(TyIdx(0), strIdx, kStFunc, kScText, nullptr, kScopeGlobal);
+    SetSrcPos(funcSymbol->GetSrcPosition(), lexer.GetLineNum());
     func = mod.GetMemPool()->New<MIRFunction>(&mod, funcSymbol->GetStIdx());
-    func->Init();
     func->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
     GlobalTables::GetFunctionTable().GetFuncTable().push_back(func);
     funcSymbol->SetFunction(func);
@@ -1941,9 +1919,8 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
     return false;
   }
   if (lexer.GetTokenKind() == TK_lbrace) {  // #2 parse Function body
+    funcSymbol->SetAppearsInCode(true);
     definedLabels.clear();
-    maxPregNo = 0;
-    ResetMaxPregNo(*func);  // reset the maxPregNo due to the change of parameters
     mod.SetCurFunction(func);
     mod.AddFunction(func);
     // set maple line number for function
@@ -1960,7 +1937,7 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
       return false;
     }
     func->SetBody(block);
-    mod.CurFunction()->GetPregTab()->SetIndex(maxPregNo + 1);
+
     // set source file number for function
     func->GetSrcPosition().SetLineNum(firstLineNum);
     func->GetSrcPosition().SetFileNum(lastFileNum);
@@ -2360,6 +2337,7 @@ std::map<TokenKind, MIRParser::FuncPtrParseMIRForElem> MIRParser::InitFuncPtrMap
   funcPtrMap[TK_srcfileinfo] = &MIRParser::ParseMIRForSrcFileInfo;
   funcPtrMap[TK_import] = &MIRParser::ParseMIRForImport;
   funcPtrMap[TK_importpath] = &MIRParser::ParseMIRForImportPath;
+  funcPtrMap[TK_LOC] = &MIRParser::ParseLoc;
   return funcPtrMap;
 }
 
@@ -2407,6 +2385,7 @@ bool MIRParser::ParseMIRForVar() {
     newst->SetAttrs(st.GetAttrs());
     newst->SetNameStrIdx(st.GetNameStrIdx());
     newst->SetValue(st.GetValue());
+    SetSrcPos(newst->GetSrcPosition(), lexer.GetLineNum());
   }
   return true;
 }
@@ -2824,7 +2803,7 @@ bool MIRParser::ParsePrototypeRemaining(MIRFunction &func, std::vector<TyIdx> &v
       }
       (void)func.GetSymTab()->AddToStringSymbolMap(*symbol);
     }
-    func.AddFormal(symbol);
+    func.AddArgument(symbol);
     vecTyIdx.push_back(symbol->GetTyIdx());
     vecAttrs.push_back(symbol->GetAttrs());
     pmTk = lexer.GetTokenKind();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -98,7 +98,7 @@ void PregRenamer::RunSelf() const {
       continue;
     }
     newPregIdx = (regMeExpr->GetPrimType() == PTY_ref) ?
-                 pregTab->CreateRefPreg(*pregTab->PregFromPregIdx(regMeExpr->GetRegIdx())->GetMIRType()) :
+                 pregTab->CreatePreg(PTY_ref, pregTab->PregFromPregIdx(regMeExpr->GetRegIdx())->GetMIRType()) :
                  pregTab->CreatePreg(regMeExpr->GetPrimType());
     ++renameCount;
     if (enabledDebug) {

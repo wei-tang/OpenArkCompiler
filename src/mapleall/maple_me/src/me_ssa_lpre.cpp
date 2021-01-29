@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -40,8 +40,8 @@ void MeSSALPre::GenerateSaveRealOcc(MeRealOcc &realOcc) {
                                                                                 *func->GetMirFunc());
     size_t i = 0;
     for (; i < func->GetMirFunc()->GetFormalCount(); ++i) {
-      if (func->GetMirFunc()->GetFormal(i) == oldFormalSt) {
-        func->GetMirFunc()->SetFormal(i, newFormalSt);
+      if (func->GetMirFunc()->GetFormalDefVec()[i].formalSym == oldFormalSt) {
+        func->GetMirFunc()->GetFormalDefVec()[i].formalSym = newFormalSt;
         break;
       }
     }

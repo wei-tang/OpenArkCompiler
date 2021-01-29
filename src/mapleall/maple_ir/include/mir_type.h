@@ -19,7 +19,6 @@
 #include "prim_types.h"
 #include "mir_pragma.h"
 #include "mpl_logging.h"
-#include "safe_cast.h"
 #if MIR_FEATURE_FULL
 #include "mempool.h"
 #include "mempool_allocator.h"
@@ -40,8 +39,10 @@ const std::string kJstrTypeName = "constStr";
 extern bool VerifyPrimType(PrimType primType1, PrimType primType2);       // verify if primType1 and primType2 match
 extern uint32 GetPrimTypeSize(PrimType primType);                         // answer in bytes; 0 if unknown
 extern uint32 GetPrimTypeP2Size(PrimType primType);                       // answer in bytes in power-of-two.
+extern PrimType GetSignedPrimType(PrimType pty);                          // return signed version
 extern const char *GetPrimTypeName(PrimType primType);
 extern const char *GetPrimTypeJavaName(PrimType primType);
+
 inline uint32 GetPrimTypeBitSize(PrimType primType) {
   // 1 byte = 8 bits = 2^3 bits
   return GetPrimTypeSize(primType) << 3;
@@ -659,6 +660,8 @@ class MIRArrayType : public MIRType {
       CHECK_FATAL(i < kMaxArrayDim, "array index out of range");
       hIdx += (sizeArray[i] << i);
     }
+    constexpr uint8 attrShift = 3;
+    hIdx += (typeAttrs.GetAttrFlag() << attrShift) + typeAttrs.GetAlignValue();
     return hIdx % kTypeHashLength;
   }
 
@@ -668,6 +671,7 @@ class MIRArrayType : public MIRType {
   TyIdx eTyIdx{ 0 };
   uint16 dim = 0;
   std::array<uint32, kMaxArrayDim> sizeArray{ {0} };
+  TypeAttrs typeAttrs;
 };
 
 // flexible array type, must be last field of a top-level struct
@@ -1074,6 +1078,7 @@ class MIRStructType : public MIRType {
   // Weak indicates the actual definition is in another module.
   bool isImported = false;
   bool isUsed = false;
+  bool isCPlusPlus = false;        // empty struct in C++ has size 1 byte
   mutable bool hasVolatileField = false;     // for caching computed value
   mutable bool hasVolatileFieldSet = false;  // if true, just read hasVolatileField;
                                              // otherwise compute to initialize hasVolatileField

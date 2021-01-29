@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -227,7 +227,6 @@ MIRFunction *MIRBuilder::GetOrCreateFunction(const std::string &str, TyIdx retTy
     funcSt = CreateSymbol(TyIdx(0), strIdx, kStFunc, kScText, nullptr, kScopeGlobal);
   }
   auto *fn = mirModule->GetMemPool()->New<MIRFunction>(mirModule, funcSt->GetStIdx());
-  fn->Init();
   fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
   auto *funcType = mirModule->GetMemPool()->New<MIRFuncType>(mirModule->GetMPAllocator());
   fn->SetMIRFuncType(funcType);
@@ -264,22 +263,19 @@ MIRFunction *MIRBuilder::CreateFunction(const std::string &name, const MIRType &
   funcSymbol->SetStorageClass(kScText);
   funcSymbol->SetSKind(kStFunc);
   auto *fn = mirModule->GetMemPool()->New<MIRFunction>(mirModule, funcSymbol->GetStIdx());
-  fn->Init();
   fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
   GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
   std::vector<TyIdx> funcVecType;
   std::vector<TypeAttrs> funcVecAttrs;
   for (size_t i = 0; i < arguments.size(); ++i) {
-    MIRSymbol *argSymbol = fn->GetSymTab()->CreateSymbol(kScopeLocal);
-    argSymbol->SetNameStrIdx(GetOrCreateStringIndex(arguments[i].first));
     MIRType *ty = arguments[i].second;
-    argSymbol->SetTyIdx(ty->GetTypeIndex());
-    argSymbol->SetStorageClass(kScFormal);
-    argSymbol->SetSKind(kStVar);
-    (void)fn->GetSymTab()->AddToStringSymbolMap(*argSymbol);
-    fn->AddFormal(argSymbol);
+    FormalDef formalDef(GetOrCreateStringIndex(arguments[i].first.c_str()), nullptr, ty->GetTypeIndex(), TypeAttrs());
+    fn->GetFormalDefVec().push_back(formalDef);
     funcVecType.push_back(ty->GetTypeIndex());
     funcVecAttrs.push_back(TypeAttrs());
+    if (fn->GetSymTab() != nullptr && formalDef.formalSym != nullptr) {
+      (void)fn->GetSymTab()->AddToStringSymbolMap(*formalDef.formalSym);
+    }
   }
   funcSymbol->SetTyIdx(GlobalTables::GetTypeTable().GetOrCreateFunctionType(
       *mirModule, returnType.GetTypeIndex(), funcVecType, funcVecAttrs, isVarg)->GetTypeIndex());
@@ -294,7 +290,6 @@ MIRFunction *MIRBuilder::CreateFunction(const std::string &name, const MIRType &
 
 MIRFunction *MIRBuilder::CreateFunction(StIdx stIdx, bool addToTable) const {
   auto *fn = mirModule->GetMemPool()->New<MIRFunction>(mirModule, stIdx);
-  fn->Init();
   fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
   if (addToTable) {
     GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
