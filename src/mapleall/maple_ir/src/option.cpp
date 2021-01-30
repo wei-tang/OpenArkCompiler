@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -61,6 +61,27 @@ bool Options::O2 = false;
 bool Options::noDot = false;
 bool Options::genIRProfile = false;
 bool Options::profileTest = false;
+std::string Options::criticalNativeFile = "maple/mrt/codetricks/profile.pv/criticalNative.list";
+std::string Options::fastNativeFile = "maple/mrt/codetricks/profile.pv/fastNative.list";
+bool Options::barrier = false;
+std::string Options::nativeFuncPropertyFile = "maple/mrt/codetricks/native_binding/native_func_property.list";
+bool Options::mapleLinkerTransformLocal = true;
+bool Options::decoupleStatic = false;
+bool Options::partialAot = false;
+uint32 Options::decoupleInit = 0;
+uint32 Options::buildApp = kNoDecouple;
+std::string Options::sourceMuid = "";
+bool Options::decoupleSuper = false;
+bool Options::deferredVisit = false;
+bool Options::deferredVisit2 = false;
+bool Options::genVtabAndItabForDecouple = false;
+bool Options::profileFunc = false;
+uint32 Options::parserOpt = 0;
+std::string Options::dumpDevirtualList = "";
+std::string Options::readDevirtualList = "";
+bool Options::usePreloadedClass = false;
+std::string Options::profile = "";
+std::string Options::appPackageName = "";
 bool Options::profileStaticFields = false;
 std::string Options::proFileData = "";
 std::string Options::proFileFuncData = "";

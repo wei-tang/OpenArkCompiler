@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -47,12 +47,16 @@ enum MIRFlavor {
   kCmpl  // == CMPLv2
 };
 
+
 enum MIRSrcLang {
   kSrcLangUnknown,
   kSrcLangC,
   kSrcLangJs,
+  kSrcLangDex,
+  kSrcLangCPlusPlus,
   kSrcLangJava,
-  kSrcLangCPlusPlus
+  kSrcLangJbc,
+  // SrcLangSwift : when clang adds support for Swift.
 };
 
 // blksize gives the size of the memory block in bytes; there are (blksize+3)/4
@@ -262,7 +266,7 @@ class MIRModule {
   }
 
   bool IsJavaModule() const {
-    return srcLang == kSrcLangJava;
+    return srcLang == kSrcLangJava || srcLang == kSrcLangDex || srcLang == kSrcLangJbc;
   }
 
   bool IsCModule() const {
