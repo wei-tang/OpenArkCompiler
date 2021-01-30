@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -20,6 +20,8 @@
 #include "mpl_timer.h"
 #include "clone.h"
 #include "call_graph.h"
+#include "verification.h"
+#include "verify_mark.h"
 #if MIR_JAVA
 #include "native_stub_func.h"
 #include "vtable_analysis.h"

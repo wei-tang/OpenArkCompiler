@@ -415,6 +415,9 @@ void VtableAnalysis::ReplaceSuperclassInvoke(CallNode &stmt) {
   // the actual method target.
   MIRFunction *callee = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(stmt.GetPUIdx());
   Klass *klass = klassHierarchy->GetKlassFromFunc(callee);
+  if (klass == nullptr && Options::deferredVisit) {
+    return;
+  }
 
   CHECK_FATAL(klass != nullptr, "Klass not found");
   MapleVector<MIRFunction*> *cands = klass->GetCandidates(callee->GetBaseFuncNameWithTypeStrIdx());
@@ -428,8 +431,11 @@ void VtableAnalysis::ReplaceSuperclassInvoke(CallNode &stmt) {
     }
   }
   if (cands == nullptr || cands->size() == 0) {
+    if (Options::deferredVisit) {
+      return;
+    }
     if (klass->IsClass() || klass->IsInterface()) {
-      LogInfo::MapleLogger() << "warning: func " << callee->GetName() << " is not found in SuperInvoke!\n";
+      LogInfo::MapleLogger() << "warning: func " << callee->GetName() << " is not found in SuperInvoke!" << "\n";
       stmt.SetOpCode(OP_callassigned);
       return;
     }
@@ -439,6 +445,13 @@ void VtableAnalysis::ReplaceSuperclassInvoke(CallNode &stmt) {
               callee->GetBaseFuncNameWithType().c_str(), klass->GetKlassName().c_str());
   MIRFunction *actualMIRFunc = cands->at(0);
   CHECK_FATAL(actualMIRFunc != nullptr, "Can not find the implementation of %s", callee->GetName().c_str());
+  if (Options::decoupleSuper && Options::deferredVisit) {
+    // temporary solution
+    std::set<std::string> funcList = {"Landroid_2Fwidget_2FImageView_3B_7ConSizeChanged_7C_28IIII_29V"};
+    if (funcList.find(actualMIRFunc->GetName()) != funcList.end()) {
+      return;
+    }
+  }
   stmt.SetOpCode(OP_callassigned);
   stmt.SetPUIdx(actualMIRFunc->GetPuidx());
   GetMIRModule().addSuperCall(actualMIRFunc->GetName());
@@ -475,7 +488,14 @@ void VtableAnalysis::ReplaceVirtualInvoke(CallNode &stmt) {
     structType = static_cast<MIRJarrayType*>(pointedType)->GetParentType();
   } else {
     Klass *klassFromFuncDependCallee = klassHierarchy->GetKlassFromFunc(callee);
-    std::string missingClassName = GlobalTables::GetStrTable().GetStringFromStrIdx(pointedType->GetNameStrIdx());
+    const std::string &missingClassName = GlobalTables::GetStrTable().GetStringFromStrIdx(pointedType->GetNameStrIdx());
+    if (klassFromFuncDependCallee == nullptr) {
+      if (Options::deferredVisit) {
+        return;
+      }
+      currFunc->GetBody()->RemoveStmt(&stmt);
+      return;
+    }
     CHECK_FATAL(klassFromFuncDependCallee != nullptr, "Error: missing class %s", missingClassName.c_str());
     structType = klassFromFuncDependCallee->GetMIRStructType();
   }
