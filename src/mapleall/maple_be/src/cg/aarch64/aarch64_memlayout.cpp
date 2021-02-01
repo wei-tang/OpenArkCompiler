@@ -26,7 +26,7 @@ using namespace maple;
  *  which is used to pass arguments that cannot be
  *  passed through registers
  */
-uint32 AArch64MemLayout::ComputeStackSpaceRequirementForCall(StmtNode &stmt, bool isIcall) {
+uint32 AArch64MemLayout::ComputeStackSpaceRequirementForCall(StmtNode &stmt,  int32 &aggCopySize, bool isIcall) {
   /* instantiate a parm locator */
   ParmLocator parmLocator(be);
   uint32 sizeOfArgsToStkPass = 0;
@@ -50,6 +50,7 @@ uint32 AArch64MemLayout::ComputeStackSpaceRequirementForCall(StmtNode &stmt, boo
     }
   }
 
+  aggCopySize = 0;
   for (; i < stmt.NumOpnds(); ++i) {
     BaseNode *opnd = stmt.Opnd(i);
     MIRType *ty = nullptr;
@@ -87,7 +88,7 @@ uint32 AArch64MemLayout::ComputeStackSpaceRequirementForCall(StmtNode &stmt, boo
       }
     }
     PLocInfo ploc;
-    parmLocator.LocateNextParm(*ty, ploc);
+    aggCopySize += parmLocator.LocateNextParm(*ty, ploc);
     if (ploc.reg0 != 0) {
       continue;  /* passed in register, so no effect on actual area */
     }
@@ -235,7 +236,8 @@ void AArch64MemLayout::LayoutEAVariales(std::vector<MIRSymbol*> &tempVar) {
   }
 }
 
-void AArch64MemLayout::LayoutReturnRef(std::vector<MIRSymbol*> &returnDelays) {
+void AArch64MemLayout::LayoutReturnRef(std::vector<MIRSymbol*> &returnDelays,
+                                       int32 &structCopySize, int32 &maxParmStackSize) {
   for (auto sym : returnDelays) {
     uint32 stIndex = sym->GetStIndex();
     TyIdx tyIdx = sym->GetTyIdx();
@@ -249,7 +251,8 @@ void AArch64MemLayout::LayoutReturnRef(std::vector<MIRSymbol*> &returnDelays) {
     symLoc->SetOffset(segRefLocals.GetSize());
     segRefLocals.SetSize(segRefLocals.GetSize() + be.GetTypeSize(tyIdx));
   }
-  segArgsToStkPass.SetSize(FindLargestActualArea());
+  segArgsToStkPass.SetSize(FindLargestActualArea(structCopySize));
+  maxParmStackSize = segArgsToStkPass.GetSize();
   if (Globals::GetInstance()->GetOptimLevel() == 0) {
     AssignSpillLocationsToPseudoRegisters();
   } else {
@@ -294,7 +297,7 @@ void AArch64MemLayout::LayoutActualParams() {
   }
 }
 
-void AArch64MemLayout::LayoutStackFrame() {
+void AArch64MemLayout::LayoutStackFrame(int32 &structCopySize, int32 &maxParmStackSize) {
   LayoutVarargParams();
   LayoutFormalParams();
   /*
@@ -312,7 +315,7 @@ void AArch64MemLayout::LayoutStackFrame() {
   LayoutEAVariales(EATempVar);
 
   /* handle ret_ref sym now */
-  LayoutReturnRef(retDelays);
+  LayoutReturnRef(retDelays, structCopySize, maxParmStackSize);
 
   /*
    * for the actual arguments that cannot be pass through registers

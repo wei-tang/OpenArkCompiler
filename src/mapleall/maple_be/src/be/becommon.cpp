@@ -156,6 +156,9 @@ void BECommon::ComputeStructTypeSizesAligns(MIRType &ty, const TyIdx &tyIdx) {
     }
     SetTypeAlign(tyIdx, std::max(GetTypeAlign(tyIdx), fieldAlign));
   }
+  if (mirModule.GetSrcLang() == kSrcLangC && GetTypeAlign(tyIdx) < k8ByteSize) {
+    SetTypeAlign(tyIdx, k8ByteSize);
+  }
   SetTypeSize(tyIdx, RoundUp(allocedSize, GetTypeAlign(tyIdx.GetIdx())));
 }
 

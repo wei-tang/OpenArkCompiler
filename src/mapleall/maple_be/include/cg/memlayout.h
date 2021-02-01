@@ -149,7 +149,7 @@ class MemLayout {
    * which is used to pass arguments that cannot be
    * passed through registers
    */
-  virtual uint32 ComputeStackSpaceRequirementForCall(StmtNode &stmtNode, bool isIcall) = 0;
+  virtual uint32 ComputeStackSpaceRequirementForCall(StmtNode &stmtNode, int32 &aggCopySize, bool isIcall) = 0;
 
   /*
    * Go over all outgoing calls in the function body and get the maximum space
@@ -158,9 +158,9 @@ class MemLayout {
    * through registers because a call passes more than 8 arguments, or
    * they cannot be fit in a pair of registers.
    */
-  uint32 FindLargestActualArea();
+  uint32 FindLargestActualArea(int32 &aggCopySize);
 
-  virtual void LayoutStackFrame() = 0;
+  virtual void LayoutStackFrame(int32 &structCopySize, int32 &maxParmStackSize) = 0;
 
   /*
    * "Pseudo-registers can be regarded as local variables of a

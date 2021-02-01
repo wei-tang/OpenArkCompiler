@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -93,6 +93,26 @@ class Options : public MapleDriverOptionBase {
   static bool O2;
   static bool noDot;
   static bool decoupleStatic;
+  static std::string criticalNativeFile;
+  static std::string fastNativeFile;
+  static bool barrier;
+  static std::string nativeFuncPropertyFile;
+  static bool mapleLinkerTransformLocal;
+  static uint32 buildApp;
+  static bool partialAot;
+  static uint32 decoupleInit;
+  static std::string sourceMuid;
+  static bool decoupleSuper;
+  static bool deferredVisit;
+  static bool deferredVisit2;
+  static bool genVtabAndItabForDecouple;
+  static bool profileFunc;
+  static uint32 parserOpt;
+  static std::string dumpDevirtualList;
+  static std::string readDevirtualList;
+  static bool usePreloadedClass;
+  static std::string profile;
+  static std::string appPackageName;
   static std::string proFileData;
   static std::string proFileFuncData;
   static std::string proFileClassData;

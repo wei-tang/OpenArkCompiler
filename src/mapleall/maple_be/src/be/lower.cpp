@@ -1590,7 +1590,8 @@ LabelIdx CGLowerer::GetLabelIdx(MIRFunction &curFunc) const {
 }
 
 void CGLowerer::ProcessArrayExpr(BaseNode &expr, BlockNode &blkNode) {
-  bool needProcessArrayExpr = !ShouldOptarray() && (mirModule.GetSrcLang() == kSrcLangJava);
+  bool needProcessArrayExpr =
+      !ShouldOptarray() && ((mirModule.GetSrcLang() == kSrcLangDex) || (mirModule.GetSrcLang() == kSrcLangJava));
   if (!needProcessArrayExpr) {
     return;
   }

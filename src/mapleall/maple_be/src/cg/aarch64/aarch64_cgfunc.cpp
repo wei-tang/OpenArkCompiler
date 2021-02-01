@@ -823,17 +823,19 @@ RegOperand *AArch64CGFunc::ExtractNewMemBase(MemOperand &memOpnd) {
 void AArch64CGFunc::SelectDassign(StIdx stIdx, FieldID fieldId, PrimType rhsPType, Operand &opnd0) {
   MIRSymbol *symbol = GetFunction().GetLocalOrGlobalSymbol(stIdx);
   int32 offset = 0;
+  bool parmCopy = false;
   if (fieldId != 0) {
     MIRStructType *structType = static_cast<MIRStructType*>(symbol->GetType());
     ASSERT(structType != nullptr, "SelectDassign: non-zero fieldID for non-structure");
     offset = GetBecommon().GetFieldOffset(*structType, fieldId).first;
+    parmCopy = IsParamStructCopy(*symbol);
   }
   uint32 regSize = GetPrimTypeBitSize(rhsPType);
   MIRType *type = symbol->GetType();
   Operand &stOpnd = LoadIntoRegister(opnd0, IsPrimitiveInteger(rhsPType), regSize,
                                      IsSignedInteger(type->GetPrimType()));
   MOperator mOp = MOP_undef;
-  if (type->GetKind() == kTypeStruct) {
+  if (type->GetKind() == kTypeStruct || type->GetKind() == kTypeUnion) {
     MIRStructType *structType = static_cast<MIRStructType*>(type);
     type = structType->GetFieldType(fieldId);
   } else if (type->GetKind() == kTypeClass) {
@@ -842,7 +844,12 @@ void AArch64CGFunc::SelectDassign(StIdx stIdx, FieldID fieldId, PrimType rhsPTyp
   }
 
   uint32 dataSize = GetPrimTypeBitSize(type->GetPrimType());
-  MemOperand *memOpnd = &GetOrCreateMemOpnd(*symbol, offset, dataSize);
+  MemOperand *memOpnd = nullptr;
+  if (parmCopy) {
+    memOpnd = &LoadStructCopyBase(*symbol, offset, dataSize);
+  } else {
+    memOpnd = &GetOrCreateMemOpnd(*symbol, offset, dataSize);
+  }
   AArch64MemOperand &archMemOperand = *static_cast<AArch64MemOperand*>(memOpnd);
   if ((memOpnd->GetMemVaryType() == kNotVary) && IsImmediateOffsetOutOfRange(archMemOperand, dataSize)) {
     memOpnd = &SplitOffsetWithAddInstruction(archMemOperand, dataSize);
@@ -1296,20 +1303,27 @@ Operand *AArch64CGFunc::SelectDread(DreadNode &expr) {
 
   PrimType symType = symbol->GetType()->GetPrimType();
   int32 offset = 0;
+  bool parmCopy = false;
   if (expr.GetFieldID() != 0) {
     MIRStructType *structType = static_cast<MIRStructType*>(symbol->GetType());
     ASSERT(structType != nullptr, "SelectDread: non-zero fieldID for non-structure");
     symType = structType->GetFieldType(expr.GetFieldID())->GetPrimType();
     offset = GetBecommon().GetFieldOffset(*structType, expr.GetFieldID()).first;
+    parmCopy = IsParamStructCopy(*symbol);
   }
   CHECK_FATAL(symType != PTY_agg, "dread type error");
   uint32 dataSize = GetPrimTypeSize(symType) * kBitsPerByte;
-  MemOperand &memOpnd = GetOrCreateMemOpnd(*symbol, offset, dataSize);
-  if ((memOpnd.GetMemVaryType() == kNotVary) &&
-      IsImmediateOffsetOutOfRange(static_cast<AArch64MemOperand&>(memOpnd), dataSize)) {
-    return &SplitOffsetWithAddInstruction(static_cast<AArch64MemOperand&>(memOpnd), dataSize);
+  MemOperand *memOpnd = nullptr;
+  if (parmCopy) {
+    memOpnd = &LoadStructCopyBase(*symbol, offset, dataSize);
+  } else {
+    memOpnd = &GetOrCreateMemOpnd(*symbol, offset, dataSize);
   }
-  return &memOpnd;
+  if ((memOpnd->GetMemVaryType() == kNotVary) &&
+      IsImmediateOffsetOutOfRange(*static_cast<AArch64MemOperand*>(memOpnd), dataSize)) {
+    return &SplitOffsetWithAddInstruction(*static_cast<AArch64MemOperand*>(memOpnd), dataSize);
+  }
+  return memOpnd;
 }
 
 RegOperand *AArch64CGFunc::SelectRegread(RegreadNode &expr) {
@@ -1406,6 +1420,34 @@ Operand *AArch64CGFunc::SelectAddrof(AddrofNode &expr) {
     MIRStructType *structType = static_cast<MIRStructType*>(symbol->GetType());
     ASSERT(structType != nullptr, "SelectAddrof: non-zero fieldID for non-structure");
     offset = GetBecommon().GetFieldOffset(*structType, expr.GetFieldID()).first;
+  }
+  if ((symbol->GetStorageClass() == kScFormal) && (symbol->GetSKind() == kStVar) &&
+      ((expr.GetFieldID() != 0) || (GetBecommon().GetTypeSize(symbol->GetType()->GetTypeIndex().GetIdx()) > k16ByteSize))) {
+    // Struct param is copied on the stack by caller if struct size > 16.
+    // Else if size < 16 then struct param is copied into one or two registers.
+    RegOperand *stackAddr = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
+    // load the base address of the struct copy from stack.
+    SelectAddrof(*stackAddr, CreateStImmOperand(*symbol, 0, 0));
+    Operand *structAddr;
+    if (GetBecommon().GetTypeSize(symbol->GetType()->GetTypeIndex().GetIdx()) <= k16ByteSize) {
+      isAggParamInReg = true;
+      structAddr = stackAddr;
+    } else {
+      AArch64OfstOperand *offopnd = &CreateOfstOpnd(0, 32);
+      AArch64MemOperand *mo = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, kSizeOfPtr * kBitsPerByte,
+                                 stackAddr, nullptr, offopnd, nullptr);
+      structAddr = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
+      GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xldr, *structAddr, *mo));
+    }
+    if (offset == 0) {
+      return structAddr;
+    } else {
+      // add the struct offset to the base address
+      Operand *result = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
+      ImmOperand *imm = &CreateImmOperand(PTY_a64, offset);
+      GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xaddrri12, *result, *structAddr, *imm));
+      return result;
+    }
   }
   PrimType ptype = expr.GetPrimType();
   regno_t vRegNO = NewVReg(kRegTyInt, GetPrimTypeSize(ptype));
@@ -1512,6 +1554,10 @@ Operand *AArch64CGFunc::SelectIread(const BaseNode &parent, IreadNode &expr) {
   }
 
   MemOperand *memOpnd = &CreateMemOpnd(destType, expr, *expr.Opnd(0), offset, memOrd);
+  if (aggParamReg) {
+    isAggParamInReg = false;
+    return aggParamReg;
+  }
   if (isVolLoad && (static_cast<AArch64MemOperand*>(memOpnd)->GetAddrMode() == AArch64MemOperand::kAddrModeBOi)) {
     memOrd = AArch64isa::kMoAcquire;
     isVolLoad = false;
@@ -4573,6 +4619,119 @@ void AArch64CGFunc::HandleRCCall(bool begin, const MIRSymbol *retRef) {
   }
 }
 
+void AArch64CGFunc::SelectParmListDreadSmallAggregate(const MIRSymbol &sym, AArch64ListOperand &srcOpnds,
+                                                      ParmLocator &parmLocator) {
+  // in two param regs if possible
+  // If struct is <= 8 bytes, then it fits into one param reg.
+  // If struct is <= 16 bytes, then it fits into two param regs.
+  // Otherwise, it goes onto the stack.
+  // If the number of available param reg is less than what is
+  // needed to fit the entire struct into them, then the param
+  // reg is skipped and the struct goes onto the stack.
+  // Example 1.
+  //  struct size == 8 bytes.
+  //  param regs x0 to x6 are used.
+  //  struct is passed in x7.
+  // Example 2.
+  //  struct is 16 bytes.
+  //  param regs x0 to x5 are used.
+  //  struct is passed in x6 and x7.
+  // Example 3.
+  //  struct is 16 bytes.
+  //  param regs x0 to x6 are used.  x7 alone is not enough to pass the struct.
+  //  struct is passed on the stack.
+  //  x7 is not used, as the following param will go onto the stack also.
+  MIRType *ty = sym.GetType();
+  int32 symSize = GetBecommon().GetTypeSize(ty->GetTypeIndex().GetIdx());
+  PLocInfo ploc;
+  parmLocator.LocateNextParm(*ty, ploc);
+  if (ploc.reg0 == 0) {
+    // No param regs available, pass on stack.
+    // If symSize is <= 8 bytes then use 1 reg, else 2
+    for (int i = 0; i < ((symSize <= k8ByteSize) ? kOneRegister : kTwoRegister); i++) {
+      MemOperand &ldmopnd = GetOrCreateMemOpnd(sym, (i * kSizeOfPtr), k64BitSize);
+      RegOperand &vreg = CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
+      GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(PickLdInsn(k64BitSize, PTY_i64), vreg, ldmopnd));
+
+      MemOperand &stmopnd = CreateMemOpnd(RSP, (ploc.memOffset + (i * kSizeOfPtr)), k64BitSize);
+      GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(PickStInsn(k64BitSize, PTY_i64), vreg, stmopnd));
+    }
+  } else {
+    // pass by param regs.
+    MemOperand &mopnd0 = GetOrCreateMemOpnd(sym, 0, k64BitSize);
+    AArch64RegOperand &parmOpnd = GetOrCreatePhysicalRegisterOperand(ploc.reg0, k64BitSize, kRegTyInt);
+    GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(PickLdInsn(k64BitSize, PTY_i64), parmOpnd, mopnd0));
+    srcOpnds.PushOpnd(parmOpnd);
+    if (ploc.reg1) {
+      MemOperand &mopnd1 = GetOrCreateMemOpnd(sym, kSizeOfPtr, k64BitSize);
+      parmOpnd = GetOrCreatePhysicalRegisterOperand(ploc.reg1, k64BitSize, kRegTyInt);
+      GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(PickLdInsn(k64BitSize, PTY_i64), parmOpnd, mopnd1));
+      srcOpnds.PushOpnd(parmOpnd);
+    }
+  }
+}
+
+void AArch64CGFunc::SelectParmListDreadLargeAggregate(const MIRSymbol &sym, AArch64ListOperand &srcOpnds,
+                                                      ParmLocator &parmLocator, int32 &structCopyOffset) {
+  // Pass larger sized struct on stack.
+  // Need to copy the entire structure onto the stack.
+  // The pointer to the starting address of the copied struct is then
+  // used as the parameter for the struct.
+  // This pointer is passed as the next parameter.
+  // Example 1:
+  //  struct is 23 bytes.
+  //  param regs x0 to x5 are used.
+  //  First around up 23 to 24, so 3 of 8-byte slots.
+  //  Copy struct to a created space on the stack.
+  //  Pointer of copied struct is passed in x6.
+  // Example 2:
+  //  struct is 25 bytes.
+  //  param regs x0 to x7 are used.
+  //  First around up 25 to 32, so 4 of 8-byte slots.
+  //  Copy struct to a created space on the stack.
+  //  Pointer of copied struct is passed on stack as the 9th parameter.
+  MIRType *ty = sym.GetType();
+  int32 symSize = GetBecommon().GetTypeSize(ty->GetTypeIndex().GetIdx());
+  PLocInfo ploc;
+  parmLocator.LocateNextParm(*ty, ploc);
+  uint32 numMemOp = RoundUp(symSize, kSizeOfPtr) / kSizeOfPtr; // round up
+  // Create the struct copies.
+  int32 baseOffset = structCopyOffset;
+  for (int i = 0; i < numMemOp; i++) {
+    MemOperand &ldmopnd = GetOrCreateMemOpnd(sym, (i * kSizeOfPtr), k64BitSize);
+    RegOperand &vreg2 = CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
+    GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(PickLdInsn(k64BitSize, PTY_i64), vreg2, ldmopnd));
+
+    MemOperand &stmopnd = CreateMemOpnd(RSP, (baseOffset + (i * kSizeOfPtr)), k64BitSize);
+    GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(PickStInsn(k64BitSize, PTY_i64), vreg2, stmopnd));
+  }
+  structCopyOffset += (numMemOp * kSizeOfPtr);
+  // Create the copy address parameter for the struct
+  AArch64RegOperand &parmOpnd = GetOrCreatePhysicalRegisterOperand(ploc.reg0, k64BitSize, kRegTyInt);
+  AArch64ImmOperand &offset = CreateImmOperand(baseOffset, k64BitSize, false);
+  RegOperand &fpopnd = GetOrCreatePhysicalRegisterOperand(RSP, kSizeOfPtr * kBitsPerByte, kRegTyInt);
+  SelectAdd(parmOpnd, fpopnd, offset, PTY_a64);
+  srcOpnds.PushOpnd(parmOpnd);
+}
+
+void AArch64CGFunc::SelectParmListForAggregate(BaseNode &argExpr, AArch64ListOperand &srcOpnds,
+                                               ParmLocator &parmLocator, int32 &structCopyOffset) {
+  CHECK_FATAL((argExpr.GetOpCode() == OP_dread), "call param is agg but not dread");
+  DreadNode &dread = static_cast<DreadNode &>(argExpr);
+  MIRSymbol *sym = GetBecommon().GetMIRModule().CurFunction()->GetLocalOrGlobalSymbol(dread.GetStIdx());
+  MIRType *ty = sym->GetType();
+  int32 symSize = GetBecommon().GetTypeSize(ty->GetTypeIndex().GetIdx());
+  if (argExpr.GetOpCode() == OP_dread) {
+    if (symSize <= k16ByteSize) {
+      SelectParmListDreadSmallAggregate(*sym, srcOpnds, parmLocator);
+    } else {
+      SelectParmListDreadLargeAggregate(*sym, srcOpnds, parmLocator, structCopyOffset);
+    }
+  } else {
+    CHECK_FATAL(0, "NYI");
+  }
+}
+
 /*
    SelectParmList generates an instrunction for each of the parameters
    to load the parameter value into the corresponding register.
@@ -4587,13 +4746,17 @@ void AArch64CGFunc::SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOp
     i++;
   }
 
+  int32 structCopyOffset = GetMaxParamStackSize() - GetStructCopySize();
   for (; i < naryNode.NumOpnds(); ++i) {
     MIRType *ty = nullptr;
     BaseNode *argExpr = naryNode.Opnd(i);
     PrimType primType = argExpr->GetPrimType();
     ASSERT(primType != PTY_void, "primType should not be void");
     /* use alloca  */
-    CHECK_FATAL(primType != PTY_agg, "NYI");
+    if (primType == PTY_agg) {
+      SelectParmListForAggregate(*argExpr, srcOpnds, parmLocator, structCopyOffset);
+      continue;
+    }
     ty = GlobalTables::GetTypeTable().GetTypeTable()[static_cast<uint32>(primType)];
     RegOperand *expRegOpnd = nullptr;
     Operand *opnd = HandleExpr(naryNode, *argExpr);
@@ -4614,7 +4777,7 @@ void AArch64CGFunc::SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOp
       GetCurBB()->AppendInsn(
           GetCG()->BuildInstruction<AArch64Insn>(PickStInsn(GetPrimTypeBitSize(primType), primType), *expRegOpnd,
                                                  actMemOpnd));
-      }
+    }
     ASSERT(ploc.reg1 == 0, "SelectCall NYI");
   }
 }
@@ -5352,6 +5515,22 @@ MemOperand &AArch64CGFunc::CreateMemOpnd(RegOperand &baseOpnd, int32 offset, uin
   return *memPool->New<AArch64MemOperand>(AArch64MemOperand::kAddrModeBOi, size, baseOpnd, nullptr, &offsetOpnd, &sym);
 }
 
+RegOperand &AArch64CGFunc::GenStructParamIndex(RegOperand &base, BaseNode &indexExpr, int shift) {
+  RegOperand *index = &LoadIntoRegister(*HandleExpr(indexExpr, *(indexExpr.Opnd(0))), PTY_a64);
+  RegOperand *srcOpnd = &CreateRegisterOperandOfType(PTY_a64);
+  ImmOperand *imm = &CreateImmOperand(PTY_a64, shift);
+  SelectShift(*srcOpnd, *index, *imm, kShiftLeft, PTY_a64);
+  RegOperand *result = &CreateRegisterOperandOfType(PTY_a64);
+  SelectAdd(*result, base, *srcOpnd, PTY_a64);
+
+  AArch64OfstOperand *offopnd = &CreateOfstOpnd(0, 32);
+  AArch64MemOperand &mo = GetOrCreateMemOpnd( AArch64MemOperand::kAddrModeBOi, k64BitSize, result, nullptr, offopnd, nullptr);
+  RegOperand &structAddr = CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
+  GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(MOP_xldr, structAddr, mo));
+
+  return structAddr;
+}
+
 /* iread a64 <* <* void>> 0 (add a64 (
  *   addrof a64 $__reg_jni_func_tab$$libcore_all_dex,
  *   mul a64 (
@@ -5360,6 +5539,7 @@ MemOperand &AArch64CGFunc::CreateMemOpnd(RegOperand &baseOpnd, int32 offset, uin
  */
 MemOperand *AArch64CGFunc::CheckAndCreateExtendMemOpnd(PrimType ptype, BaseNode &addrExpr, int32 offset,
                                                        AArch64isa::MemoryOrdering memOrd) {
+  aggParamReg = nullptr;
   if (memOrd != AArch64isa::kMoNone || !IsPrimitiveInteger(ptype) || addrExpr.GetOpCode() != OP_add || offset != 0) {
     return nullptr;
   }
@@ -5392,6 +5572,10 @@ MemOperand *AArch64CGFunc::CheckAndCreateExtendMemOpnd(PrimType ptype, BaseNode 
   TypeCvtNode *typeCvtNode = static_cast<TypeCvtNode*>(indexExpr);
   PrimType fromType = typeCvtNode->FromType();
   PrimType toType = typeCvtNode->GetPrimType();
+  if (isAggParamInReg) {
+    aggParamReg = &GenStructParamIndex(base, *indexExpr, shift);
+    return nullptr;
+  }
   MemOperand *memOpnd = nullptr;
   if ((fromType == PTY_i32) && (toType == PTY_a64)) {
     RegOperand &index =
@@ -6276,5 +6460,15 @@ RegType AArch64CGFunc::GetRegisterType(regno_t reg) const {
   } else {
     return CGFunc::GetRegisterType(reg);
   }
+}
+
+MemOperand &AArch64CGFunc::LoadStructCopyBase(const MIRSymbol &symbol, int32 offset, int dataSize) {
+  // For struct formals > 16 bytes, this is the pointer to the struct copy.
+  // Load the base pointer first.
+  RegOperand *vreg = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
+  MemOperand *baseMemOpnd = &GetOrCreateMemOpnd(symbol, 0, k64BitSize);
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(k64BitSize, PTY_i64), *vreg, *baseMemOpnd));
+  // Create the indirect load mem opnd from the base pointer.
+  return CreateMemOpnd(*vreg, offset, dataSize);
 }
 }  /* namespace maplebe */
