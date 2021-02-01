@@ -177,6 +177,10 @@ class OriginalSt {
     return addressTaken;
   }
 
+  void SetAddressTaken(bool addrTaken = true) {
+    addressTaken = addrTaken;
+  }
+
   bool IsEPreLocalRefVar() const {
     return epreLocalRefVar;
   }
