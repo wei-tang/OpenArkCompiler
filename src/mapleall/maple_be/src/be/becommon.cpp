@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -154,6 +154,9 @@ void BECommon::ComputeStructTypeSizesAligns(MIRType &ty, const TyIdx &tyIdx) {
       allocedSize = std::max(allocedSize, static_cast<uint64>(fieldTypeSize));
     }
     SetTypeAlign(tyIdx, std::max(GetTypeAlign(tyIdx), fieldAlign));
+  }
+  if (mirModule.GetSrcLang() == kSrcLangC && GetTypeAlign(tyIdx) < k8ByteSize) {
+    SetTypeAlign(tyIdx, k8ByteSize);
   }
   SetTypeSize(tyIdx, RoundUp(allocedSize, GetTypeAlign(tyIdx.GetIdx())));
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -63,6 +63,9 @@ constexpr int32 kInsnSixthOpnd = 5;
 constexpr int32 kInsnSeventhOpnd = 6;
 constexpr int32 kInsnEighthOpnd = 7;
 
+/* Number of registers */
+constexpr uint32 kOneRegister = 1;
+constexpr uint32 kTwoRegister = 2;
 
 /* Check whether the value is an even number. */
 constexpr int32 kDivide2 = 2;
