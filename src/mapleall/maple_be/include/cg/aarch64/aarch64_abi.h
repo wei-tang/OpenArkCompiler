@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -82,7 +82,8 @@ class ParmLocator {
 
   ~ParmLocator() = default;
 
-  void LocateNextParm(MIRType &mirType, PLocInfo &pLoc);
+  // Return size of aggregate structure copy on stack.
+  int32 LocateNextParm(MIRType &mirType, PLocInfo &pLoc);
 
  private:
   BECommon &beCommon;
@@ -112,7 +113,7 @@ class ParmLocator {
     nextGeneralRegNO = static_cast<int32>((nextGeneralRegNO + 1) & ~static_cast<int32>(1));
   }
 
-  void ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &pLoc, uint64 &typeSize, int32 typeAlign);
+  int32 ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &pLoc, uint64 &typeSize, int32 typeAlign);
 };
 
 /* given the type of the return value, determines the return mechanism */

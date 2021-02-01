@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -272,6 +272,8 @@ class AArch64CGFunc : public CGFunc {
     return GetOrCreatePhysicalRegisterOperand(RFP, kSizeOfPtr * kBitsPerByte, kRegTyInt);
   }
 
+  RegOperand &GenStructParamIndex(RegOperand &base, BaseNode &indexExpr, int shift);
+
   MemOperand &GetOrCreateMemOpnd(const MIRSymbol &symbol, int32 offset, uint32 size, bool forLocalRef = false);
 
   AArch64MemOperand &GetOrCreateMemOpnd(AArch64MemOperand::AArch64AddressingMode, uint32, RegOperand*, RegOperand*,
@@ -438,6 +440,8 @@ class AArch64CGFunc : public CGFunc {
 
   bool HasStackLoadStore();
 
+  MemOperand &LoadStructCopyBase(const MIRSymbol &symbol, int32 offset, int datasize);
+
   int32 GetSplitBaseOffset() const {
     return splitStpldpBaseOffset;
   }
@@ -551,6 +555,12 @@ class AArch64CGFunc : public CGFunc {
   RegOperand &LoadIntoRegister(Operand &o, PrimType oty) {
     return (o.IsRegister() ? static_cast<RegOperand&>(o) : SelectCopy(o, oty, oty));
   }
+
+  void SelectParmListDreadSmallAggregate(const MIRSymbol &sym, AArch64ListOperand &srcOpnds, ParmLocator &parmLocator);
+  void SelectParmListDreadLargeAggregate(const MIRSymbol &sym, AArch64ListOperand &srcOpnds, ParmLocator &parmLocator,
+                                         int32 &structCopyOffset);
+  void SelectParmListForAggregate(BaseNode &argExpr, AArch64ListOperand &srcOpnds, ParmLocator &parmLocator,
+                                  int32 &structCopyOffset);
 
   void SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOpnds, bool isCallNative = false);
   Operand *SelectClearStackCallParam(const AddrofNode &expr, int64 &offsetValue);

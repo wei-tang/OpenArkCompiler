@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -42,6 +42,10 @@ void AArch64MoveRegArgs::CollectRegisterArgs(std::map<uint32, AArch64reg> &argsL
     }
     argsList[i] = ploc.reg0;
     indexList.emplace_back(i);
+    if (ploc.reg1 == kRinvalid) {
+      continue;
+    }
+    aarchCGFunc->PushElemIntoFormalRegList(ploc.reg1);
   }
 }
 

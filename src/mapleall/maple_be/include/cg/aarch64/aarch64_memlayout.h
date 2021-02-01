@@ -139,9 +139,9 @@ class AArch64MemLayout : public MemLayout {
    * which is used to pass arguments that cannot be
    * passed through registers
    */
-  uint32 ComputeStackSpaceRequirementForCall(StmtNode &stmt, bool isIcall) override;
+  uint32 ComputeStackSpaceRequirementForCall(StmtNode &stmt, int32 &aggCopySize, bool isIcall) override;
 
-  void LayoutStackFrame() override;
+  void LayoutStackFrame(int32 &structCopySize, int32 &maxParmStackSize) override;
 
   void AssignSpillLocationsToPseudoRegisters() override;
 
@@ -201,7 +201,7 @@ class AArch64MemLayout : public MemLayout {
   void LayoutActualParams();
   void LayoutLocalVariales(std::vector<MIRSymbol*> &tempVar, std::vector<MIRSymbol*> &returnDelays);
   void LayoutEAVariales(std::vector<MIRSymbol*> &tempVar);
-  void LayoutReturnRef(std::vector<MIRSymbol*> &returnDelays);
+  void LayoutReturnRef(std::vector<MIRSymbol*> &returnDelays, int32 &structCopySize, int32 &maxParmStackSize);
 };
 }  /* namespace maplebe */
 

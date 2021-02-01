@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -102,7 +102,7 @@ class CGFunc {
 
   void LayoutStackFrame() {
     CHECK_FATAL(memLayout != nullptr, "memLayout should has been initialized in constructor");
-    memLayout->LayoutStackFrame();
+    memLayout->LayoutStackFrame(structCopySize, maxParamStackSize);
   }
 
   bool HasCall() const {
@@ -371,6 +371,14 @@ class CGFunc {
 
   int32 GetTotalNumberOfInstructions() const {
     return totalInsns;
+  }
+
+  int32 GetStructCopySize() const {
+    return structCopySize;
+  }
+
+  int32 GetMaxParamStackSize() const {
+    return maxParamStackSize;
   }
 
   virtual void ProcessLazyBinding() = 0;
@@ -805,12 +813,16 @@ class CGFunc {
   MapleMap<PregIdx, StIdx> *pregsToVarsMap = nullptr;
 #endif
   int32 totalInsns = 0;
+  int32 structCopySize;
+  int32 maxParamStackSize;
   bool hasProEpilogue = false;
   bool isVolLoad = false;
   bool isVolStore = false;
   bool isAfterRegAlloc = false;
+  bool isAggParamInReg = false;
   uint32 frequency = 0;
   DebugInfo *debugInfo = nullptr;  /* debugging info */
+  RegOperand *aggParamReg = nullptr;
   ReachingDefinition *reachingDef = nullptr;
 
   int32 dbgCallFrameOffset = 0;
@@ -854,6 +866,15 @@ class CGFunc {
     uint32 offset = RoundUp(nextSpillLocation, static_cast<uint64>(size));
     nextSpillLocation = offset + size;
     return offset;
+  }
+
+  // See if the symbol is a structure parameter that requires a copy.
+  bool IsParamStructCopy(const MIRSymbol &symbol) {
+    if (symbol.GetStorageClass() == kScFormal &&
+        GetBecommon().GetTypeSize(symbol.GetTyIdx().GetIdx()) > k16ByteSize) {
+      return true;
+    }
+    return false;
   }
 
  private:

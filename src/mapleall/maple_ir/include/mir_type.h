@@ -628,6 +628,18 @@ class MIRArrayType : public MIRType {
     this->dim = dim;
   }
 
+  TypeAttrs GetTypeAttrs() const {
+    return typeAttrs;
+  }
+
+  TypeAttrs& GetTypeAttrs() {
+    return typeAttrs;
+  }
+
+  void SetTypeAttrs(TypeAttrs attrs) {
+    typeAttrs = attrs;
+  }
+
   MIRType *GetElemType() const;
 
   MIRType *CopyMIRTypeNode() const override {
@@ -660,8 +672,7 @@ class MIRArrayType : public MIRType {
       CHECK_FATAL(i < kMaxArrayDim, "array index out of range");
       hIdx += (sizeArray[i] << i);
     }
-    constexpr uint8 attrShift = 3;
-    hIdx += (typeAttrs.GetAttrFlag() << attrShift) + typeAttrs.GetAlignValue();
+    hIdx += (typeAttrs.GetAttrFlag() << 3) + typeAttrs.GetAlignValue();
     return hIdx % kTypeHashLength;
   }
 
@@ -841,6 +852,14 @@ class MIRStructType : public MIRType {
 
   void SetIsUsed(bool flag) {
     isUsed = flag;
+  }
+
+  bool IsCPlusPlus() const {
+    return isCPlusPlus;
+  }
+
+  void SetIsCPlusPlus(bool flag) {
+    isCPlusPlus = flag;
   }
 
   GStrIdx GetFieldGStrIdx(FieldID id) const {
@@ -1628,6 +1647,10 @@ class MIRInstantVectorType : public MIRType {
   }  // size unknown
 
   const GenericInstantVector &GetInstantVec() const {
+    return instantVec;
+  }
+
+  GenericInstantVector &GetInstantVec() {
     return instantVec;
   }
 

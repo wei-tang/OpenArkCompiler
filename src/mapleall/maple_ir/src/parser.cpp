@@ -313,6 +313,10 @@ bool MIRParser::ParseArrayType(TyIdx &arrayTyIdx) {
   }
   ASSERT(tyIdx != 0u, "something wrong with parsing element type ");
   MIRArrayType arrayType(tyIdx, vec);
+  if (!ParseTypeAttrs(arrayType.GetTypeAttrs())) {
+    Error("bad type attribute in pointer type specification");
+    return false;
+  }
   arrayTyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&arrayType);
   return true;
 }
@@ -1192,7 +1196,21 @@ bool MIRParser::ParseFuncType(TyIdx &tyIdx) {
   std::vector<TyIdx> vecTyIdx;
   std::vector<TypeAttrs> vecAttrs;
   TokenKind tokenKind = lexer.NextToken();
+  bool varargs = false;
   while (tokenKind != TK_rparen) {
+    if (tokenKind == TK_dotdotdot) {
+      if (vecTyIdx.size() == 0) {
+        Error("variable arguments can only appear after fixed parameters ");
+        return false;
+      }
+      varargs = true;
+      tokenKind = lexer.NextToken();
+      if (tokenKind != TK_rparen) {
+        Error("expect ) after ... but get");
+        return false;
+      }
+      break;
+    }
     TyIdx tyIdxTmp(0);
     if (!ParseType(tyIdxTmp)) {
       Error("expect type parsing function parameters ");
@@ -1224,9 +1242,9 @@ bool MIRParser::ParseFuncType(TyIdx &tyIdx) {
     Error("expect return type for function type but get ");
     return false;
   }
-  MIRType *funcType =
-      GlobalTables::GetTypeTable().GetOrCreateFunctionType(mod, retTyIdx, vecTyIdx, vecAttrs, false, true);
-  tyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(funcType);
+  MIRFuncType functype(retTyIdx, vecTyIdx, vecAttrs, mod.GetMPAllocator());
+  functype.SetVarArgs(varargs);
+  tyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&functype);
   return true;
 }
 
