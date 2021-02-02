@@ -45,8 +45,7 @@ class MeBuilder {
   }
 
   OpMeExpr *BuildOpMeExpr(BaseNode &mirNode) const {
-    OpMeExpr *meExpr = New<OpMeExpr>(kInvalidExprID);
-    meExpr->InitBase(mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds());
+    OpMeExpr *meExpr = New<OpMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds());
     return meExpr;
   }
 

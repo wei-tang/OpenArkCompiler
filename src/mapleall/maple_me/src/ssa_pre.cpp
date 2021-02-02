@@ -1140,7 +1140,6 @@ MeExpr *SSAPre::CopyMeExpr(const MeExpr &expr) const {
     case kMeOpOp: {
       auto &opExpr = static_cast<const OpMeExpr&>(expr);
       OpMeExpr *newExpr = irMapAlloc->GetMemPool()->New<OpMeExpr>(opExpr, -1);
-      newExpr->InitBase(opExpr.GetOp(), opExpr.GetPrimType(), opExpr.GetNumOpnds());
       return newExpr;
     }
     case kMeOpNary: {
@@ -1151,7 +1150,6 @@ MeExpr *SSAPre::CopyMeExpr(const MeExpr &expr) const {
     case kMeOpIvar: {
       auto &ivarMeExpr = static_cast<const IvarMeExpr&>(expr);
       IvarMeExpr *newIvar = irMapAlloc->GetMemPool()->New<IvarMeExpr>(-1, ivarMeExpr);
-      newIvar->InitBase(ivarMeExpr.GetOp(), ivarMeExpr.GetPrimType(), ivarMeExpr.GetNumOpnds());
       return newIvar;
     }
     default:
