@@ -6255,6 +6255,92 @@ void AArch64CGFunc::SelectMPLClinitCheck(IntrinsiccallNode &intrnNode) {
   }
 }
 
+void AArch64CGFunc::GenCVaStartIntrin(RegOperand &opnd, uint32 stkSize) {
+  // FPLR only pushed in regalloc() after intrin function
+  Operand &stkOpnd = GetOrCreatePhysicalRegisterOperand(RFP, k64BitSize, kRegTyInt);
+
+  // __stack
+  AArch64ImmOperand *offsOpnd = &CreateImmOperand(0, k64BitSize, true, kUnAdjustVary); // isvary reset StackFrameSize
+  AArch64ImmOperand *offsOpnd2 = &CreateImmOperand(stkSize, k64BitSize, false);
+  RegOperand &vReg = CreateVirtualRegisterOperand(NewVReg(kRegTyInt, GetPrimTypeSize(PTY_a64)));
+  if (stkSize) {
+    SelectAdd(vReg, *offsOpnd, *offsOpnd2, PTY_a64);
+    SelectAdd(vReg, stkOpnd, vReg, PTY_a64);
+  } else {
+    SelectAdd(vReg, stkOpnd, *offsOpnd, PTY_a64);
+  }
+  AArch64OfstOperand *offOpnd = &GetOrCreateOfstOpnd(0, k64BitSize);
+  MemOperand *strOpnd = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, k64BitSize, &opnd, nullptr,
+                         offOpnd, static_cast<MIRSymbol *>(nullptr)); // mem operand in va_list struct (lhs)
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xstr, vReg, *strOpnd));
+
+  // __gr_top   ; it's the same as __stack before the 1st va_arg
+  offOpnd = &GetOrCreateOfstOpnd(k8BitSize, k64BitSize);
+  strOpnd = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, k64BitSize, &opnd, nullptr,
+                                offOpnd, static_cast<MIRSymbol *>(nullptr));
+  SelectAdd(vReg, stkOpnd, *offsOpnd, PTY_a64);
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xstr, vReg, *strOpnd));
+
+  // __vr_top
+  int32 grAreaSize = static_cast<AArch64MemLayout *>(GetMemlayout())->GetSizeOfGRSaveArea();
+  offsOpnd2 = &CreateImmOperand(RoundUp(grAreaSize, kSizeOfPtr*2), k64BitSize, false);
+  SelectSub(vReg, *offsOpnd, *offsOpnd2, PTY_a64);  // if 1st opnd is register => sub
+  SelectAdd(vReg, stkOpnd, vReg, PTY_a64);
+  offOpnd = &GetOrCreateOfstOpnd(k16BitSize, k64BitSize);
+  strOpnd = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, k64BitSize, &opnd, nullptr,
+                               offOpnd, static_cast<MIRSymbol *>(nullptr));
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xstr, vReg, *strOpnd));
+
+  // __gr_offs
+  int32 offs = 0 - grAreaSize;
+  offsOpnd = &CreateImmOperand(offs, k32BitSize, false);
+  RegOperand *tmpReg = &CreateRegisterOperandOfType(PTY_i32); // offs value to be assigned (rhs)
+  SelectCopyImm(*tmpReg, *offsOpnd, PTY_i32);
+  offOpnd = &GetOrCreateOfstOpnd(3*kSizeOfPtr, k32BitSize);
+  strOpnd = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, k32BitSize, &opnd, nullptr,
+                                offOpnd, static_cast<MIRSymbol *>(nullptr));
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wstr, *tmpReg, *strOpnd));
+
+  // __vr_offs
+  offs = 0 - static_cast<AArch64MemLayout *>(GetMemlayout())->GetSizeOfVRSaveArea();
+  offsOpnd = &CreateImmOperand(offs, k32BitSize, false);
+  tmpReg = &CreateRegisterOperandOfType(PTY_i32);
+  SelectCopyImm(*tmpReg, *offsOpnd, PTY_i32);
+  offOpnd = &GetOrCreateOfstOpnd(3*kSizeOfPtr+sizeof(int32), k32BitSize);
+  strOpnd = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, k32BitSize, &opnd, nullptr,
+                               offOpnd, static_cast<MIRSymbol *>(nullptr));
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wstr, *tmpReg, *strOpnd));
+}
+
+void AArch64CGFunc::SelectCVaStart(IntrinsiccallNode &intrnNode) {
+  ASSERT(intrnNode.NumOpnds() == 2, "must be 2 operands");
+  // 2 operands, but only 1 needed. Don't need to emit code for second operand
+
+  // va_list is a passed struct with an address, load its address
+  BaseNode *argExpr = intrnNode.Opnd(0);
+  Operand *opnd = HandleExpr(intrnNode, *argExpr);
+  RegOperand &opnd0 = LoadIntoRegister(*opnd, PTY_a64);  // first argument of intrinsic
+
+  // Find beginning of unnamed arg on stack.
+  // Ex. void foo(int i1, int i2, ... int i8, struct S r, struct S s, ...)
+  //     where struct S has size 32, address of r and s are on stack but they are named.
+  ParmLocator parmLocator(GetBecommon());
+  PLocInfo pLoc;
+  uint32 stkSize = 0;
+  for (uint32 i = 0; i < GetFunction().GetFormalCount(); i++) {
+    MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(GetFunction().GetNthParamTyIdx(i));
+    parmLocator.LocateNextParm(*ty, pLoc);
+    if (pLoc.reg0 == kRinvalid) {  // on stack
+      stkSize = pLoc.memOffset + pLoc.memSize;
+    }
+  }
+  stkSize = RoundUp(stkSize, kSizeOfPtr);
+
+  GenCVaStartIntrin(opnd0, stkSize);
+
+  return;
+}
+
 void AArch64CGFunc::SelectIntrinCall(IntrinsiccallNode &intrinsiccallNode) {
   MIRIntrinsicID intrinsic = intrinsiccallNode.GetIntrinsic();
 
@@ -6281,6 +6367,10 @@ void AArch64CGFunc::SelectIntrinCall(IntrinsiccallNode &intrinsiccallNode) {
   }
   if ((intrinsic == INTRN_MPL_CLEANUP_LOCALREFVARS) || (intrinsic == INTRN_MPL_CLEANUP_LOCALREFVARS_SKIP) ||
       (intrinsic == INTRN_MPL_CLEANUP_NORETESCOBJS)) {
+    return;
+  }
+  if (intrinsic == INTRN_C_va_start) {
+    SelectCVaStart(intrinsiccallNode);
     return;
   }
   std::vector<Operand*> operands;  /* Temporary.  Deallocated on return. */
