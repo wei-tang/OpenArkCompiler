@@ -1070,7 +1070,7 @@ AnalysisResult *MeDoABCOpt::Run(MeFunction *func, MeFuncResultMgr *frm, ModuleRe
   CHECK_FATAL(frm != nullptr, "frm is nullptr");
   auto *dom = static_cast<Dominance*>(frm->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
   CHECK_FATAL(dom != nullptr, "dominance phase has problem");
-  auto *irMap = static_cast<MeIRMap*>(frm->GetAnalysisResult(MeFuncPhase_IRMAP, func));
+  auto *irMap = static_cast<MeIRMap*>(frm->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   CHECK_FATAL(irMap != nullptr, "irMap phase has problem");
   MemPool *abcoMemPool = NewMemPool();
   MeABC meABC(*func, *dom, *irMap, *abcoMemPool);

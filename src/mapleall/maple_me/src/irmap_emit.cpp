@@ -564,4 +564,32 @@ StmtNode &AssertMeStmt::EmitStmt(SSATab &ssaTab) {
   assertStmt->SetSrcPos(GetSrcPosition());
   return *assertStmt;
 }
+
+void BB::EmitBB(SSATab &ssaTab, BlockNode &curblk, bool needAnotherPass) {
+  // emit head. label
+  LabelIdx labidx = GetBBLabel();
+  if (labidx != 0) {
+    LabelNode *lbnode = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<LabelNode>();
+    lbnode->SetLabelIdx(labidx);
+    curblk.AddStatement(lbnode);
+  }
+  auto &meStmts = GetMeStmts();
+  for (auto &meStmt : meStmts) {
+    if (!needAnotherPass) {
+      if (meStmt.GetOp() == OP_interfaceicall) {
+        meStmt.SetOp(OP_icall);
+      } else if (meStmt.GetOp() == OP_interfaceicallassigned) {
+        meStmt.SetOp(OP_icallassigned);
+      }
+    }
+    StmtNode &stmt = meStmt.EmitStmt(ssaTab);
+    curblk.AddStatement(&stmt);
+  }
+  if (GetAttributes(kBBAttrIsTryEnd)) {
+    // generate op_endtry
+    StmtNode *endtry = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<StmtNode>(OP_endtry);
+    curblk.AddStatement(endtry);
+  }
+}
+
 }  // namespace maple

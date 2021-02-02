@@ -44,7 +44,7 @@
 #include "me_may2dassign.h"
 #include "me_loop_analysis.h"
 #include "me_ssa.h"
-#include "me_irmap.h"
+#include "me_irmap_build.h"
 #include "me_bb_layout.h"
 #include "me_emit.h"
 #include "me_rc_lowering.h"

@@ -20,7 +20,7 @@ namespace maple {
 AnalysisResult *MeDoSSADevirtual::Run(MeFunction *func, MeFuncResultMgr *frm, ModuleResultMgr *mrm) {
   auto *dom = static_cast<Dominance*>(frm->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
   ASSERT(dom != nullptr, "dominance phase has problem");
-  auto *irMap = static_cast<MeIRMap*>(frm->GetAnalysisResult(MeFuncPhase_IRMAP, func));
+  auto *irMap = static_cast<MeIRMap*>(frm->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   ASSERT(irMap != nullptr, "hssaMap has problem");
   CHECK_FATAL(mrm != nullptr, "Needs module result manager for ipa");
   auto *kh = static_cast<KlassHierarchy*>(mrm->GetAnalysisResult(MoPhase_CHA, &func->GetMIRModule()));

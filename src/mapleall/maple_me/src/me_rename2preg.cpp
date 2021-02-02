@@ -30,7 +30,7 @@ using namespace maple;
 // Part1: Generalize GetAnalysisResult from MeFuncResultMgr
 template <MePhaseID id> struct ExtractPhaseClass {};
 
-template <> struct ExtractPhaseClass<MeFuncPhase_IRMAP> {
+template <> struct ExtractPhaseClass<MeFuncPhase_IRMAPBUILD> {
   using Type = MeIRMap;
 };
 
@@ -231,7 +231,7 @@ class SSARename2Preg {
     bool emptyFunc = func.empty();
     if (!emptyFunc) {
       MeFuncResultMgr &funcRst = utils::ToRef(pFuncRst);
-      MeIRMap &irMap = utils::ToRef(GetAnalysisResult<MeFuncPhase_IRMAP>(func, funcRst));
+      MeIRMap &irMap = utils::ToRef(GetAnalysisResult<MeFuncPhase_IRMAPBUILD>(func, funcRst));
       const AliasClass &aliasClass = utils::ToRef(GetAnalysisResult<MeFuncPhase_ALIASCLASS>(func, funcRst));
 
       cacheProxy.Init(utils::ToRef(ssaTab), irMap);

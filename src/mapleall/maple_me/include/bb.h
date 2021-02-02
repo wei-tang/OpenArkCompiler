@@ -297,6 +297,7 @@ class BB {
   void ReplaceMeStmt(const MeStmt *stmt, MeStmt *newStmt);
   void DumpMePhiList(const IRMap *irMap);
   void DumpMeVarPiList(const IRMap *irMap);
+  void EmitBB(SSATab &ssaTab, BlockNode &curblk, bool needAnotherPass);
   StmtNodes &GetStmtNodes() {
     return stmtNodeList;
   }

@@ -359,7 +359,7 @@ AnalysisResult *MeDoStorePre::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRe
   ASSERT(dom != nullptr, "dominance phase has problem");
   auto *aliasClass = static_cast<AliasClass*>(m->GetAnalysisResult(MeFuncPhase_ALIASCLASS, func));
   ASSERT(aliasClass != nullptr, "aliasClass phase has problem");
-  auto *meIrMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAP, func));
+  auto *meIrMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   CHECK_FATAL(meIrMap != nullptr, "irmap phase has problem");
   MeStorePre storePre(*func, *dom, *aliasClass, *NewMemPool(), DEBUGFUNC(func));
   storePre.ApplySSUPre();

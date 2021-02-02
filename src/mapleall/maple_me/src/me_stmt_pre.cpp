@@ -1060,7 +1060,7 @@ void MeStmtPre::RemoveUnnecessaryDassign(DassignMeStmt &dssMeStmt) {
 AnalysisResult *MeDoStmtPre::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
   auto *dom = static_cast<Dominance*>(m->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
   ASSERT(dom != nullptr, "dominance phase has problem");
-  auto *irMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAP, func));
+  auto *irMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   ASSERT(irMap != nullptr, "irMap phase has problem");
   MeStmtPre ssaPre(*func, *irMap, *dom, *NewMemPool(), *NewMemPool(), MeOption::stmtprePULimit);
   if (DEBUGFUNC(func)) {

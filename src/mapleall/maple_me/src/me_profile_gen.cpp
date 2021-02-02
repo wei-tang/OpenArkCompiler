@@ -153,7 +153,7 @@ AnalysisResult *MeDoProfGen::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRes
     return nullptr;
   }
 
-  auto *hMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAP, func));
+  auto *hMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   CHECK_FATAL(hMap != nullptr, "hssamap is nullptr");
   MeProfGen profGen(*func, *tempMp, *hMap, DEBUGFUNC(func));
   if (!profGen.CanInstrument()) {

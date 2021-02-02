@@ -84,7 +84,7 @@ AnalysisResult *MeDoAnalyzeCtor::Run(MeFunction *func, MeFuncResultMgr *m, Modul
   auto *dom = static_cast<Dominance*>(m->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
   auto *kh = static_cast<KlassHierarchy*>(moduleResultMgr->GetAnalysisResult(MoPhase_CHA, &func->GetMIRModule()));
   ASSERT_NOT_NULL(dom);
-  ASSERT_NOT_NULL(m->GetAnalysisResult(MeFuncPhase_IRMAP, func));
+  ASSERT_NOT_NULL(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   AnalyzeCtor analyzeCtor(*func, *dom, *kh);
   analyzeCtor.ProcessFunc();
   return nullptr;
