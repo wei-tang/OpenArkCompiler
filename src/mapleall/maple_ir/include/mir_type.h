@@ -628,15 +628,15 @@ class MIRArrayType : public MIRType {
     this->dim = dim;
   }
 
-  TypeAttrs GetTypeAttrs() const {
+  const TypeAttrs &GetTypeAttrs() const {
     return typeAttrs;
   }
 
-  TypeAttrs& GetTypeAttrs() {
+  TypeAttrs &GetTypeAttrs() {
     return typeAttrs;
   }
 
-  void SetTypeAttrs(TypeAttrs attrs) {
+  void SetTypeAttrs(const TypeAttrs &attrs) {
     typeAttrs = attrs;
   }
 
@@ -672,7 +672,8 @@ class MIRArrayType : public MIRType {
       CHECK_FATAL(i < kMaxArrayDim, "array index out of range");
       hIdx += (sizeArray[i] << i);
     }
-    hIdx += (typeAttrs.GetAttrFlag() << 3) + typeAttrs.GetAlignValue();
+    constexpr uint8 attrShift = 3;
+    hIdx += (typeAttrs.GetAttrFlag() << attrShift) + typeAttrs.GetAlignValue();
     return hIdx % kTypeHashLength;
   }
 

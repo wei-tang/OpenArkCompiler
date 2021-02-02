@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -285,8 +285,8 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
       MIRStorageClass storage = mirSymbol.GetStorageClass();
       if (symName.find("classInitProtectRegion") == 0) {
         Emit(4096);
-      } else if ((kind == kTypeStruct || kind == kTypeClass || kind == kTypeArray || kind == kTypeUnion) &&
-                 (storage == kScGlobal || storage == kScPstatic || storage == kScFstatic)) {
+      } else if (((kind == kTypeStruct) || (kind == kTypeClass) || (kind == kTypeArray) || (kind == kTypeUnion)) &&
+                 ((storage == kScGlobal) || (storage == kScPstatic) || (storage == kScFstatic))) {
         Emit(std::to_string(k8ByteSize));
       } else {
         Emit(std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeAlign(mirType->GetTypeIndex())));
