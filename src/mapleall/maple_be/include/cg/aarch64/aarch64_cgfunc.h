@@ -272,7 +272,7 @@ class AArch64CGFunc : public CGFunc {
     return GetOrCreatePhysicalRegisterOperand(RFP, kSizeOfPtr * kBitsPerByte, kRegTyInt);
   }
 
-  RegOperand &GenStructParamIndex(RegOperand &base, BaseNode &indexExpr, int shift);
+  RegOperand &GenStructParamIndex(RegOperand &base, const BaseNode &indexExpr, int shift);
 
   MemOperand &GetOrCreateMemOpnd(const MIRSymbol &symbol, int32 offset, uint32 size, bool forLocalRef = false);
 

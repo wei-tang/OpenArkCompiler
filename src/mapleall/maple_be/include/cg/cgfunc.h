@@ -868,7 +868,7 @@ class CGFunc {
     return offset;
   }
 
-  // See if the symbol is a structure parameter that requires a copy.
+  /* See if the symbol is a structure parameter that requires a copy. */
   bool IsParamStructCopy(const MIRSymbol &symbol) {
     if (symbol.GetStorageClass() == kScFormal &&
         GetBecommon().GetTypeSize(symbol.GetTyIdx().GetIdx()) > k16ByteSize) {

@@ -835,7 +835,7 @@ void AArch64CGFunc::SelectDassign(StIdx stIdx, FieldID fieldId, PrimType rhsPTyp
   Operand &stOpnd = LoadIntoRegister(opnd0, IsPrimitiveInteger(rhsPType), regSize,
                                      IsSignedInteger(type->GetPrimType()));
   MOperator mOp = MOP_undef;
-  if (type->GetKind() == kTypeStruct || type->GetKind() == kTypeUnion) {
+  if ((type->GetKind() == kTypeStruct) || (type->GetKind() == kTypeUnion)) {
     MIRStructType *structType = static_cast<MIRStructType*>(type);
     type = structType->GetFieldType(fieldId);
   } else if (type->GetKind() == kTypeClass) {
@@ -1422,20 +1422,23 @@ Operand *AArch64CGFunc::SelectAddrof(AddrofNode &expr) {
     offset = GetBecommon().GetFieldOffset(*structType, expr.GetFieldID()).first;
   }
   if ((symbol->GetStorageClass() == kScFormal) && (symbol->GetSKind() == kStVar) &&
-      ((expr.GetFieldID() != 0) || (GetBecommon().GetTypeSize(symbol->GetType()->GetTypeIndex().GetIdx()) > k16ByteSize))) {
-    // Struct param is copied on the stack by caller if struct size > 16.
-    // Else if size < 16 then struct param is copied into one or two registers.
+      ((expr.GetFieldID() != 0) ||
+       (GetBecommon().GetTypeSize(symbol->GetType()->GetTypeIndex().GetIdx()) > k16ByteSize))) {
+    /*
+     * Struct param is copied on the stack by caller if struct size > 16.
+     * Else if size < 16 then struct param is copied into one or two registers.
+     */
     RegOperand *stackAddr = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
-    // load the base address of the struct copy from stack.
+    /* load the base address of the struct copy from stack. */
     SelectAddrof(*stackAddr, CreateStImmOperand(*symbol, 0, 0));
     Operand *structAddr;
     if (GetBecommon().GetTypeSize(symbol->GetType()->GetTypeIndex().GetIdx()) <= k16ByteSize) {
       isAggParamInReg = true;
       structAddr = stackAddr;
     } else {
-      AArch64OfstOperand *offopnd = &CreateOfstOpnd(0, 32);
+      AArch64OfstOperand *offopnd = &CreateOfstOpnd(0, k32BitSize);
       AArch64MemOperand *mo = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, kSizeOfPtr * kBitsPerByte,
-                                 stackAddr, nullptr, offopnd, nullptr);
+                                                  stackAddr, nullptr, offopnd, nullptr);
       structAddr = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
       GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xldr, *structAddr, *mo));
     }
@@ -1554,7 +1557,7 @@ Operand *AArch64CGFunc::SelectIread(const BaseNode &parent, IreadNode &expr) {
   }
 
   MemOperand *memOpnd = &CreateMemOpnd(destType, expr, *expr.Opnd(0), offset, memOrd);
-  if (aggParamReg) {
+  if (aggParamReg != nullptr) {
     isAggParamInReg = false;
     return aggParamReg;
   }
@@ -5515,7 +5518,7 @@ MemOperand &AArch64CGFunc::CreateMemOpnd(RegOperand &baseOpnd, int32 offset, uin
   return *memPool->New<AArch64MemOperand>(AArch64MemOperand::kAddrModeBOi, size, baseOpnd, nullptr, &offsetOpnd, &sym);
 }
 
-RegOperand &AArch64CGFunc::GenStructParamIndex(RegOperand &base, BaseNode &indexExpr, int shift) {
+RegOperand &AArch64CGFunc::GenStructParamIndex(RegOperand &base, const BaseNode &indexExpr, int shift) {
   RegOperand *index = &LoadIntoRegister(*HandleExpr(indexExpr, *(indexExpr.Opnd(0))), PTY_a64);
   RegOperand *srcOpnd = &CreateRegisterOperandOfType(PTY_a64);
   ImmOperand *imm = &CreateImmOperand(PTY_a64, shift);
@@ -5523,8 +5526,9 @@ RegOperand &AArch64CGFunc::GenStructParamIndex(RegOperand &base, BaseNode &index
   RegOperand *result = &CreateRegisterOperandOfType(PTY_a64);
   SelectAdd(*result, base, *srcOpnd, PTY_a64);
 
-  AArch64OfstOperand *offopnd = &CreateOfstOpnd(0, 32);
-  AArch64MemOperand &mo = GetOrCreateMemOpnd( AArch64MemOperand::kAddrModeBOi, k64BitSize, result, nullptr, offopnd, nullptr);
+  AArch64OfstOperand *offopnd = &CreateOfstOpnd(0, k32BitSize);
+  AArch64MemOperand &mo =
+      GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, k64BitSize, result, nullptr, offopnd, nullptr);
   RegOperand &structAddr = CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
   GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(MOP_xldr, structAddr, mo));
 
