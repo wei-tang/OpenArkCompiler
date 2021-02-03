@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -261,6 +261,8 @@ class Emitter {
   Emitter(CG &cg, const std::string &fileName)
       : cg(&cg),
         rangeIdx2PrefixStr(cg.GetMIRModule()->GetMPAllocator().Adapter()),
+        arraySize(0),
+        isFlexibleArray(false),
         hugeSoTargets(cg.GetMIRModule()->GetMPAllocator().Adapter()) {
     outStream.open(fileName, std::ios::trunc);
     MIRModule &mirModule = *cg.GetMIRModule();
@@ -282,6 +284,8 @@ class Emitter {
   const AsmInfo *asmInfo;
   std::ofstream outStream;
   MemPool *memPool;
+  uint16 arraySize;
+  bool isFlexibleArray;
 #if 1/* REQUIRE TO SEPERATE TARGAARCH64 TARGARM32 */
 /* Following code is under TARGAARCH64 condition */
   uint64 javaInsnCount = 0;
