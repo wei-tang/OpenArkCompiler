@@ -115,7 +115,7 @@ void AArch64MemLayout::LayoutVarargParams() {
       if (i == 0) {
         if (be.HasFuncReturnType(*func)) {
           TyIdx tidx = be.GetFuncReturnType(*func);
-          if (be.GetTypeSize(tidx.GetIdx()) <= 16) {
+          if (be.GetTypeSize(tidx.GetIdx()) <= k16ByteSize) {
             continue;
           }
         }
@@ -138,7 +138,7 @@ void AArch64MemLayout::LayoutVarargParams() {
       }
     }
     SetSizeOfGRSaveArea((k8BitSize - nIntRegs) * kSizeOfPtr);
-    SetSizeOfVRSaveArea((k8BitSize - nFpRegs) * kSizeOfPtr * 2);
+    SetSizeOfVRSaveArea((k8BitSize - nFpRegs) * kSizeOfPtr * k2ByteSize);
   }
 }
 
@@ -423,5 +423,4 @@ int32 AArch64MemLayout::GetVRSaveAreaBaseLoc() {
   total -= SizeOfArgsToStackPass();
   return total;
 }
-
 }  /* namespace maplebe */

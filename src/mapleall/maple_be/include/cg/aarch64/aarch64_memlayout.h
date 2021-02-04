@@ -167,7 +167,7 @@ class AArch64MemLayout : public MemLayout {
     segGrSaveArea.SetSize(sz);
   }
 
-  int32 GetSizeOfGRSaveArea() {
+  int32 GetSizeOfGRSaveArea() const {
     return segGrSaveArea.GetSize();
   }
 
@@ -175,7 +175,7 @@ class AArch64MemLayout : public MemLayout {
     segVrSaveArea.SetSize(sz);
   }
 
-  int32 GetSizeOfVRSaveArea() {
+  int32 GetSizeOfVRSaveArea() const {
     return segVrSaveArea.GetSize();
   }
 

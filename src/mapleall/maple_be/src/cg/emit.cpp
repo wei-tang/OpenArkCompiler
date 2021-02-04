@@ -237,6 +237,7 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
   if (Globals::GetInstance()->GetBECommon()->IsEmptyOfTypeAlignTable()) {
     ASSERT(false, "container empty check");
   }
+
   switch (label) {
     case kAsmGlbl: {
       Emit(asmInfo->GetGlobal());
@@ -265,9 +266,10 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
     case kAsmComm: {
       std::string size;
       if (isFlexibleArray) {
-        size = std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeSize(mirType->GetTypeIndex()) + arraySize);
+          size = std::to_string(
+              Globals::GetInstance()->GetBECommon()->GetTypeSize(mirType->GetTypeIndex()) + arraySize);
       } else {
-        size = std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeSize(mirType->GetTypeIndex()));
+          size = std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeSize(mirType->GetTypeIndex()));
       }
       Emit(asmInfo->GetComm());
       Emit(symName);
@@ -276,7 +278,7 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
       Emit(", ");
 #if PECOFF
       std::string align = std::to_string(
-          static_cast<int>(log2(Globals::GetInstance()->GetBECommon()->GetTypeAlign(mirType->GetTypeIndex()))));
+        static_cast<int>(log2(Globals::GetInstance()->GetBECommon()->GetTypeAlign(mirType->GetTypeIndex()))));
       emit(align);
 #else /* ELF */
       /* output align, symbol name begin with "classInitProtectRegion" align is 4096 */
@@ -310,9 +312,10 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
     case kAsmSize: {
       std::string size;
       if (isFlexibleArray) {
-        size = std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeSize(mirType->GetTypeIndex()) + arraySize);
+          size = std::to_string(
+              Globals::GetInstance()->GetBECommon()->GetTypeSize(mirType->GetTypeIndex()) + arraySize);
       } else {
-        size = std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeSize(mirType->GetTypeIndex()));
+          size = std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeSize(mirType->GetTypeIndex()));
       }
       Emit(asmInfo->GetSize());
       Emit(symName);
@@ -403,7 +406,7 @@ void Emitter::EmitStrConstant(const MIRStrConst &mirStrConst) {
    */
   const char *str = GlobalTables::GetUStrTable().GetStringFromStrIdx(mirStrConst.GetValue()).c_str();
   if (isFlexibleArray) {
-    arraySize += strlen(str) + k1ByteSize;
+      arraySize += static_cast<uint32>(strlen(str)) + k1ByteSize;
   }
   constexpr int bufSize = 6;
   while (*str) {
@@ -480,7 +483,7 @@ void Emitter::EmitScalarConstant(MIRConst &mirConst, bool newLine, bool flag32) 
       }
       Emit(intCt.GetValue());
       if (isFlexibleArray) {
-        arraySize += (sizeInBits / kBitsPerByte);
+          arraySize += (sizeInBits / kBitsPerByte);
       }
       break;
     }
@@ -489,7 +492,7 @@ void Emitter::EmitScalarConstant(MIRConst &mirConst, bool newLine, bool flag32) 
       EmitAsmLabel(asmName);
       Emit(std::to_string(floatCt.GetIntValue()));
       if (isFlexibleArray) {
-        arraySize += k4ByteFloatSize;
+          arraySize += k4ByteFloatSize;
       }
       break;
     }
@@ -498,7 +501,7 @@ void Emitter::EmitScalarConstant(MIRConst &mirConst, bool newLine, bool flag32) 
       EmitAsmLabel(asmName);
       Emit(std::to_string(doubleCt.GetIntValue()));
       if (isFlexibleArray) {
-        arraySize += k8ByteDoubleSize;
+          arraySize += k8ByteDoubleSize;
       }
       break;
     }
@@ -1405,8 +1408,8 @@ void Emitter::EmitStructConstant(MIRConst &mirConst) {
   uint32 fieldIdx = 1;
   for (uint32 i = 0; i < num; ++i) {
     if (((i + 1) == num) && cg->GetMIRModule()->GetSrcLang() == kSrcLangC) {
-      isFlexibleArray = Globals::GetInstance()->GetBECommon()->GetHasFlexibleArray(mirType.GetTypeIndex().GetIdx());
-      arraySize = 0;
+        isFlexibleArray = Globals::GetInstance()->GetBECommon()->GetHasFlexibleArray(mirType.GetTypeIndex().GetIdx());
+        arraySize = 0;
     }
     MIRConst *elemConst = structCt.GetAggConstElement(fieldIdx);
     MIRType &elemType = *structType.GetElemType(i);

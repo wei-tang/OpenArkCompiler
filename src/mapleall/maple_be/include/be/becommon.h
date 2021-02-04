@@ -122,7 +122,7 @@ class BECommon {
     return (funcReturnType.at(&func));
   }
 
-  void AddElementToFuncReturnType(MIRFunction &func, TyIdx tyIdx);
+  void AddElementToFuncReturnType(MIRFunction &func, const TyIdx tyIdx);
 
   MIRType *BeGetOrCreatePointerType(const MIRType &pointedType);
 
@@ -197,11 +197,12 @@ class BECommon {
   void AddTypeAlign(uint8 value) {
     typeAlignTable.emplace_back(value);
   }
+
   bool GetHasFlexibleArray(uint32 idx) const {
-    return typeAlignTable.at(idx);
+    return typeHasFlexibleArray.at(idx);
   }
   void SetHasFlexibleArray(uint32 idx, bool value) {
-    typeAlignTable.at(idx) = value;
+    typeHasFlexibleArray.at(idx) = value;
   }
 
   FieldID GetStructFieldCount(uint32 idx) const {
@@ -240,7 +241,7 @@ class BECommon {
    * Note: currently only for java class types.
    */
   MapleUnorderedMap<MIRClassType*, JClassLayout*> jClassLayoutTable;
-  MapleUnorderedMap<MIRFunction *, TyIdx> funcReturnType;
+  MapleUnorderedMap<MIRFunction*, TyIdx> funcReturnType;
 }; /* class BECommon */
 }  /* namespace maplebe */
 
