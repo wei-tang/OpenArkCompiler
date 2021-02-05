@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -505,8 +505,14 @@ std::string MIRModule::GetFileNameAsPostfix() const {
     fileNameStr += GlobalTables::GetStrTable().GetStringFromStrIdx(GStrIdx(fileNameIdx));
   } else {
     // option 2: src file name removing ext name.
-    ASSERT(fileNameStr.find_last_of('.') != fileNameStr.npos, "not found.");
-    fileNameStr += fileNameStr.substr(0, fileNameStr.find_last_of('.'));
+    if (GetSrcFileInfo().size() != 0) {
+      GStrIdx idx = GetSrcFileInfo()[0].first;
+      const std::string kStr = GlobalTables::GetStrTable().GetStringFromStrIdx(idx);
+      ASSERT(kStr.find_last_of('.') != kStr.npos, "not found .");
+      fileNameStr += kStr.substr(0, kStr.find_last_of('.'));
+    } else {
+      ASSERT(0, "No fileinfo and no srcfileinfo in mpl file");
+    }
   }
   for (char &c : fileNameStr) {
     if (!isalpha(c) && !isdigit(c) && c != '_' && c != '$') {

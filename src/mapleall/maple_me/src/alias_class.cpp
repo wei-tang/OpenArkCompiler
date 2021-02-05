@@ -115,6 +115,7 @@ AliasElem *AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
   switch (expr.GetOpCode()) {
     case OP_addrof: {
       OriginalSt &oSt = *static_cast<AddrofSSANode&>(expr).GetSSAVar()->GetOrigSt();
+      oSt.SetAddressTaken();
       FindOrCreateAliasElem(oSt);
       return &FindOrCreateAliasElemOfAddrofOSt(oSt);
     }
