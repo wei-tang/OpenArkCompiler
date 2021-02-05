@@ -590,6 +590,8 @@ class AArch64CGFunc : public CGFunc {
                          PrimType stype);
   bool GenerateCompareWithZeroInstruction(Opcode jmpOp, Opcode cmpOp, bool is64Bits,
                                           LabelOperand &targetOpnd, Operand &opnd0);
+  void GenCVaStartIntrin(RegOperand &opnd, uint32 stkSize);
+  void SelectCVaStart(IntrinsiccallNode &intrnNode);
   void SelectMPLClinitCheck(IntrinsiccallNode&);
   void SelectMPLProfCounterInc(IntrinsiccallNode &intrnNode);
   /* Helper functions for translating complex Maple IR instructions/inrinsics */
