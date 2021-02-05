@@ -1546,7 +1546,7 @@ void ReflectionAnalysis::GenClassMetaData(Klass &klass) {
   }
   if (structType->IsMIRClassType()) {
     MIRClassType *classType = static_cast<MIRClassType*>(structType);
-    for (TyIdx const kTyIdx : classType->GetInterfaceImplemented()) {
+    for (TyIdx const &kTyIdx : classType->GetInterfaceImplemented()) {
       Klass *interface = klassH->GetKlassFromTyIdx(kTyIdx);
       if (interface == nullptr) {
         MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(kTyIdx);

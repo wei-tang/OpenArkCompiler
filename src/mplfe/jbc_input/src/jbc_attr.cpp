@@ -253,7 +253,7 @@ std::list<std::string> JBCAttrLocalVariableInfo::EmitToStrings() const {
   std::list<std::string> ans;
   std::stringstream ss;
   ans.emplace_back("===== Local Variable Info =====");
-  for (const std::pair<std::pair<uint16, uint16>, JavaAttrLocalVariableInfoItem> &itemPair : itemMap) {
+  for (const std::pair<const std::pair<uint16, uint16>, JavaAttrLocalVariableInfoItem> &itemPair : itemMap) {
     const JavaAttrLocalVariableInfoItem &item = itemPair.second;
     ss.str("");
     ss << "slot[" << item.slotIdx << "]: ";

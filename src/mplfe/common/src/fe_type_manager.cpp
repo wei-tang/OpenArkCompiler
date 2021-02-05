@@ -142,7 +142,7 @@ void FETypeManager::CheckSameNamePolicy() const {
   if (result.size() > 0) {
     WARN(kLncWarn, "========== Structs list with the same name ==========");
   }
-  for (const std::pair<GStrIdx, std::list<GStrIdx>> &item : result) {
+  for (const std::pair<const GStrIdx, std::list<GStrIdx>> &item : result) {
     std::string typeName = GlobalTables::GetStrTable().GetStringFromStrIdx(item.first);
     WARN(kLncWarn, "Type: %s", typeName.c_str());
     for (const GStrIdx &mpltNameIdx : item.second) {

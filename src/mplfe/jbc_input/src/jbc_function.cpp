@@ -318,8 +318,8 @@ bool JBCFunction::CheckJVMStackResult() {
 }
 
 bool JBCFunction::PreBuildJsrInfo(const jbc::JBCAttrCode &code) {
-  const MapleMap<uint32, jbc::JBCOp*> &instMap = code.GetInstMap();
-  for (const std::pair<uint32, jbc::JBCOp*> &it : instMap) {
+  const MapleMap<const uint32, jbc::JBCOp*> &instMap = code.GetInstMap();
+  for (const std::pair<const uint32, jbc::JBCOp*> &it : instMap) {
     uint32 pc = it.first;
     jbc::JBCOp *op = it.second;
     ASSERT_NOT_NULL(op);
@@ -353,8 +353,8 @@ bool JBCFunction::PreBuildJsrInfo(const jbc::JBCAttrCode &code) {
 
 bool JBCFunction::BuildStmtFromInstruction(const jbc::JBCAttrCode &code) {
   GeneralStmt *stmt = nullptr;
-  const MapleMap<uint32, jbc::JBCOp*> &instMap = code.GetInstMap();
-  for (const std::pair<uint32, jbc::JBCOp*> &it : instMap) {
+  const MapleMap<const uint32, jbc::JBCOp*> &instMap = code.GetInstMap();
+  for (const std::pair<const uint32, jbc::JBCOp*> &it : instMap) {
     uint32 pc = it.first;
     const jbc::JBCOp *op = it.second;
     ASSERT(op != nullptr, "null ptr check");
@@ -416,7 +416,7 @@ GeneralStmt *JBCFunction::BuildStmtFromInstructionForSwitch(const jbc::JBCOp &op
   GeneralStmt *stmt = uniStmt.get();
   stmt->SetFallThru(false);
   const jbc::JBCOpSwitch &opSwitch = static_cast<const jbc::JBCOpSwitch&>(op);
-  for (const std::pair<int32, uint32> &targetInfo : opSwitch.GetTargets()) {
+  for (const std::pair<const int32, uint32> &targetInfo : opSwitch.GetTargets()) {
     GeneralStmt *target = BuildAndUpdateLabel(targetInfo.second, uniStmt);
     static_cast<JBCStmtInstBranch*>(stmt)->AddSucc(target);
   }
@@ -491,7 +491,7 @@ void JBCFunction::BuildStmtForTry(const jbc::JBCAttrCode &code) {
     rawInfo[std::make_pair(start, end)].push_back(handlerPC);
   }
   BuildTryInfo(rawInfo, outMapStartEnd, outMapStartCatch);
-  for (const std::pair<uint32, uint32> &startEnd : outMapStartEnd) {
+  for (const std::pair<const uint32, uint32> &startEnd : outMapStartEnd) {
     // Try
     JBCStmtPesudoTry *stmtTry =
         static_cast<JBCStmtPesudoTry*>(RegisterGeneralStmt(std::make_unique<JBCStmtPesudoTry>()));
@@ -620,8 +620,8 @@ void JBCFunction::BuildStmtForInstComment(const jbc::JBCAttrCode &code) {
   uint16 currLineNum = 0xFFFF;  // use 0xFFFF as invalid line number
   std::stringstream ss;
   const jbc::JBCConstPool &constPool = method.GetConstPool();
-  const MapleMap<uint32, jbc::JBCOp*> &instMap = code.GetInstMap();
-  for (const std::pair<uint32, jbc::JBCOp*> &it : instMap) {
+  const MapleMap<const uint32, jbc::JBCOp*> &instMap = code.GetInstMap();
+  for (const std::pair<const uint32, jbc::JBCOp*> &it : instMap) {
     uint32 pc = it.first;
     jbc::JBCOp *op = it.second;
     if (mapPCLineNum.find(pc) != mapPCLineNum.end()) {
