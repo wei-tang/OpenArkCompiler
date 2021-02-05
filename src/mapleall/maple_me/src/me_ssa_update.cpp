@@ -103,25 +103,19 @@ MeExpr *MeSSAUpdate::RenameExpr(MeExpr &meExpr, bool &changed) {
     }
     case kMeOpIvar: {
       auto &ivarMeExpr = static_cast<IvarMeExpr&>(meExpr);
-      IvarMeExpr newMeExpr(kInvalidExprID);
-      if (ivarMeExpr.GetMu() == nullptr) {
-        newMeExpr.SetMuVal(nullptr);
-      } else {
-        newMeExpr.SetMuVal(static_cast<VarMeExpr*>(RenameExpr(*ivarMeExpr.GetMu(), needRehash)));
-      }
-      newMeExpr.SetBase(RenameExpr(*ivarMeExpr.GetBase(), needRehash));
+      MeExpr *newbase = RenameExpr(*ivarMeExpr.GetBase(), needRehash);
       if (needRehash) {
         changed = true;
-        newMeExpr.SetFieldID(ivarMeExpr.GetFieldID());
-        newMeExpr.SetTyIdx(ivarMeExpr.GetTyIdx());
-        newMeExpr.InitBase(ivarMeExpr.GetOp(), ivarMeExpr.GetPrimType(), ivarMeExpr.GetNumOpnds());
+        IvarMeExpr newMeExpr(kInvalidExprID, ivarMeExpr.GetPrimType(), ivarMeExpr.GetTyIdx(), ivarMeExpr.GetFieldID());
+        newMeExpr.SetBase(newbase);
+        newMeExpr.SetMuVal(ivarMeExpr.GetMu());
         return irMap.HashMeExpr(newMeExpr);
       }
       return &meExpr;
     }
     case kMeOpOp: {
       auto &meOpExpr = static_cast<OpMeExpr&>(meExpr);
-      OpMeExpr newMeExpr(kInvalidExprID);
+      OpMeExpr newMeExpr(kInvalidExprID, meExpr.GetOp(), meOpExpr.GetPrimType(), meOpExpr.GetNumOpnds());
       newMeExpr.SetOpnd(0, RenameExpr(*meOpExpr.GetOpnd(0), needRehash));
       if (meOpExpr.GetOpnd(1) != nullptr) {
         newMeExpr.SetOpnd(1, RenameExpr(*meOpExpr.GetOpnd(1), needRehash));
@@ -136,21 +130,19 @@ MeExpr *MeSSAUpdate::RenameExpr(MeExpr &meExpr, bool &changed) {
         newMeExpr.SetBitsSize(meOpExpr.GetBitsSize());
         newMeExpr.SetTyIdx(meOpExpr.GetTyIdx());
         newMeExpr.SetFieldID(meOpExpr.GetFieldID());
-        newMeExpr.InitBase(meOpExpr.GetOp(), meOpExpr.GetPrimType(), meOpExpr.GetNumOpnds());
         return irMap.HashMeExpr(newMeExpr);
       }
       return &meExpr;
     }
     case kMeOpNary: {
       auto &naryMeExpr = static_cast<NaryMeExpr&>(meExpr);
-      NaryMeExpr newMeExpr(&irMap.GetIRMapAlloc(), kInvalidExprID, naryMeExpr.GetTyIdx(), naryMeExpr.GetIntrinsic(),
+      NaryMeExpr newMeExpr(&irMap.GetIRMapAlloc(), kInvalidExprID, meExpr.GetOp(), meExpr.GetPrimType(), meExpr.GetNumOpnds(), naryMeExpr.GetTyIdx(), naryMeExpr.GetIntrinsic(),
                            naryMeExpr.GetBoundCheck());
       for (size_t i = 0; i < naryMeExpr.GetOpnds().size(); ++i) {
         newMeExpr.GetOpnds().push_back(RenameExpr(*naryMeExpr.GetOpnd(i), needRehash));
       }
       if (needRehash) {
         changed = true;
-        newMeExpr.InitBase(meExpr.GetOp(), meExpr.GetPrimType(), meExpr.GetNumOpnds());
         return irMap.HashMeExpr(newMeExpr);
       }
       return &meExpr;
