@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -29,11 +29,10 @@ VarMeExpr *MeSSI::CreateNewPiExpr(const MeExpr &opnd) {
   CHECK_NULL_FATAL(ost);
   CHECK_FATAL(!ost->IsVolatile(), "must be");
   VarMeExpr *var = irMap->NewInPool<VarMeExpr>(irMap->GetExprID(), ost->GetIndex(),
-                                               irMap->GetVerst2MeExprTable().size());
+                                               irMap->GetVerst2MeExprTable().size(), opnd.GetPrimType());
   irMap->SetExprID(irMap->GetExprID() + 1);
   irMap->PushBackVerst2MeExprTable(var);
   ost->PushbackVersionIndex(var->GetVstIdx());
-  var->InitBase(opnd.GetOp(), opnd.GetPrimType(), 0);
   return var;
 }
 
@@ -416,7 +415,6 @@ MeExpr *MeSSI::NewMeExpr(MeExpr &meExpr) {
       auto &naryMeExpr = static_cast<NaryMeExpr&>(meExpr);
       NaryMeExpr *newNaryMeExpr = GetMemPool()->New<NaryMeExpr>(&GetAllocator(), irMap->GetExprID(), naryMeExpr);
       irMap->SetExprID(irMap->GetExprID() + 1);
-      newNaryMeExpr->InitBase(meExpr.GetOp(), meExpr.GetPrimType(), meExpr.GetNumOpnds());
       return newNaryMeExpr;
     }
     default:

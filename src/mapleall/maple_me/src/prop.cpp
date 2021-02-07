@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -114,16 +114,13 @@ MeExpr *Prop::SimplifyCompareSelectConstMeExpr(const OpMeExpr &opMeExpr, const M
   }
 
   // negative one is invalid ExprID
-  OpMeExpr newopMeExpr(-1);
-  newopMeExpr.InitBase(OP_select, PTY_u1, 3);
+  OpMeExpr newopMeExpr(-1, OP_select, PTY_u1, 3);
   newopMeExpr.SetOpnd(0, opMeOpnd0.GetOpnd(0));
 
-  ConstMeExpr exNewOpnds01(-1, constOpnd01);
-  exNewOpnds01.InitBase(OP_constval, PTY_u1, 0);
+  ConstMeExpr exNewOpnds01(-1, constOpnd01, PTY_u1);
   MeExpr *newOpnd01 = irMap.HashMeExpr(exNewOpnds01);
 
-  ConstMeExpr exNewOpnds02(-1, constOpnd02);
-  exNewOpnds02.InitBase(OP_constval, PTY_u1, 0);
+  ConstMeExpr exNewOpnds02(-1, constOpnd02, PTY_u1);
   MeExpr *newOpnds02 = irMap.HashMeExpr(exNewOpnds02);
 
   newopMeExpr.SetOpnd(1, newOpnd01);

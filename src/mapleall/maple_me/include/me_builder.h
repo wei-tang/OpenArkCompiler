@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -45,8 +45,7 @@ class MeBuilder {
   }
 
   OpMeExpr *BuildOpMeExpr(BaseNode &mirNode) const {
-    OpMeExpr *meExpr = New<OpMeExpr>(kInvalidExprID);
-    meExpr->InitBase(mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds());
+    OpMeExpr *meExpr = New<OpMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds());
     return meExpr;
   }
 
