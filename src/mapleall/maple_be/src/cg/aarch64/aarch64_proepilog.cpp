@@ -19,6 +19,7 @@ namespace maplebe {
 using namespace maple;
 
 namespace {
+constexpr uint32 k2BitSize = 2;
 constexpr int32 kSoeChckOffset = 8192;
 
 enum RegsPushPop : uint8 {
@@ -99,8 +100,9 @@ void AArch64GenProEpilog::GenStackGuard(BB &bb) {
 
     int32 stkSize = static_cast<AArch64MemLayout*>(cgFunc.GetMemlayout())->RealStackFrameSize() -
                     static_cast<AArch64MemLayout*>(cgFunc.GetMemlayout())->SizeOfArgsToStackPass() - vArea;
-    AArch64MemOperand *downStk = aarchCGFunc.GetMemoryPool()->New<AArch64MemOperand>(RFP,
-    stkSize - kOffset8MemPos - vArea, kSizeOfPtr * kBitsPerByte);
+    AArch64MemOperand *downStk =
+        aarchCGFunc.GetMemoryPool()->New<AArch64MemOperand>(RFP, stkSize - kOffset8MemPos - vArea,
+                                                            kSizeOfPtr * kBitsPerByte);
     if (downStk->GetMemVaryType() == kNotVary &&
         aarchCGFunc.IsImmediateOffsetOutOfRange(*downStk, k64BitSize)) {
       downStk = &aarchCGFunc.SplitOffsetWithAddInstruction(*downStk, k64BitSize, R10);
@@ -159,8 +161,9 @@ BB &AArch64GenProEpilog::GenStackGuardCheckInsn(BB &bb) {
       aarchCGFunc.GetOrCreatePhysicalRegisterOperand(R10, kSizeOfPtr * kBitsPerByte, kRegTyInt);
   int32 stkSize = static_cast<AArch64MemLayout*>(cgFunc.GetMemlayout())->RealStackFrameSize() -
                   static_cast<AArch64MemLayout*>(cgFunc.GetMemlayout())->SizeOfArgsToStackPass() - vArea;
-  AArch64MemOperand *downStk = aarchCGFunc.GetMemoryPool()->New<AArch64MemOperand>
-                               (RFP, stkSize - kOffset8MemPos - vArea, kSizeOfPtr * kBitsPerByte);
+  AArch64MemOperand *downStk =
+      aarchCGFunc.GetMemoryPool()->New<AArch64MemOperand>(RFP, stkSize - kOffset8MemPos - vArea,
+                                                          kSizeOfPtr * kBitsPerByte);
   if (downStk->GetMemVaryType() == kNotVary && aarchCGFunc.IsImmediateOffsetOutOfRange(*downStk, k64BitSize)) {
     downStk = &aarchCGFunc.SplitOffsetWithAddInstruction(*static_cast<AArch64MemOperand*>(downStk), k64BitSize, R10);
   }
@@ -573,10 +576,10 @@ void AArch64GenProEpilog::GeneratePushRegs() {
                  cgFunc.GetMemlayout()->SizeOfArgsToStackPass();
 
   if (cgFunc.GetMirModule().IsCModule() && cgFunc.GetFunction().GetAttr(FUNCATTR_varargs)) {
-    // GR/VR save areas are above the callee save area
+    /* GR/VR save areas are above the callee save area */
     AArch64MemLayout *ml = static_cast<AArch64MemLayout *>(cgFunc.GetMemlayout());
-    int saveareasize = RoundUp(ml->GetSizeOfGRSaveArea(), kSizeOfPtr*2) +
-                       RoundUp(ml->GetSizeOfVRSaveArea(), kSizeOfPtr*2);
+    int saveareasize = RoundUp(ml->GetSizeOfGRSaveArea(), kSizeOfPtr * k2BitSize) +
+                       RoundUp(ml->GetSizeOfVRSaveArea(), kSizeOfPtr * k2BitSize);
     offset -= saveareasize;
   }
 
@@ -623,28 +626,30 @@ void AArch64GenProEpilog::GeneratePushUnnamedVarargRegs() {
     uint32 dataSizeBits = kSizeOfPtr * kBitsPerByte;
     int32 offset = memlayout->GetGRSaveAreaBaseLoc();
     if (memlayout->GetSizeOfGRSaveArea() % kAarch64StackPtrAlignment) {
-      offset += kSizeOfPtr;  // End of area should be aligned. Hole between VR and GR area
+      offset += kSizeOfPtr;  /* End of area should be aligned. Hole between VR and GR area */
     }
-    int32 start_regno = 8 - (memlayout->GetSizeOfGRSaveArea() / kSizeOfPtr);
-    ASSERT(start_regno <= 8, "Incorrect starting GR regno for GR Save Area");
-    for (uint32 i = start_regno + (uint32)R0; i < (uint32)R8; i++) {
+    int32 start_regno = k8BitSize - (memlayout->GetSizeOfGRSaveArea() / kSizeOfPtr);
+    ASSERT(start_regno <= k8BitSize, "Incorrect starting GR regno for GR Save Area");
+    for (uint32 i = start_regno + static_cast<uint32>(R0); i < static_cast<uint32>(R8); i++) {
       Operand &stackloc = aarchCGFunc.CreateStkTopOpnd(offset, dataSizeBits);
-      RegOperand &reg = aarchCGFunc.GetOrCreatePhysicalRegisterOperand((AArch64reg)i, 64, kRegTyInt);
-      Insn &inst = currCG->BuildInstruction<AArch64Insn>(
-                     aarchCGFunc.PickStInsn(dataSizeBits, PTY_i64), reg, stackloc);
+      RegOperand &reg =
+          aarchCGFunc.GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(i), k64BitSize, kRegTyInt);
+      Insn &inst =
+          currCG->BuildInstruction<AArch64Insn>(aarchCGFunc.PickStInsn(dataSizeBits, PTY_i64), reg, stackloc);
       cgFunc.GetCurBB()->AppendInsn(inst);
       offset += kSizeOfPtr;
     }
     offset = memlayout->GetVRSaveAreaBaseLoc();
-    start_regno = 8 - (memlayout->GetSizeOfVRSaveArea() / (kSizeOfPtr * 2));
-    ASSERT(start_regno <= 8, "Incorrect starting GR regno for VR Save Area");
-    for (uint32 i = start_regno + (uint32)V0; i < (uint32)V8; i++) {
+    start_regno = k8BitSize - (memlayout->GetSizeOfVRSaveArea() / (kSizeOfPtr * k2BitSize));
+    ASSERT(start_regno <= k8BitSize, "Incorrect starting GR regno for VR Save Area");
+    for (uint32 i = start_regno + static_cast<uint32>(V0); i < static_cast<uint32>(V8); i++) {
       Operand &stackloc = aarchCGFunc.CreateStkTopOpnd(offset, dataSizeBits);
-      RegOperand &reg = aarchCGFunc.GetOrCreatePhysicalRegisterOperand((AArch64reg)i, 64, kRegTyInt);
-      Insn &inst = currCG->BuildInstruction<AArch64Insn>(
-                     aarchCGFunc.PickStInsn(dataSizeBits, PTY_i64), reg, stackloc);
+      RegOperand &reg =
+          aarchCGFunc.GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(i), k64BitSize, kRegTyInt);
+      Insn &inst =
+          currCG->BuildInstruction<AArch64Insn>(aarchCGFunc.PickStInsn(dataSizeBits, PTY_i64), reg, stackloc);
       cgFunc.GetCurBB()->AppendInsn(inst);
-      offset += (kSizeOfPtr * 2);
+      offset += (kSizeOfPtr * k2BitSize);
     }
   }
 }
@@ -956,10 +961,10 @@ void AArch64GenProEpilog::GeneratePopRegs() {
                  cgFunc.GetMemlayout()->SizeOfArgsToStackPass();
 
   if (cgFunc.GetMirModule().IsCModule() && cgFunc.GetFunction().GetAttr(FUNCATTR_varargs)) {
-    // GR/VR save areas are above the callee save area
+    /* GR/VR save areas are above the callee save area */
     AArch64MemLayout *ml = static_cast<AArch64MemLayout *>(cgFunc.GetMemlayout());
-    int saveareasize = RoundUp(ml->GetSizeOfGRSaveArea(), kSizeOfPtr*2) +
-                       RoundUp(ml->GetSizeOfVRSaveArea(), kSizeOfPtr*2);
+    int saveareasize = RoundUp(ml->GetSizeOfGRSaveArea(), kSizeOfPtr * k2BitSize) +
+                       RoundUp(ml->GetSizeOfVRSaveArea(), kSizeOfPtr * k2BitSize);
     offset -= saveareasize;
   }
 

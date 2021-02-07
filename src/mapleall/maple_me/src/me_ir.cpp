@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -1417,11 +1417,34 @@ bool MeExpr::HasIvar() const {
   return false;
 }
 
+bool MeExpr::IsDexMerge() const {
+  if (op != OP_intrinsicop) {
+    return false;
+  }
+  auto *naryx = static_cast<const NaryMeExpr*>(this);
+  if (naryx->GetIntrinsic() != INTRN_JAVA_MERGE) {
+    return false;
+  }
+  if (naryx->GetOpnds().size() != 1) {
+    return false;
+  }
+  if (naryx->GetOpnd(0)->GetMeOp() == kMeOpVar || naryx->GetOpnd(0)->GetMeOp() == kMeOpIvar) {
+    return true;
+  }
+  if (naryx->GetOpnd(0)->GetMeOp() == kMeOpReg) {
+    auto *r = static_cast<RegMeExpr*>(naryx->GetOpnd(0));
+    return r->GetRegIdx() >= 0;
+  }
+  return false;
+}
 
 // check if MeExpr can be a pointer to something that requires incref for its
 // assigned target
 bool MeExpr::PointsToSomethingThatNeedsIncRef(SSATab &ssaTab) {
   if (op == OP_retype) {
+    return true;
+  }
+  if (IsDexMerge()) {
     return true;
   }
   if (meOp == kMeOpIvar) {

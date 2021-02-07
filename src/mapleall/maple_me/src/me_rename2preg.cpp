@@ -427,7 +427,7 @@ class SSARename2Preg {
   CacheProxy cacheProxy;
   FormalRenaming formal;
 };
-}  // namespace
+} // namespace
 
 namespace maple {
 

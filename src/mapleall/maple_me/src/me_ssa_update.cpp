@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -136,7 +136,8 @@ MeExpr *MeSSAUpdate::RenameExpr(MeExpr &meExpr, bool &changed) {
     }
     case kMeOpNary: {
       auto &naryMeExpr = static_cast<NaryMeExpr&>(meExpr);
-      NaryMeExpr newMeExpr(&irMap.GetIRMapAlloc(), kInvalidExprID, meExpr.GetOp(), meExpr.GetPrimType(), meExpr.GetNumOpnds(), naryMeExpr.GetTyIdx(), naryMeExpr.GetIntrinsic(),
+      NaryMeExpr newMeExpr(&irMap.GetIRMapAlloc(), kInvalidExprID, meExpr.GetOp(), meExpr.GetPrimType(),
+                           meExpr.GetNumOpnds(), naryMeExpr.GetTyIdx(), naryMeExpr.GetIntrinsic(),
                            naryMeExpr.GetBoundCheck());
       for (size_t i = 0; i < naryMeExpr.GetOpnds().size(); ++i) {
         newMeExpr.GetOpnds().push_back(RenameExpr(*naryMeExpr.GetOpnd(i), needRehash));

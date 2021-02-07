@@ -1186,7 +1186,8 @@ StmtNode *CGLowerer::LowerCall(CallNode &callNode, StmtNode *&nextStmt, BlockNod
     MIRPtrType *pretType = static_cast<MIRPtrType*>((calleeFunc->GetNthParamType(0)));
     CHECK_FATAL(pretType != nullptr, "nullptr is not expected");
     retType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(pretType->GetPointedTyIdx());
-    CHECK_FATAL((retType->GetKind() == kTypeStruct) || (retType->GetKind() == kTypeUnion), "make sure retType is a struct type");
+    CHECK_FATAL((retType->GetKind() == kTypeStruct) || (retType->GetKind() == kTypeUnion),
+        "make sure retType is a struct type");
   }
 
   /* if return type is not of a struct, return */

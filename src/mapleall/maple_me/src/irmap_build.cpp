@@ -30,8 +30,8 @@ VarMeExpr *IRMapBuild::GetOrCreateVarFromVerSt(const VersionSt &vst) {
   }
   const OriginalSt *ost = vst.GetOrigSt();
   ASSERT(ost->IsSymbolOst(), "GetOrCreateVarFromVerSt: wrong ost_type");
-  auto *varx = irMap->New<VarMeExpr>(&irMap->irMapAlloc, irMap->exprID++, ost->GetIndex(), vindex,
-     GlobalTables::GetTypeTable().GetTypeTable()[ost->GetTyIdx().GetIdx()]->GetPrimType());
+  PrimType primType = GlobalTables::GetTypeTable().GetTypeTable()[ost->GetTyIdx().GetIdx()]->GetPrimType();
+  auto *varx = irMap->New<VarMeExpr>(&irMap->irMapAlloc, irMap->exprID++, ost->GetIndex(), vindex, primType);
   ASSERT(!GlobalTables::GetTypeTable().GetTypeTable().empty(), "container check");
   varx->SetFieldID(ost->GetFieldID());
   irMap->vst2MeExprTable[vindex] = varx;
@@ -47,8 +47,8 @@ RegMeExpr *IRMapBuild::GetOrCreateRegFromVerSt(const VersionSt &vst) {
   }
   const OriginalSt *ost = vst.GetOrigSt();
   ASSERT(ost->IsPregOst(), "GetOrCreateRegFromVerSt: PregOST expected");
-  auto *regx = irMap->NewInPool<RegMeExpr>(irMap->exprID++, ost->GetPregIdx(), mirModule.CurFunction()->GetPuidx(),
-                                           ost->GetIndex(), vindex, ost->GetMIRPreg()->GetPrimType());
+  auto *regx = irMap->New<RegMeExpr>(irMap->exprID++, ost->GetPregIdx(), mirModule.CurFunction()->GetPuidx(),
+                                     ost->GetIndex(), vindex, ost->GetMIRPreg()->GetPrimType());
   irMap->vst2MeExprTable[vindex] = regx;
   return regx;
 }

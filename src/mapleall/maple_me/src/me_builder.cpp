@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -35,14 +35,17 @@ MeExpr &MeBuilder::CreateMeExpr(int32 exprId, MeExpr &meExpr) const {
       resultExpr = New<ConststrMeExpr>(exprId, static_cast<ConststrMeExpr&>(meExpr).GetStrIdx(), meExpr.GetPrimType());
       break;
     case kMeOpConststr16:
-      resultExpr = New<Conststr16MeExpr>(exprId, static_cast<Conststr16MeExpr&>(meExpr).GetStrIdx(), meExpr.GetPrimType());
+      resultExpr = New<Conststr16MeExpr>(exprId, static_cast<Conststr16MeExpr&>(meExpr).GetStrIdx(),
+                                         meExpr.GetPrimType());
       break;
     case kMeOpSizeoftype:
-      resultExpr = New<SizeoftypeMeExpr>(exprId, meExpr.GetPrimType(), static_cast<SizeoftypeMeExpr&>(meExpr).GetTyIdx());
+      resultExpr = New<SizeoftypeMeExpr>(exprId, meExpr.GetPrimType(),
+                                         static_cast<SizeoftypeMeExpr&>(meExpr).GetTyIdx());
       break;
     case kMeOpFieldsDist: {
       auto &expr = static_cast<FieldsDistMeExpr&>(meExpr);
-      resultExpr = New<FieldsDistMeExpr>(exprId, meExpr.GetPrimType(), expr.GetTyIdx(), expr.GetFieldID1(), expr.GetFieldID2());
+      resultExpr = New<FieldsDistMeExpr>(exprId, meExpr.GetPrimType(), expr.GetTyIdx(),
+                                         expr.GetFieldID1(), expr.GetFieldID2());
       break;
     }
     case kMeOpAddrof:
@@ -56,7 +59,8 @@ MeExpr &MeBuilder::CreateMeExpr(int32 exprId, MeExpr &meExpr) const {
       resultExpr = New<AddroffuncMeExpr>(exprId, static_cast<AddroffuncMeExpr&>(meExpr).GetPuIdx());
       break;
     case kMeOpGcmalloc:
-      resultExpr = New<GcmallocMeExpr>(exprId, meExpr.GetOp(), meExpr.GetPrimType(), static_cast<GcmallocMeExpr&>(meExpr).GetTyIdx());
+      resultExpr = New<GcmallocMeExpr>(exprId, meExpr.GetOp(), meExpr.GetPrimType(),
+                                       static_cast<GcmallocMeExpr&>(meExpr).GetTyIdx());
       break;
     default:
       CHECK_FATAL(false, "not yet implement");
@@ -82,9 +86,10 @@ MeExpr *MeBuilder::BuildMeExpr(BaseNode &mirNode) const {
 
 MeExpr *MeBuilder::BuildAddrofMeExpr(BaseNode &mirNode) const {
   auto &addrofNode = static_cast<AddrofSSANode&>(mirNode);
-  AddrofMeExpr &meExpr = *New<AddrofMeExpr>(kInvalidExprID, addrofNode.GetPrimType(), addrofNode.GetSSAVar()->GetOrigSt()->GetIndex());
-  meExpr.SetFieldID(addrofNode.GetFieldID());
-  return &meExpr;
+  auto meExpr = New<AddrofMeExpr>(kInvalidExprID, addrofNode.GetPrimType(),
+                                  addrofNode.GetSSAVar()->GetOrigSt()->GetIndex());
+  meExpr->SetFieldID(addrofNode.GetFieldID());
+  return meExpr;
 }
 
 MeExpr *MeBuilder::BuildAddroffuncMeExpr(BaseNode &mirNode) const {
@@ -93,13 +98,15 @@ MeExpr *MeBuilder::BuildAddroffuncMeExpr(BaseNode &mirNode) const {
 }
 
 MeExpr *MeBuilder::BuildGCMallocMeExpr(BaseNode &mirNode) const {
-  GcmallocMeExpr &meExpr = *New<GcmallocMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(), static_cast<GCMallocNode&>(mirNode).GetTyIdx());
-  return &meExpr;
+  auto meExpr = New<GcmallocMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(),
+                                    static_cast<GCMallocNode&>(mirNode).GetTyIdx());
+  return meExpr;
 }
 
 MeExpr *MeBuilder::BuildSizeoftypeMeExpr(BaseNode &mirNode) const {
-  SizeoftypeMeExpr &meExpr = *New<SizeoftypeMeExpr>(kInvalidExprID, mirNode.GetPrimType(), static_cast<SizeoftypeNode&>(mirNode).GetTyIdx());
-  return &meExpr;
+  auto meExpr = New<SizeoftypeMeExpr>(kInvalidExprID, mirNode.GetPrimType(),
+                                      static_cast<SizeoftypeNode&>(mirNode).GetTyIdx());
+  return meExpr;
 }
 
 MeExpr *MeBuilder::BuildFieldsDistMeExpr(BaseNode &mirNode) const {
@@ -111,8 +118,9 @@ MeExpr *MeBuilder::BuildFieldsDistMeExpr(BaseNode &mirNode) const {
 
 MeExpr *MeBuilder::BuildIvarMeExpr(BaseNode &mirNode) const {
   auto &ireadSSANode = static_cast<IreadSSANode&>(mirNode);
-  IvarMeExpr &meExpr = *New<IvarMeExpr>(kInvalidExprID, mirNode.GetPrimType(), ireadSSANode.GetTyIdx(), ireadSSANode.GetFieldID());
-  return &meExpr;
+  auto meExpr = New<IvarMeExpr>(kInvalidExprID, mirNode.GetPrimType(),
+                                ireadSSANode.GetTyIdx(), ireadSSANode.GetFieldID());
+  return meExpr;
 }
 
 MeExpr *MeBuilder::BuildConstMeExpr(BaseNode &mirNode) const {
@@ -123,13 +131,15 @@ MeExpr *MeBuilder::BuildConstMeExpr(BaseNode &mirNode) const {
 }
 
 MeExpr *MeBuilder::BuildConststrMeExpr(BaseNode &mirNode) const {
-  ConststrMeExpr &meExpr = *New<ConststrMeExpr>(kInvalidExprID, static_cast<ConststrNode&>(mirNode).GetStrIdx(), mirNode.GetPrimType());
-  return &meExpr;
+  auto meExpr = New<ConststrMeExpr>(kInvalidExprID, static_cast<ConststrNode&>(mirNode).GetStrIdx(),
+                                    mirNode.GetPrimType());
+  return meExpr;
 }
 
 MeExpr *MeBuilder::BuildConststr16MeExpr(BaseNode &mirNode) const {
-  Conststr16MeExpr &meExpr = *New<Conststr16MeExpr>(kInvalidExprID, static_cast<Conststr16Node&>(mirNode).GetStrIdx(), mirNode.GetPrimType());
-  return &meExpr;
+  auto meExpr = New<Conststr16MeExpr>(kInvalidExprID, static_cast<Conststr16Node&>(mirNode).GetStrIdx(),
+                                      mirNode.GetPrimType());
+  return meExpr;
 }
 
 MeExpr *MeBuilder::BuildOpMeExprForCompare(BaseNode &mirNode) const {
@@ -182,21 +192,24 @@ MeExpr *MeBuilder::BuildOpMeExprForResolveFunc(BaseNode &mirNode) const {
 
 MeExpr *MeBuilder::BuildNaryMeExprForArray(BaseNode &mirNode) const {
   auto &arrayNode = static_cast<ArrayNode&>(mirNode);
-  NaryMeExpr &meExpr =
-      *NewInPool<NaryMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds(), arrayNode.GetTyIdx(), INTRN_UNDEFINED, arrayNode.GetBoundsCheck());
-  return &meExpr;
+  auto meExpr =
+      NewInPool<NaryMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds(),
+                            arrayNode.GetTyIdx(), INTRN_UNDEFINED, arrayNode.GetBoundsCheck());
+  return meExpr;
 }
 
 MeExpr *MeBuilder::BuildNaryMeExprForIntrinsicop(BaseNode &mirNode) const {
-  NaryMeExpr &meExpr =
-      *NewInPool<NaryMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds(), TyIdx(0), static_cast<IntrinsicopNode&>(mirNode).GetIntrinsic(), false);
-  return &meExpr;
+  auto meExpr =
+      NewInPool<NaryMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds(),
+                            TyIdx(0), static_cast<IntrinsicopNode&>(mirNode).GetIntrinsic(), false);
+  return meExpr;
 }
 
 MeExpr *MeBuilder::BuildNaryMeExprForIntrinsicWithType(BaseNode &mirNode) const {
   auto &intrinNode = static_cast<IntrinsicopNode&>(mirNode);
-  NaryMeExpr &meExpr = *NewInPool<NaryMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(), mirNode.GetNumOpnds(), intrinNode.GetTyIdx(), intrinNode.GetIntrinsic(), false);
-  return &meExpr;
+  auto meExpr = NewInPool<NaryMeExpr>(kInvalidExprID, mirNode.GetOpCode(), mirNode.GetPrimType(),
+                                      mirNode.GetNumOpnds(), intrinNode.GetTyIdx(), intrinNode.GetIntrinsic(), false);
+  return meExpr;
 }
 
 UnaryMeStmt &MeBuilder::BuildUnaryMeStmt(Opcode op, MeExpr &opnd, BB &bb, const SrcPosition &src) const {

@@ -284,7 +284,7 @@ class Emitter {
   const AsmInfo *asmInfo;
   std::ofstream outStream;
   MemPool *memPool;
-  uint16 arraySize;
+  uint32 arraySize;
   bool isFlexibleArray;
 #if 1/* REQUIRE TO SEPERATE TARGAARCH64 TARGARM32 */
 /* Following code is under TARGAARCH64 condition */
