@@ -55,7 +55,6 @@ class AnalyzeRC {
         aliasClass(ac),
         analyzeRCMp(memPool),
         analyzeRCAllocator(memPool),
-        meBuilder(irMap.GetIRMapAlloc()),
         rcItemsMap(std::less<OStIdx>(), analyzeRCAllocator.Adapter()),
         skipLocalRefVars(false) {}
 
@@ -88,7 +87,6 @@ class AnalyzeRC {
   AliasClass &aliasClass;
   MemPool *analyzeRCMp;
   MapleAllocator analyzeRCAllocator;
-  MeBuilder meBuilder;
   MapleMap<OStIdx, RCItem*> rcItemsMap;
   bool skipLocalRefVars;
 };
