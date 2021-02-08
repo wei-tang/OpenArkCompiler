@@ -15,8 +15,7 @@
 #include "feir_dfg.h"
 
 namespace maple {
-void FEIRDFG::CalculateDefUseByUseDef(std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapDefUse,
-                                      const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapUseDef) {
+void FEIRDFG::CalculateDefUseByUseDef(FEIRDefUseChain &mapDefUse, const FEIRUseDefChain &mapUseDef) {
   mapDefUse.clear();
   for (auto &it : mapUseDef) {
     for (UniqueFEIRVar *def : it.second) {
@@ -27,8 +26,7 @@ void FEIRDFG::CalculateDefUseByUseDef(std::map<UniqueFEIRVar*, std::set<UniqueFE
   }
 }
 
-void FEIRDFG::CalculateUseDefByDefUse(std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapUseDef,
-                                      const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapDefUse) {
+void FEIRDFG::CalculateUseDefByDefUse(FEIRUseDefChain &mapUseDef, const FEIRDefUseChain &mapDefUse) {
   mapUseDef.clear();
   for (auto &it : mapDefUse) {
     for (UniqueFEIRVar *use : it.second) {

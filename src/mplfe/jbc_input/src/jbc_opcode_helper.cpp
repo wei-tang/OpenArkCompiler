@@ -29,7 +29,7 @@ JBCOpcodeHelper::JBCOpcodeHelper(const jbc::JBCClassMethod &argMethod) : method(
 std::vector<std::string> JBCOpcodeHelper::GetBaseTypeNamesForOP(const jbc::JBCOp &op, bool &success) {
   auto it = funcPtrMapGetBaseTypeName.find(op.GetOpcodeKind());
   if (it == funcPtrMapGetBaseTypeName.end()) {
-    return GetBaseTypeNamesForOPDefault(op, success);
+    return GetBaseTypeNamesForOPDefault(success);
   } else {
     return (this->*(it->second))(op, success);
   }
@@ -47,7 +47,7 @@ std::map<jbc::JBCOpcodeKind, JBCOpcodeHelper::FuncPtrGetBaseTypeName> JBCOpcodeH
   return ans;
 }
 
-std::vector<std::string> JBCOpcodeHelper::GetBaseTypeNamesForOPDefault(const jbc::JBCOp &op, bool &success) const {
+std::vector<std::string> JBCOpcodeHelper::GetBaseTypeNamesForOPDefault(bool &success) const {
   success = true;
   return std::vector<std::string>();
 }

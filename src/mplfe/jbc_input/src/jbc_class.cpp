@@ -44,7 +44,7 @@ bool JBCClassElem::ParseFile(MapleAllocator &allocator, BasicIORead &io, const J
       return false;
     }
     attrs.push_back(attr);
-    attrMap.RegisterAttr(attr);
+    attrMap.RegisterAttr(*attr);
   }
   return true;
 }
@@ -97,6 +97,25 @@ bool JBCClassMethod::PreProcess() {
 
 const JBCAttrCode *JBCClassMethod::GetCode() const {
   return static_cast<const JBCAttrCode*>(attrMap.GetAttr(jbc::JBCAttrKind::kAttrCode));
+}
+
+bool JBCClassMethod::IsVirtual() const {
+  std::string classNameOrg = GetClass().GetClassNameOrin();
+  CHECK_FATAL(classNameOrg.length() > 2, "Invalid calss name: %s", classNameOrg.c_str()); // LclassName;
+  std::string className = classNameOrg.substr(1, classNameOrg.length() - 2);
+  return (accessFlag & kAccMethodFinal) == 0 && (accessFlag & kAccMethodPrivate) == 0 &&
+         (accessFlag & kAccMethodProtected) == 0 && (accessFlag & kAccMethodStatic) == 0 &&
+         GetName().compare(className) != 0 && GetName().compare("<init>") != 0 && GetName().compare("<clinit>") != 0;
+}
+
+bool JBCClassMethod::HasCode() const {
+  uint16 flag = GetAccessFlag();
+  return ((flag & kAccMethodAbstract) == 0) && ((flag & kAccMethodNative) == 0);
+}
+
+bool JBCClassMethod::IsNative() const {
+  uint16 flag = GetAccessFlag();
+  return flag & kAccMethodNative;
 }
 
 // ---------- JBCClass ----------
@@ -158,7 +177,7 @@ bool JBCClass::ParseFileForConstPool(BasicIORead &io) {
   for (uint16_t i = 1; i < header.constPoolCount && success; i += (wide ? kIdxOffWide : kIdxOff)) {
     JBCConst *objConst = JBCConst::InConst(allocator, io);
     if (objConst != nullptr) {
-      (void)constPool.InsertConst(objConst);
+      (void)constPool.InsertConst(*objConst);
       wide = objConst->IsWide();
       if (wide) {
         constPool.InsertConstDummyForWide();
@@ -206,7 +225,7 @@ bool JBCClass::ParseFileForAttrs(BasicIORead &io) {
       return false;
     }
     tbAttrs.push_back(attr);
-    attrMap.RegisterAttr(attr);
+    attrMap.RegisterAttr(*attr);
   }
   return success;
 }

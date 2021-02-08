@@ -57,4 +57,26 @@ bool FEIRVarTypeScatter::EqualsToImpl(const std::unique_ptr<FEIRVar> &argVar) co
 size_t FEIRVarTypeScatter::HashImpl() const {
   return 0;
 }
+
+MIRSymbol *FEIRVarTypeScatter::GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const {
+  MPLFE_PARALLEL_FORBIDDEN();
+  MIRType *mirType = var->GetType()->GenerateMIRTypeAuto();
+  std::string name = GetName(*mirType);
+  return builder.GetOrCreateGlobalDecl(name, *mirType);
+}
+
+MIRSymbol *FEIRVarTypeScatter::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
+  MPLFE_PARALLEL_FORBIDDEN();
+  MIRType *mirType = var->GetType()->GenerateMIRTypeAuto();
+  std::string name = GetName(*mirType);
+  return builder.GetOrCreateLocalDecl(name, *mirType);
+}
+
+MIRSymbol *FEIRVarTypeScatter::GenerateMIRSymbolImpl(MIRBuilder &builder) const {
+  if (isGlobal) {
+    return GenerateGlobalMIRSymbol(builder);
+  } else {
+    return GenerateLocalMIRSymbol(builder);
+  }
+}
 }  // namespace maple

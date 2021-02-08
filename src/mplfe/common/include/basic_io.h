@@ -94,7 +94,7 @@ class BasicIOMapFile {
   explicit BasicIOMapFile(const std::string &name);
   BasicIOMapFile(const std::string &name, const uint8 *ptrIn, long lengthIn);
   virtual ~BasicIOMapFile();
-  bool OpenAndMap();
+  virtual bool OpenAndMap();
   void Close();
   static std::unique_ptr<BasicIOMapFile> GenFileInMemory(const std::string &name, const uint8 *buf, size_t len);
 

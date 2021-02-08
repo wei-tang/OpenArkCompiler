@@ -40,7 +40,16 @@ void FEOptions::AddInputJarFile(const std::string &fileName) {
   if (type == FEFileType::FileType::kJar) {
     inputJarFiles.push_back(fileName);
   } else {
-    WARN(kLncWarn, "invalid input class file %s...skipped", fileName.c_str());
+    WARN(kLncWarn, "invalid input jar file %s...skipped", fileName.c_str());
+  }
+}
+
+void FEOptions::AddInputDexFile(const std::string &fileName) {
+  FEFileType::FileType type = FEFileType::GetInstance().GetFileTypeByMagicNumber(fileName);
+  if (type == FEFileType::FileType::kDex) {
+    inputDexFiles.push_back(fileName);
+  } else {
+    WARN(kLncWarn, "invalid input dex file %s...skipped", fileName.c_str());
   }
 }
 

@@ -26,7 +26,7 @@
 namespace maple {
 class FEFunctionProcessTask : public MplTask {
  public:
-  FEFunctionProcessTask(FEFunction &argFunction);
+  FEFunctionProcessTask(std::unique_ptr<FEFunction> &argFunction);
   virtual ~FEFunctionProcessTask() = default;
 
  protected:
@@ -34,7 +34,7 @@ class FEFunctionProcessTask : public MplTask {
   int FinishImpl(MplTaskParam *param) override;
 
  private:
-  FEFunction &function;
+  std::unique_ptr<FEFunction> &function;
 };
 
 class FEFunctionProcessSchedular : public MplScheduler {
@@ -42,7 +42,7 @@ class FEFunctionProcessSchedular : public MplScheduler {
   FEFunctionProcessSchedular(const std::string &name)
       : MplScheduler(name) {}
   virtual ~FEFunctionProcessSchedular() = default;
-  void AddFunctionProcessTask(const std::unique_ptr<FEFunction> &function);
+  void AddFunctionProcessTask(std::unique_ptr<FEFunction> &function);
   void SetDumpTime(bool arg) {
     dumpTime = arg;
   }
@@ -58,11 +58,12 @@ class MPLFECompilerComponent {
  public:
   MPLFECompilerComponent(MIRModule &argModule, MIRSrcLang argSrcLang);
   virtual ~MPLFECompilerComponent() = default;
-  bool InitFromOptions() {
-    return InitFromOptionsImpl();
-  }
   bool ParseInput() {
     return ParseInputImpl();
+  }
+
+  bool LoadOnDemandType() {
+    return LoadOnDemandTypeImpl();
   }
 
   bool PreProcessDecl() {
@@ -71,6 +72,10 @@ class MPLFECompilerComponent {
 
   bool ProcessDecl() {
     return ProcessDeclImpl();
+  }
+
+  void ProcessPragma() {
+    ProcessPragmaImpl();
   }
 
   bool PreProcessWithoutFunction() {
@@ -105,11 +110,20 @@ class MPLFECompilerComponent {
     return static_cast<uint32>(functions.size());
   }
 
+  const std::set<FEFunction*> &GetCompileFailedFEFunctions() const {
+    return compileFailedFEFunctions;
+  }
+
+  void ReleaseMemPool() {
+    ReleaseMemPoolImpl();
+  }
+
  protected:
-  virtual bool InitFromOptionsImpl() = 0;
   virtual bool ParseInputImpl() = 0;
+  virtual bool LoadOnDemandTypeImpl() = 0;
   virtual bool PreProcessDeclImpl() = 0;
   virtual bool ProcessDeclImpl() = 0;
+  virtual void ProcessPragmaImpl() = 0;
   virtual bool PreProcessWithoutFunctionImpl() = 0;
   virtual bool PreProcessWithFunctionImpl() = 0;
   virtual bool ProcessFunctionSerialImpl();
@@ -117,14 +131,16 @@ class MPLFECompilerComponent {
   virtual std::string GetComponentNameImpl() const;
   virtual bool ParallelableImpl() const;
   virtual void DumpPhaseTimeTotalImpl() const;
+  virtual void ReleaseMemPoolImpl() = 0;
 
   MIRModule &module;
   MIRSrcLang srcLang;
   std::list<std::unique_ptr<FEInputFieldHelper>> fieldHelpers;
   std::list<std::unique_ptr<FEInputMethodHelper>> methodHelpers;
-  std::list<std::unique_ptr<FEInputStructHelper>> structHelpers;
+  std::list<FEInputStructHelper*> structHelpers;
   std::list<std::unique_ptr<FEFunction>> functions;
   std::unique_ptr<FEFunctionPhaseResult> phaseResultTotal;
+  std::set<FEFunction*> compileFailedFEFunctions;
 };
 }  // namespace maple
 #endif

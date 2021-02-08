@@ -95,6 +95,7 @@ class AArch64CGFunc : public CGFunc {
   void SelectIassign(IassignNode &stmt) override;
   void SelectAggIassign(IassignNode &stmt, Operand &lhsAddrOpnd) override;
   void SelectReturn(Operand *opnd0) override;
+  void SelectIgoto(Operand *opnd0) override;
   void SelectCondGoto(CondGotoNode &stmt, Operand &opnd0, Operand &opnd1) override;
   void SelectCondGoto(LabelOperand &targetOpnd, Opcode jmpOp, Opcode cmpOp, Operand &opnd0, Operand &opnd1,
                       PrimType primType);
@@ -115,6 +116,7 @@ class AArch64CGFunc : public CGFunc {
   void SelectAddrof(Operand &result, AArch64MemOperand &memOpnd);
   Operand *SelectAddrof(AddrofNode &expr) override;
   Operand &SelectAddrofFunc(AddroffuncNode &expr) override;
+  Operand &SelectAddrofLabel(AddroflabelNode &expr) override;
 
   PrimType GetDestTypeFromAggSize(uint32 bitSize) const;
 

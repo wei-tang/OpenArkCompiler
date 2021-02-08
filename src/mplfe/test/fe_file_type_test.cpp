@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -20,18 +20,18 @@ namespace maple {
 TEST(FEFileType, GetFileTypeByExtName) {
   EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName("jar"), FEFileType::FileType::kJar);
   EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName("class"), FEFileType::FileType::kClass);
-  EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName(""), FEFileType::FileType::kUnknown);
-  EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName("txt"), FEFileType::FileType::kUnknown);
+  EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName(""), FEFileType::FileType::kUnknownType);
+  EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName("txt"), FEFileType::FileType::kUnknownType);
 }
 
 TEST(FEFileType, RegisterExtName_Warn) {
   FEFileType::GetInstance().RegisterExtName(FEFileType::FileType::kJar, "");
-  FEFileType::GetInstance().RegisterExtName(FEFileType::FileType::kUnknown, "txt");
+  FEFileType::GetInstance().RegisterExtName(FEFileType::FileType::kUnknownType, "txt");
 }
 
 TEST(FEFileType, RegisterMagicNumber_Warn) {
   FEFileType::GetInstance().RegisterMagicNumber(FEFileType::FileType::kJar, 0);
-  FEFileType::GetInstance().RegisterMagicNumber(FEFileType::FileType::kUnknown, 0x12345678);
+  FEFileType::GetInstance().RegisterMagicNumber(FEFileType::FileType::kUnknownType, 0x12345678);
 }
 
 TEST(FEFileType, GetExtName) {

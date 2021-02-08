@@ -96,7 +96,40 @@ MIRSymbol *FEIRVar::GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const {
   MPLFE_PARALLEL_FORBIDDEN();
   MIRType *mirType = type->GenerateMIRTypeAuto();
   std::string name = GetName(*mirType);
-  return builder.GetOrCreateGlobalDecl(name, *mirType);
+  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
+  MIRSymbol *gSymbol = builder.GetOrCreateGlobalDecl(name, *mirType);
+  if (gSymbol->GetAttrs().GetAttrFlag() != 0) {
+    return  gSymbol;
+  }
+  // Set global var attr once
+  std::size_t pos = name.find("_7C");
+  if (pos != std::string::npos) {
+    std::string containerName = name.substr(0, pos);
+    GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(containerName);
+    TyIdx containerTypeIdx = GlobalTables::GetTypeNameTable().GetTyIdxFromGStrIdx(strIdx);
+    if (containerTypeIdx != TyIdx(0)) {
+      MIRType *containerType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(containerTypeIdx);
+      if (containerType->IsStructType()) {
+        // for external class
+        MIRStructType *mirContainer = static_cast<MIRStructType*>(containerType);
+        if (!mirContainer->IsLocal()) {
+          gSymbol->SetStorageClass(kScExtern);
+        }
+        // for not defined field use
+        if (gSymbol->GetAttrs().GetAttrFlag() == 0) {
+          auto t = TypeAttrs();
+          t.SetAttr(ATTR_static);
+          gSymbol->AddAttrs(t);
+        }
+        for (auto &field : mirContainer->GetStaticFields()) {
+          if (field.first == nameIdx) {
+            gSymbol->AddAttrs(field.second.second.ConvertToTypeAttrs());
+          }
+        }
+      }
+    }
+  }
+  return gSymbol;
 }
 
 MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {

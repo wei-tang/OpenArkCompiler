@@ -16,10 +16,7 @@
 #include "namemangler.h"
 
 namespace maple {
-std::vector<std::string> FEUtilJava::SolveMethodSignature(std::string signature, bool inMpl) {
-  if (inMpl) {
-    signature = namemangler::DecodeName(signature);
-  }
+std::vector<std::string> FEUtilJava::SolveMethodSignature(const std::string &signature) {
   std::vector<std::string> ans;
   size_t pos1 = signature.find('(');
   size_t pos2 = signature.find(')');
@@ -28,10 +25,10 @@ std::vector<std::string> FEUtilJava::SolveMethodSignature(std::string signature,
   }
   std::string paramTypeNames = signature.substr(pos1 + 1, pos2 - pos1 - 1);
   std::string retTypeName = signature.substr(pos2 + 1);
-  ans.push_back(inMpl ? namemangler::EncodeName(retTypeName) : retTypeName);
+  ans.push_back(retTypeName);
   while (paramTypeNames.length() > 0) {
     std::string typeName = SolveParamNameInJavaFormat(paramTypeNames);
-    ans.push_back(inMpl ? namemangler::EncodeName(typeName) : typeName);
+    ans.push_back(typeName);
     paramTypeNames = paramTypeNames.substr(typeName.length());
   }
   return ans;

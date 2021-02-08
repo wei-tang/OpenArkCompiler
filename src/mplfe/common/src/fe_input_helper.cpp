@@ -32,8 +32,6 @@ MIRStructType *FEInputStructHelper::GetContainerImpl() {
 
 bool FEInputStructHelper::PreProcessDeclImpl() {
   bool error = false;
-  std::string structNameOrin = GetStructNameOrin();
-  FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "PreProcessDecl for %s", structNameOrin.c_str());
   MIRStructType *structType = CreateMIRStructType(error);
   if (error) {
     return false;
@@ -48,16 +46,16 @@ bool FEInputStructHelper::PreProcessDeclImpl() {
 }
 
 bool FEInputStructHelper::ProcessDeclImpl() {
-  std::string structNameOrin = GetStructNameOrin();
-  FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "ProcessDecl for %s", structNameOrin.c_str());
   if (isSkipped) {
     return true;
   }
   if (mirStructType == nullptr) {
     return false;
   }
-  // Create Symbol
-  CreateSymbol();
+  if (!FEOptions::GetInstance().IsGenMpltOnly() && !isOnDemandLoad) {
+    // Create Symbol
+    CreateSymbol();
+  }
   // Process SuperClass
   ProcessDeclSuperClass();
   // Process Interface
@@ -67,6 +65,9 @@ bool FEInputStructHelper::ProcessDeclImpl() {
   // Process Fields
   InitFieldHelpers();
   ProcessFieldDef();
+  if (!FEOptions::GetInstance().IsGenMpltOnly() && !isOnDemandLoad) {
+    ProcessStaticFields();
+  }
   // Process Methods
   InitMethodHelpers();
   ProcessMethodDef();
@@ -100,11 +101,11 @@ void FEInputStructHelper::ProcessDeclSuperClass() {
 }
 
 void FEInputStructHelper::ProcessDeclSuperClassForJava() {
-  std::vector<std::string> superNames = GetSuperClassNames();
+  const std::list<std::string> &superNames = GetSuperClassNames();
   ASSERT(superNames.size() <= 1, "there must be zero or one super class for java class: %s",
          GetStructNameOrin().c_str());
   if (superNames.size() == 1) {
-    std::string superNameMpl = namemangler::EncodeName(superNames[0]);
+    const std::string &superNameMpl = namemangler::EncodeName(superNames.front());
     bool isCreate = false;
     MIRStructType *superType = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType(superNameMpl, false,
                                                                                            FETypeFlag::kSrcExtern,
@@ -134,10 +135,10 @@ void FEInputStructHelper::ProcessDeclSuperClassForJava() {
 }
 
 void FEInputStructHelper::ProcessDeclImplements() {
-  std::vector<std::string> interfaceNames = GetInterfaceNames();
+  const std::vector<std::string> &interfaceNames = GetInterfaceNames();
   std::vector<MIRStructType*> interfaceTypes;
   for (const std::string &name : interfaceNames) {
-    std::string interfaceNameMpl = namemangler::EncodeName(name);
+    const std::string &interfaceNameMpl = namemangler::EncodeName(name);
     bool isCreate = false;
     MIRStructType *interfaceType = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType(interfaceNameMpl, true,
                                                                                                FETypeFlag::kSrcExtern,
@@ -204,12 +205,12 @@ void FEInputStructHelper::ProcessDeclDefInfo() {
 }
 
 void FEInputStructHelper::ProcessDeclDefInfoSuperNameForJava() {
-  std::vector<std::string> superNames = GetSuperClassNames();
+  std::list<std::string> superNames = GetSuperClassNames();
   if (superNames.size() > 1) {
     ASSERT(false, "There is one super class at most in java");
     return;
   }
-  std::string superName = superNames.size() == 0 ? "unknown" : superNames[0];
+  std::string superName = superNames.size() == 0 ? "unknown" : superNames.front();
   std::string superNameMpl = namemangler::EncodeName(superName);
   GStrIdx superNameMplIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(superNameMpl.c_str());
   SET_CLASS_INFO_PAIR(mirStructType, "INFO_superclassname", superNameMplIdx.GetIdx(), true);
@@ -230,9 +231,50 @@ void FEInputStructHelper::ProcessDeclDefInfoImplementNameForJava() {
   }
 }
 
+void FEInputStructHelper::ProcessStaticFields() {
+  uint32 i = 0;
+  uint32 stringIDCount = 0;
+  FieldVector::iterator it;
+  for (it = mirStructType->GetStaticFields().begin(); it != mirStructType->GetStaticFields().end(); ++i, ++it) {
+    StIdx stIdx = GlobalTables::GetGsymTable().GetStIdxFromStrIdx(it->first);
+    const std::string &fieldName = GlobalTables::GetStrTable().GetStringFromStrIdx(it->first);
+    MIRConst *cst = nullptr;
+    MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(it->second.first);
+    if (i < staticFieldsConstVal.size()) {
+      cst = staticFieldsConstVal[i];
+      if (cst != nullptr && cst->GetKind() == kConstStr16Const) {
+        std::u16string str16 =
+            GlobalTables::GetU16StrTable().GetStringFromStrIdx(static_cast<MIRStr16Const*>(cst)->GetValue());
+        MIRSymbol *literalVar =  FEManager::GetJavaStringManager().GetLiteralVar(str16);
+        if (literalVar == nullptr) {
+          literalVar = FEManager::GetJavaStringManager().CreateLiteralVar(FEManager::GetMIRBuilder(), str16, true);
+        }
+        if (!FEOptions::GetInstance().IsAOT()) {
+          AddrofNode *expr = FEManager::GetMIRBuilder().CreateExprAddrof(0, *literalVar,
+            FEManager::GetModule().GetMemPool());
+          MIRType *ptrType = GlobalTables::GetTypeTable().GetTypeTable()[PTY_ptr];
+          // Judge null pointer is not required.
+          cst = new(std::nothrow) MIRAddrofConst(expr->GetStIdx(), expr->GetFieldID(), *ptrType);
+        } else {
+          uint32 stringID = finalStaticStringID[stringIDCount++];
+          cst = new(std::nothrow) MIRIntConst(stringID, *GlobalTables::GetTypeTable().GetInt64());
+        }
+      }
+    }
+    MIRSymbol *fieldVar = GlobalTables::GetGsymTable().GetSymbolFromStidx(stIdx.Idx());
+    if (fieldVar == nullptr) {
+      fieldVar = FEManager::GetMIRBuilder().GetOrCreateGlobalDecl(fieldName, *type);
+      fieldVar->SetAttrs(it->second.second.ConvertToTypeAttrs());
+    }
+    if (cst != nullptr) {
+      fieldVar->SetKonst(cst);
+    }
+  }
+}
+
 void FEInputStructHelper::ProcessFieldDef() {
   for (FEInputFieldHelper *fieldHelper : fieldHelpers) {
-    bool success = fieldHelper->ProcessDeclWithContainer(allocator, *this);
+    bool success = fieldHelper->ProcessDeclWithContainer(allocator);
     if (success) {
       if (fieldHelper->IsStatic()) {
         mirStructType->GetStaticFields().push_back(fieldHelper->GetMIRFieldPair());
@@ -250,9 +292,21 @@ void FEInputStructHelper::ProcessMethodDef() {
     bool success = methodHelper->ProcessDecl(allocator);
     if (success) {
       mirStructType->GetMethods().push_back(methodHelper->GetMIRMethodPair());
+      methodHelper->SetClassTypeInfo(*mirStructType);
     } else {
-      ERR(kLncErr, "Error occurs in ProcessFieldDef for %s", GetStructNameOrin().c_str());
+      ERR(kLncErr, "Error occurs in ProcessMethodDef for %s", GetStructNameOrin().c_str());
     }
+  }
+}
+
+void FEInputStructHelper::ProcessPragma() {
+  if (isSkipped) {
+    return;
+  }
+  std::vector<MIRPragma*> pragmas = pragmaHelper->GenerateMIRPragmas();
+  std::vector<MIRPragma*> &pragmaVec = mirStructType->GetPragmaVec();
+  for (MIRPragma *pragma : pragmas) {
+    pragmaVec.push_back(pragma);
   }
 }
 

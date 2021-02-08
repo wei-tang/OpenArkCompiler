@@ -724,6 +724,35 @@ void AArch64Insn::EmitAdrpLdr(const CG &cg, Emitter &emitter) const {
   emitter.Emit("]\n");
 }
 
+void AArch64Insn::EmitAdrpLabel(Emitter &emitter) const {
+  /* adrp    xd, label
+   * add     xd, xd, #lo12:label
+   */
+  const AArch64MD *md = &AArch64CG::kMd[MOP_adrp_label];
+
+  Operand *opnd0 = opnds[0];
+  Operand *opnd1 = opnds[1];
+  OpndProp *prop0 = static_cast<AArch64OpndProp*>(md->operand[0]);
+  LabelIdx lidx = static_cast<ImmOperand *>(opnd1)->GetValue();
+
+  /* adrp    xd, label */
+  emitter.Emit("\t").Emit("adrp").Emit("\t");
+  opnd0->Emit(emitter, prop0);
+  emitter.Emit(", ");
+  const char *idx;
+  idx = strdup(std::to_string(Globals::GetInstance()->GetBECommon()->GetMIRModule().CurFunction()->GetPuidx()).c_str());
+  emitter.Emit(".label.").Emit(idx).Emit("__").Emit(lidx).Emit("\n");
+
+  /* add     xd, xd, #lo12:label */
+  emitter.Emit("\tadd\t");
+  opnd0->Emit(emitter, prop0);
+  emitter.Emit(", ");
+  opnd0->Emit(emitter, prop0);
+  emitter.Emit(", ");
+  emitter.Emit(":lo12:").Emit(".label.").Emit(idx).Emit("__").Emit(lidx).Emit("\n");
+  emitter.Emit("\n");
+}
+
 void AArch64Insn::EmitLazyBindingRoutine(Emitter &emitter) const {
   /* ldr xzr, [xs] */
   const AArch64MD *md = &AArch64CG::kMd[MOP_adrp_ldr];
@@ -954,6 +983,10 @@ void AArch64Insn::Emit(const CG &cg, Emitter &emitter) const {
     case MOP_lazy_ldr: {
       EmitLazyLoad(emitter);
       emitter.IncreaseJavaInsnCount(kLazyLdrInsnCount);
+      return;
+    }
+    case MOP_adrp_label: {
+      EmitAdrpLabel(emitter);
       return;
     }
     case MOP_lazy_tail: {

@@ -83,6 +83,15 @@ void CGCFG::BuildCFG() {
         gotoBB->PushBackPreds(*curBB);
         break;
       }
+      case BB::kBBIgoto: {
+        for (auto lidx : CG::GetCurCGFunc()->GetMirModule().CurFunction()->GetLabelTab()->GetAddrTakenLabels()) {
+          BB *igotobb = cgFunc->GetBBFromLab2BBMap(lidx);
+          CHECK_FATAL(igotobb, "igotobb is null");
+          curBB->PushBackSuccs(*igotobb);
+          igotobb->PushBackPreds(*curBB);
+        }
+        break;
+      }
       case BB::kBBRangeGoto: {
         for (auto labelIdx : curBB->GetRangeGotoLabelVec()) {
           BB *gotoBB = cgFunc->GetBBFromLab2BBMap(labelIdx);

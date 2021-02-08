@@ -301,12 +301,13 @@ bool JBCConstRef::PrepareFEStructElemInfo() {
   const std::string &className = constClass->GetClassNameOrin();
   const std::string &elemName = constNameAndType->GetName();
   const std::string &descName = constNameAndType->GetDesc();
-  std::string fullName = namemangler::EncodeName(className + "|" + elemName + "|" + descName);
-  GStrIdx fullNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(fullName);
+  StructElemNameIdx *structElemNameIdx = alloc.GetMemPool()->New<StructElemNameIdx>(className, elemName, descName);
   if (tag == kConstFieldRef) {
-    feStructElemInfo = FEManager::GetTypeManager().RegisterStructFieldInfo(fullNameIdx, kSrcLangJava, false);
+    feStructElemInfo = FEManager::GetTypeManager().RegisterStructFieldInfo(
+        *structElemNameIdx, kSrcLangJava, false);
   } else {
-    feStructElemInfo = FEManager::GetTypeManager().RegisterStructMethodInfo(fullNameIdx, kSrcLangJava, false);
+    feStructElemInfo = FEManager::GetTypeManager().RegisterStructMethodInfo(
+        *structElemNameIdx, kSrcLangJava, false);
   }
   return feStructElemInfo != nullptr;
 }
@@ -465,9 +466,9 @@ bool JBCConstInvokeDynamic::PrepareFEStructElemInfo(const std::string &ownerClas
   const std::string &className = ownerClassName + "$DynamicCall$";
   const std::string &elemName = constNameAndType->GetName();
   const std::string &descName = constNameAndType->GetDesc();
-  std::string fullName = namemangler::EncodeName(className + "|" + elemName + "|" + descName);
-  GStrIdx fullNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(fullName);
-  feStructElemInfo = FEManager::GetTypeManager().RegisterStructMethodInfo(fullNameIdx, kSrcLangJava, false);
+  StructElemNameIdx *structElemNameIdx = alloc.GetMemPool()->New<StructElemNameIdx>(className, elemName, descName);
+  feStructElemInfo = FEManager::GetTypeManager().RegisterStructMethodInfo(
+      *structElemNameIdx, kSrcLangJava, false);
   static_cast<FEStructMethodInfo*>(feStructElemInfo)->SetJavaDyamicCall();
   return feStructElemInfo != nullptr;
 }

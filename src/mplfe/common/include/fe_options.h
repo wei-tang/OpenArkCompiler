@@ -15,6 +15,7 @@
 #ifndef MPLFE_INCLUDE_COMMON_FE_OPTIONS_H
 #define MPLFE_INCLUDE_COMMON_FE_OPTIONS_H
 #include <list>
+#include <vector>
 #include <string>
 #include <set>
 #include "mpl_logging.h"
@@ -34,6 +35,22 @@ class FEOptions {
     kSmart            // auto anti-proguard
   };
 
+  enum ModeCollectDepTypes {
+    kAll = 0,      // collect all dependent types
+    kFunc          // collect func dependent types
+  };
+
+  enum ModeDepSameNamePolicy {
+    kSys = 0,      // load type form sys when on-demand load same name type
+    kSrc           // load type form src when on-demand load same name type
+  };
+
+  enum TypeInferKind {
+    kNo = 0,
+    kRoahAlgorithm,
+    kLinearScan
+  };
+
   static FEOptions &GetInstance() {
     return options;
   }
@@ -51,6 +68,11 @@ class FEOptions {
   void AddInputJarFile(const std::string &fileName);
   const std::list<std::string> &GetInputJarFiles() const {
     return inputJarFiles;
+  }
+
+  void AddInputDexFile(const std::string &fileName);
+  const std::vector<std::string> &GetInputDexFiles() const {
+    return inputDexFiles;
   }
 
 
@@ -76,6 +98,47 @@ class FEOptions {
 
   const std::list<std::string> &GetInputMpltFiles() const {
     return inputMpltFiles;
+  }
+
+  // On Demand Type Creation
+  void SetXBootClassPath(const std::string &fileName) {
+    strXBootClassPath = fileName;
+  }
+
+  const std::string &GetXBootClassPath() const {
+    return strXBootClassPath;
+  }
+
+  void SetClassLoaderContext(const std::string &fileName) {
+    strClassLoaderContext = fileName;
+  }
+
+  const std::string &GetClassLoaderContext() const {
+    return strClassLoaderContext;
+  }
+
+  void SetCompileFileName(const std::string &fileName) {
+    strCompileFileName = fileName;
+  }
+
+  const std::string &GetCompileFileName() const {
+    return strCompileFileName;
+  }
+
+  void SetModeCollectDepTypes(ModeCollectDepTypes mode) {
+    modeCollectDepTypes = mode;
+  }
+
+  ModeCollectDepTypes GetModeCollectDepTypes() const {
+    return modeCollectDepTypes;
+  }
+
+  void SetModeDepSameNamePolicy(ModeDepSameNamePolicy mode) {
+    modeDepSameNamePolicy = mode;
+  }
+
+  ModeDepSameNamePolicy GetModeDepSameNamePolicy() const {
+    return modeDepSameNamePolicy;
   }
 
   // output control options
@@ -123,6 +186,14 @@ class FEOptions {
     return isDumpInstComment;
   }
 
+  void SetNoMplFile() {
+    isNoMplFile = true;
+  }
+
+  bool IsNoMplFile() const {
+    return isNoMplFile;
+  }
+
   // debug info control options
   void SetDumpLevel(int level) {
     dumpLevel = level;
@@ -138,6 +209,22 @@ class FEOptions {
 
   bool IsDumpTime() const {
     return isDumpTime;
+  }
+
+  void SetIsDumpComment(bool flag) {
+    isDumpComment = flag;
+  }
+
+  bool IsDumpComment() const {
+    return isDumpComment;
+  }
+
+  void SetIsDumpLOC(bool flag) {
+    isDumpLOC = flag;
+  }
+
+  bool IsDumpLOC() const {
+    return isDumpLOC;
   }
 
   void SetIsDumpPhaseTime(bool flag) {
@@ -254,14 +341,6 @@ class FEOptions {
     return dumpThreadTime;
   }
 
-  void SetReleaseAfterEmit(bool arg) {
-    isReleaseAfterEmit = arg;
-  }
-
-  bool IsReleaseAfterEmit() const {
-    return isReleaseAfterEmit;
-  }
-
   void AddDumpJBCFuncName(const std::string &funcName) {
     if (!funcName.empty()) {
       CHECK_FATAL(dumpJBCFuncNames.insert(funcName).second, "dumpJBCFuncNames insert failed");
@@ -276,14 +355,42 @@ class FEOptions {
     return dumpJBCFuncNames.find(funcName) != dumpJBCFuncNames.end();
   }
 
+  void SetTypeInferKind(TypeInferKind arg) {
+    typeInferKind = arg;
+  }
+
+  TypeInferKind GetTypeInferKind() const {
+    return typeInferKind;
+  }
+
+  bool HasJBC() const {
+    return ((inputClassFiles.size() != 0) || (inputJarFiles.size() != 0));
+  }
+
+  void SetIsAOT(bool flag) {
+    isAOT = flag;
+  }
+
+  bool IsAOT() const {
+    return isAOT;
+  }
+
  private:
   static FEOptions options;
   // input control options
   std::list<std::string> inputClassFiles;
   std::list<std::string> inputJarFiles;
+  std::vector<std::string> inputDexFiles;
   std::list<std::string> inputMpltFilesFromSys;
   std::list<std::string> inputMpltFilesFromApk;
   std::list<std::string> inputMpltFiles;
+
+  // On Demand Type Creation
+  std::string strXBootClassPath;
+  std::string strClassLoaderContext;
+  std::string strCompileFileName;
+  ModeCollectDepTypes modeCollectDepTypes = ModeCollectDepTypes::kFunc;
+  ModeDepSameNamePolicy modeDepSameNamePolicy = ModeDepSameNamePolicy::kSys;
 
   // output control options
   bool isGenMpltOnly;
@@ -291,10 +398,13 @@ class FEOptions {
   std::string outputPath;
   std::string outputName;
   bool isDumpInstComment = false;
+  bool isNoMplFile = false;
 
   // debug info control options
   int dumpLevel;
   bool isDumpTime;
+  bool isDumpComment = false;
+  bool isDumpLOC = false;
   bool isDumpPhaseTime = false;
   bool isDumpPhaseTimeDetail = false;
 
@@ -316,7 +426,12 @@ class FEOptions {
   // parallel
   uint32 nthreads;
   bool dumpThreadTime;
-  bool isReleaseAfterEmit = false;
+
+  // type-infer
+  TypeInferKind typeInferKind = kLinearScan;
+
+  // symbol resolve
+  bool isAOT = false;
 
   FEOptions();
   ~FEOptions() = default;

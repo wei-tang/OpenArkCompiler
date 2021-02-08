@@ -163,6 +163,7 @@ class AArch64Insn : public Insn {
   void EmitAdrpLdr(const CG&, Emitter&) const;
   void EmitLazyBindingRoutine(Emitter&) const;
   void EmitClinitTail(Emitter&) const;
+  void EmitAdrpLabel(Emitter&) const;
   void EmitLazyLoad(Emitter&) const;
   void EmitLazyLoadStatic(Emitter&) const;
   void EmitArrayClassCacheLoad(Emitter&) const;

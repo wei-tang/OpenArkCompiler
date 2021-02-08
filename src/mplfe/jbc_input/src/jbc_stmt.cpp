@@ -452,7 +452,7 @@ std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpArrayLoad(JBCFunctionConte
   CHECK_FATAL(stackOutType != jbc::JBCPrimType::kTypeDefault, "invalid out type for ArrayLoad");
   PrimType ptyElem = JBCStack2FEHelper::JBCStackItemTypeToPrimType(stackOutType);
   UniqueFEIRVar varElem = stack2feHelper.PushItem(ptyElem);
-  return FEIRBuilder::CreateStmtArrayLoad(std::move(varElem), std::move(varArray), std::move(varIndex), ptyElem);
+  return FEIRBuilder::CreateStmtArrayLoad(std::move(varElem), std::move(varArray), std::move(varIndex));
 }
 
 std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpArrayStore(JBCFunctionContext &context, bool &success) const {
@@ -467,7 +467,7 @@ std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpArrayStore(JBCFunctionCont
   UniqueFEIRVar varElem = stack2feHelper.PopItem(ptyElem);
   UniqueFEIRVar varIndex = stack2feHelper.PopItem(ptyIndex);
   UniqueFEIRVar varArray = stack2feHelper.PopItem(ptyArray);
-  return FEIRBuilder::CreateStmtArrayStore(std::move(varElem), std::move(varArray), std::move(varIndex), ptyElem);
+  return FEIRBuilder::CreateStmtArrayStore(std::move(varElem), std::move(varArray), std::move(varIndex));
 }
 
 std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpPop(JBCFunctionContext &context, bool &success) const {

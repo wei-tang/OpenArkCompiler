@@ -181,6 +181,7 @@ class JBCOp {
   virtual JBCPrimType GetOutputTypesToStackImpl(const JBCConstPool &constPool) const;
   virtual std::string DumpImpl(const JBCConstPool &constPool) const;
 
+  MapleAllocator &alloc;
   JBCOpcode op : 8;
   JBCOpcodeKind kind : 7;
   bool wide : 1;
