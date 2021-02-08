@@ -166,7 +166,7 @@ class JBCAttrCode : public JBCAttr {
   ~JBCAttrCode();
   void InitLocalVarInfo();
   void SetLoadStoreType() const;
-  const MapleMap<uint32, JBCOp*> &GetInstMap() const {
+  const MapleMap<const uint32, JBCOp*> &GetInstMap() const {
     return instructions;
   }
 
@@ -218,7 +218,7 @@ class JBCAttrCode : public JBCAttr {
   MapleVector<attr::ExceptionTableItem*> exceptions;
   uint16 nAttr;
   MapleVector<JBCAttr*> attrs;
-  MapleMap<uint32, JBCOp*> instructions;
+  MapleMap<const uint32, JBCOp*> instructions;
   JBCAttrMap attrMap;
   JBCAttrLocalVariableInfo localVarInfo;
 };
