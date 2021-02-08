@@ -668,6 +668,12 @@
  */
 {MOP_adrp_ldr, {mopdReg64ID, mopdLiteral},ISATOMIC|CANTHROW,kLtAdrpLdr,"intrinsic_adrpldr","0,1",2},
 
+/* will be emit to two instructions in a row:
+ * adrp    xd, label
+ * add     xd, xd, #:lo12:label
+ */
+{MOP_adrp_label, {mopdReg64ID, mopdImm64},0,kLtAlu,"intrinsic_adrplabel","0,1", 2},
+
 /*
  * will be emit to three instrunctions in a row:
  * adrp  xd, :got:__arrayClassCacheTable$$xxx+offset

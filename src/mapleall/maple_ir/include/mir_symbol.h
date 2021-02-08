@@ -597,6 +597,10 @@ class MIRLabelTable {
     return labelTable;
   }
 
+  MapleUnorderedSet<LabelIdx> GetAddrTakenLabels() {
+    return addrTakenLabels;
+  }
+
   const MapleMap<GStrIdx, LabelIdx> &GetStrIdxToLabelIdxMap() const {
     return strIdxToLabIdxMap;
   }

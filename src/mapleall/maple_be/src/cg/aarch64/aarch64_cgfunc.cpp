@@ -1525,6 +1525,14 @@ PrimType AArch64CGFunc::GetDestTypeFromAggSize(uint32 bitSize) const {
   return primType;
 }
 
+Operand &AArch64CGFunc::SelectAddrofLabel(AddroflabelNode &expr) {
+  // adrp reg, label-id
+  Operand &dst = CreateVirtualRegisterOperand(NewVReg(kRegTyInt, expr.SizeOfInstr()));
+  Operand &immOpnd = CreateImmOperand(expr.GetOffset(), k64BitSize, false);
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_adrp_label, dst, immOpnd));
+  return dst;
+}
+
 Operand *AArch64CGFunc::SelectIread(const BaseNode &parent, IreadNode &expr) {
   int32 offset = 0;
   MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(expr.GetTyIdx());
@@ -1845,6 +1853,17 @@ bool AArch64CGFunc::GenerateCompareWithZeroInstruction(Opcode jmpOp, Opcode cmpO
       break;
   }
   return finish;
+}
+
+void AArch64CGFunc::SelectIgoto(Operand *opnd0) {
+  Operand *srcOpnd = opnd0;
+  if (opnd0->GetKind() == Operand::kOpdMem) {
+    Operand *dst = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
+    GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xldr, *dst, *opnd0));
+    srcOpnd = dst;
+  }
+  GetCurBB()->SetKind(BB::kBBIgoto);
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xbr, *srcOpnd));
 }
 
 void AArch64CGFunc::SelectCondGoto(LabelOperand &targetOpnd, Opcode jmpOp, Opcode cmpOp, Operand &origOpnd0,
