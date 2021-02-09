@@ -66,13 +66,6 @@ class SSATab : public AnalysisResult {
     return ost;
   }
 
-  const MIRSymbol *GetMIRSymbolFromOriginalSt(const OriginalSt &ost) const {
-    return originalStTable.GetMIRSymbolFromOriginalSt(ost);
-  }
-  MIRSymbol *GetMIRSymbolFromOriginalSt(OriginalSt &ost) {
-    return originalStTable.GetMIRSymbolFromOriginalSt(ost);
-  }
-
   PrimType GetPrimType(OStIdx idx) const {
     const MIRSymbol *symbol = GetMIRSymbolFromID(idx);
     return symbol->GetType()->GetPrimType();

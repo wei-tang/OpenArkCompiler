@@ -125,7 +125,7 @@ class MeExpr {
     return op == OP_gcmalloc || op == OP_gcmallocjarray || op == OP_gcpermalloc || op == OP_gcpermallocjarray;
   }
 
-  virtual bool IsVolatile(const SSATab&) const {
+  virtual bool IsVolatile() const {
     return false;
   }
 
@@ -192,9 +192,9 @@ class IassignMeStmt;  // circular dependency exists, no other choice
 // base class for VarMeExpr and RegMeExpr
 class ScalarMeExpr : public MeExpr {
  public:
-  ScalarMeExpr(int32 exprid, const OStIdx &oidx, uint32 vidx, MeExprOp meop, Opcode o, PrimType ptyp)
+  ScalarMeExpr(int32 exprid, OriginalSt *origSt, uint32 vidx, MeExprOp meop, Opcode o, PrimType ptyp)
       : MeExpr(exprid, meop, o, ptyp, 0),
-        ostIdx(oidx),
+        ost(origSt),
         vstIdx(vidx),
         defBy(kDefByNo) {
     def.defStmt = nullptr;
@@ -228,12 +228,8 @@ class ScalarMeExpr : public MeExpr {
 
   BB *DefByBB() const;
 
-  const OStIdx &GetOStIdx() const {
-    return ostIdx;
-  }
-
-  OStIdx GetOstIdx() const {
-    return ostIdx;
+  OriginalSt *GetOst() const {
+    return ost;
   }
 
   size_t GetVstIdx() const {
@@ -298,7 +294,7 @@ class ScalarMeExpr : public MeExpr {
 
   BB *GetDefByBBMeStmt(const Dominance&, MeStmtPtr&) const;
  private:
-  OStIdx ostIdx;   // the index in MEOptimizer's OriginalStTable;
+  OriginalSt *ost;
   uint32 vstIdx;    // the index in MEOptimizer's VersionStTable, 0 if not in VersionStTable
   MeDefBy defBy : 3;
   union {
@@ -312,8 +308,8 @@ class ScalarMeExpr : public MeExpr {
 // represant dread
 class VarMeExpr final : public ScalarMeExpr {
  public:
-  VarMeExpr(MapleAllocator *alloc, int32 exprid, OStIdx oidx, size_t vidx, PrimType ptyp)
-      : ScalarMeExpr(exprid, oidx, vidx, kMeOpVar, OP_dread, ptyp),
+  VarMeExpr(MapleAllocator *alloc, int32 exprid, OriginalSt *ost, size_t vidx, PrimType ptyp)
+      : ScalarMeExpr(exprid, ost, vidx, kMeOpVar, OP_dread, ptyp),
         inferredTypeCandidates(alloc->Adapter()) {}
 
   ~VarMeExpr() = default;
@@ -322,21 +318,13 @@ class VarMeExpr final : public ScalarMeExpr {
   BaseNode &EmitExpr(SSATab&) override;
   bool IsValidVerIdx(const SSATab &ssaTab) const;
 
-  bool IsVolatile(const SSATab&) const override;
+  bool IsVolatile() const override;
   // indicate if the variable is local variable but not a function formal variable
   bool IsPureLocal(const SSATab&, const MIRFunction&) const;
-  bool IsZeroVersion(const SSATab&) const;
+  bool IsZeroVersion() const;
   bool IsSameVariableValue(const VarMeExpr&) const override;
-  VarMeExpr &ResolveVarMeValue(SSATab &ssaTab);
-  bool PointsToStringLiteral(SSATab &ssaTab);
-
-  FieldID GetFieldID() const {
-    return fieldID;
-  }
-
-  void SetFieldID(FieldID fieldIDVal) {
-    fieldID = fieldIDVal;
-  }
+  VarMeExpr &ResolveVarMeValue();
+  bool PointsToStringLiteral();
 
   TyIdx GetInferredTyIdx() const {
     return inferredTyIdx;
@@ -385,7 +373,6 @@ class VarMeExpr final : public ScalarMeExpr {
  private:
   bool noDelegateRC = false;  // true if this cannot be optimized by delegaterc
   bool noSubsumeRC = false;   // true if this cannot be optimized by subsumrc
-  FieldID fieldID = 0;
   TyIdx inferredTyIdx{ 0 }; /* Non zero if it has a known type (allocation type is seen). */
   MapleVector<TyIdx> inferredTypeCandidates;
   bool maybeNull = true;  // false if definitely not null
@@ -477,10 +464,9 @@ class MePhiNode {
 
 class RegMeExpr : public ScalarMeExpr {
  public:
-  RegMeExpr(int32 exprid, PregIdx preg, PUIdx pidx, OStIdx oidx, uint32 vidx, PrimType ptyp)
-      : ScalarMeExpr(exprid, oidx, vidx, kMeOpReg, OP_regread, ptyp),
-        regIdx(preg),
-        puIdx(pidx) {}
+  RegMeExpr(int32 exprid, OriginalSt *ost, uint32 vidx, PrimType ptyp)
+      : ScalarMeExpr(exprid, ost, vidx, kMeOpReg, OP_regread, ptyp),
+        regIdx(ost->GetPregIdx()) {}
 
   ~RegMeExpr() = default;
 
@@ -497,17 +483,12 @@ class RegMeExpr : public ScalarMeExpr {
     regIdx = regIdxVal;
   }
 
-  PUIdx GetPuIdx() const {
-    return puIdx;
-  }
-
   bool IsNormalReg() const {
     return regIdx >= 0;
   }
 
  private:
   PregIdx16 regIdx;
-  PUIdx puIdx;
 };
 
 class ConstMeExpr : public MeExpr {
@@ -896,11 +877,7 @@ class IvarMeExpr : public MeExpr {
 
   void Dump(const IRMap*, int32 indent = 0) const override;
   BaseNode &EmitExpr(SSATab&) override;
-  bool IsVolatile(const SSATab&) const override {
-    return IsVolatile();
-  }
-
-  bool IsVolatile() const;
+  bool IsVolatile() const override;
   bool IsFinal();
   bool IsRCWeak() const;
   bool IsUseSameSymbol(const MeExpr&) const override;

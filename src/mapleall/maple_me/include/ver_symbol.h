@@ -84,7 +84,7 @@ class VersionSt {
   const OriginalSt *GetOrigSt() const {
     return ost;
   }
-  OriginalSt *GetOrigSt() {
+  OriginalSt *GetOst() {
     return ost;
   }
   void SetOrigSt(OriginalSt *ost) {
@@ -188,7 +188,7 @@ class VersionStTable {
   }
 
   VersionSt *CreateVSymbol(VersionSt *vst, size_t version) {
-    OriginalSt *ost = vst->GetOrigSt();
+    OriginalSt *ost = vst->GetOst();
     return CreateVersionSt(ost, version);
   }
 

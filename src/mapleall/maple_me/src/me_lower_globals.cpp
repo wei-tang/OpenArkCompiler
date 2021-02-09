@@ -54,7 +54,7 @@ void MeLowerGlobals::LowerGlobalDreads(MeStmt &stmt, MeExpr &expr) {
     }
     case kMeOpVar: {
       auto &varExpr = static_cast<VarMeExpr&>(expr);
-      OriginalSt *ost = ssaTable->GetSymbolOriginalStFromID(varExpr.GetOStIdx());
+      OriginalSt *ost = varExpr.GetOst();
       if (ost->IsLocal()) {
         break;
       }
@@ -112,7 +112,7 @@ void MeLowerGlobals::Run() {
       }
       if (stmt.GetOp() == OP_dassign) {
         auto &dass = static_cast<DassignMeStmt&>(stmt);
-        OriginalSt *ost = ssaTable->GetSymbolOriginalStFromID(dass.GetVarLHS()->GetOStIdx());
+        OriginalSt *ost = dass.GetVarLHS()->GetOst();
         if (ost->IsLocal()) {
           continue;
         }
