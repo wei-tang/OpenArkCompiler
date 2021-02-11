@@ -2510,6 +2510,9 @@ StmtNode *CGLowerer::LowerIntrinsiccall(IntrinsiccallNode &intrincall, BlockNode
   if (intrnID == INTRN_MPL_CLEAR_STACK) {
     return LowerIntrinsicMplClearStack(intrincall, newBlk);
   }
+  if (intrnID == INTRN_C_va_start) {
+    return &intrincall;
+  }
   IntrinDesc *intrinDesc = &IntrinDesc::intrinTable[intrnID];
   if (intrinDesc->IsSpecial()) {
     /* For special intrinsics we leave them to CGFunc::SelectIntrinCall() */

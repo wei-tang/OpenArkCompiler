@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -141,6 +141,8 @@ void AArch64OfstOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const 
   if (CGOptions::IsPIC() &&
       (symbol->GetStorageClass() == kScGlobal || symbol->GetStorageClass() == kScExtern)) {
     emitter.Emit(":got:" + symbol->GetName());
+  } else if (symbol->GetStorageClass() == kScPstatic && symbol->GetSKind() != kStConst && symbol->IsLocal()) {
+      emitter.Emit(symbol->GetName() + std::to_string(emitter.GetCG()->GetMIRModule()->CurFunction()->GetPuidx()));
   } else {
     emitter.Emit(symbol->GetName());
   }
@@ -180,6 +182,8 @@ void StImmOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const {
   }
   if (CGOptions::IsPIC() && (symbol->GetStorageClass() == kScGlobal || symbol->GetStorageClass() == kScExtern)) {
     emitter.Emit(":got:" + GetName());
+  } else if (symbol->GetStorageClass() == kScPstatic && symbol->GetSKind() != kStConst && symbol->IsLocal()) {
+    emitter.Emit(symbol->GetName() + std::to_string(emitter.GetCG()->GetMIRModule()->CurFunction()->GetPuidx()));
   } else {
     emitter.Emit(GetName());
   }
@@ -298,7 +302,12 @@ void AArch64MemOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const {
     ASSERT(offset != nullptr, "nullptr check");
 
     emitter.Emit(", #:lo12:");
-    emitter.Emit(GetSymbolName());
+    if (GetSymbol()->GetStorageClass() == kScPstatic && GetSymbol()->IsLocal()) {
+      PUIdx pIdx = emitter.GetCG()->GetMIRModule()->CurFunction()->GetPuidx();
+      emitter.Emit(GetSymbolName() + std::to_string(pIdx));
+    } else {
+      emitter.Emit(GetSymbolName());
+    }
     if (!offset->IsZero()) {
       emitter.Emit("+");
       emitter.Emit(std::to_string(offset->GetOffsetValue()));
@@ -349,7 +358,14 @@ void AArch64MemOperand::Dump() const {
       GetBaseRegister()->Dump();
       LogInfo::MapleLogger() << "offset:";
       AArch64OfstOperand *offOpnd = GetOffsetImmediate();
-      LogInfo::MapleLogger() << "#:lo12:" << GetSymbolName() << "+" << std::to_string(offOpnd->GetOffsetValue());
+      LogInfo::MapleLogger() << "#:lo12:";
+      if (GetSymbol()->GetStorageClass() == kScPstatic && GetSymbol()->IsLocal()) {
+        PUIdx pIdx = CG::GetCurCGFunc()->GetMirModule().CurFunction()->GetPuidx();
+        LogInfo::MapleLogger() << GetSymbolName() << std::to_string(pIdx);
+      } else {
+        LogInfo::MapleLogger() << GetSymbolName();
+      }
+      LogInfo::MapleLogger() << "+" << std::to_string(offOpnd->GetOffsetValue());
       break;
     }
     default:
