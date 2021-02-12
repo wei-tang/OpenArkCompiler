@@ -140,7 +140,7 @@ AnalysisResult *MeDoSplitCEdge::Run(MeFunction *func, MeFuncResultMgr *m, Module
     }
     // current BB is a merge
     for (BB *pred : preds) {
-      if (pred->GetKind() == kBBGoto) {
+      if (pred->GetKind() == kBBGoto || pred->GetKind() == kBBIgoto) {
         continue;
       }
       if (pred->GetSucc().size() > 1) {

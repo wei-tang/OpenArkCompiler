@@ -39,7 +39,7 @@ inline constexpr bool IsCallAssigned(Opcode code) {
 }
 
 inline constexpr bool IsBranch(Opcode opcode) {
-  return (opcode == OP_goto || opcode == OP_brtrue || opcode == OP_brfalse || opcode == OP_switch);
+  return (opcode == OP_goto || opcode == OP_brtrue || opcode == OP_brfalse || opcode == OP_switch || opcode == OP_igoto);
 }
 
 constexpr bool IsCommutative(Opcode opcode) {

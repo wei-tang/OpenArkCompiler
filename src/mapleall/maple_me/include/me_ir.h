@@ -2353,7 +2353,7 @@ class RetMeStmt : public NaryMeStmt {
   MapleMap<OStIdx, VarMeExpr*> muList;
 };
 
-// eval, free, decref, incref, decrefreset, assertnonnull
+// eval, free, decref, incref, decrefreset, assertnonnull, igoto
 class UnaryMeStmt : public MeStmt {
  public:
   explicit UnaryMeStmt(const StmtNode *stt) : MeStmt(stt) {}

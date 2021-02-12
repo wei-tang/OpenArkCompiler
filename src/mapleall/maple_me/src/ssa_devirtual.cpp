@@ -403,6 +403,7 @@ void SSADevirtual::VisitMeExpr(MeExpr *meExpr) const {
     }
     case kMeOpAddrof:
     case kMeOpAddroffunc:
+    case kMeOpAddroflabel:
     case kMeOpGcmalloc:
     case kMeOpConst:
     case kMeOpConststr:
@@ -476,6 +477,7 @@ void SSADevirtual::TraversalMeStmt(MeStmt &meStmt) {
     }
     case OP_assertnonnull:
     case OP_eval:
+    case OP_igoto:
     case OP_free: {
       auto *unaryStmt = static_cast<UnaryMeStmt*>(&meStmt);
       VisitMeExpr(unaryStmt->GetOpnd());

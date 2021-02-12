@@ -49,13 +49,19 @@ static bool CompareBackedge(const std::pair<BB*, BB*> &a, const std::pair<BB*, B
   return (a.first)->GetBBId() < (b.first)->GetBBId();
 }
 
-bool MeDoLoopCanon::NeedConvert(BB &bb, BB &pred, MapleAllocator &localAlloc, MapleMap<Key, bool> &swapSuccs) const {
+bool MeDoLoopCanon::NeedConvert(MeFunction *func, BB &bb, BB &pred, MapleAllocator &localAlloc, MapleMap<Key, bool> &swapSuccs) const {
   bb.SetAttributes(kBBAttrIsInLoop);
   pred.SetAttributes(kBBAttrIsInLoop);
   // do not convert do-while loop
   if ((bb.GetKind() != kBBCondGoto) || (&pred == &bb) || bb.GetAttributes(kBBAttrIsTry) ||
       bb.GetAttributes(kBBAttrIsCatch)) {
     return false;
+  }
+  if (bb.GetBBLabel() != 0) {
+    const MapleUnorderedSet<LabelIdx> &addrTakenLabels = func->GetMirFunc()->GetLabelTab()->GetAddrTakenLabels();
+    if (addrTakenLabels.find(bb.GetBBLabel()) != addrTakenLabels.end()) {
+      return false;  // target of igoto cannot be cloned
+    }
   }
   ASSERT(bb.GetSucc().size() == 2, "the number of bb's successors must equal 2");
   // if both succs are equal, return false
@@ -221,7 +227,7 @@ void MeDoLoopCanon::ExecuteLoopCanon(MeFunction &func, MeFuncResultMgr &m, Domin
       ASSERT_NOT_NULL(pred);
       // bb is reachable from entry && bb dominator pred
       if (dom.Dominate(*func.GetCommonEntryBB(), *bb) && dom.Dominate(*bb, *pred) &&
-          !pred->GetAttributes(kBBAttrWontExit) && (NeedConvert(*bb, *pred, localAlloc, swapSuccs))) {
+          !pred->GetAttributes(kBBAttrWontExit) && (NeedConvert(&func, *bb, *pred, localAlloc, swapSuccs))) {
         if (DEBUGFUNC(&func)) {
           LogInfo::MapleLogger() << "find backedge " << bb->GetBBId() << " <-- " << pred->GetBBId() << '\n';
         }
