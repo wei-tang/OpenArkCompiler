@@ -302,8 +302,8 @@ bool HDSE::ExprNonDeletable(const MeExpr &meExpr) const {
     }
     case kMeOpVar: {
       auto &varMeExpr = static_cast<const VarMeExpr&>(meExpr);
-      return varMeExpr.IsVolatile(ssaTab) ||
-             (decoupleStatic && ssaTab.GetSymbolOriginalStFromID(varMeExpr.GetOStIdx())->GetMIRSymbol()->IsGlobal());
+      return varMeExpr.IsVolatile() ||
+             (decoupleStatic && varMeExpr.GetOst()->GetMIRSymbol()->IsGlobal());
     }
     case kMeOpIvar: {
       auto &opIvar = static_cast<const IvarMeExpr&>(meExpr);
@@ -334,9 +334,9 @@ bool HDSE::HasNonDeletableExpr(const MeStmt &meStmt) const {
     case OP_dassign: {
       auto &dasgn = static_cast<const DassignMeStmt&>(meStmt);
       VarMeExpr *varMeExpr = dasgn.GetVarLHS();
-      return (varMeExpr != nullptr && varMeExpr->IsVolatile(ssaTab)) || ExprNonDeletable(*dasgn.GetRHS()) ||
+      return (varMeExpr != nullptr && varMeExpr->IsVolatile()) || ExprNonDeletable(*dasgn.GetRHS()) ||
              (hdseKeepRef && dasgn.Propagated()) || dasgn.GetWasMayDassign() ||
-             (decoupleStatic && ssaTab.GetSymbolOriginalStFromID(varMeExpr->GetOStIdx())->GetMIRSymbol()->IsGlobal());
+             (decoupleStatic && varMeExpr->GetOst()->GetMIRSymbol()->IsGlobal());
     }
     case OP_regassign: {
       auto &rasgn = static_cast<const RegassignMeStmt&>(meStmt);

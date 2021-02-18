@@ -185,7 +185,7 @@ std::string InequalityGraph::GetName(const MeExpr &meExpr, IRMap &irMap) const {
   MeExprOp meOp = meExpr.GetMeOp();
   CHECK_FATAL(meOp == kMeOpVar, "must be VarMeExpr");
   const auto *varMeExpr = static_cast<const VarMeExpr*>(&meExpr);
-  MIRSymbol *sym = irMap.GetSSATab().GetMIRSymbolFromID(varMeExpr->GetOStIdx());
+  MIRSymbol *sym = varMeExpr->GetOst()->GetMIRSymbol();
   name = sym->GetName() + "\\nmx" + std::to_string(meExpr.GetExprID());
   return name;
 }
@@ -210,7 +210,7 @@ std::string InequalityGraph::GetName(ESSABaseNode &node, IRMap &irMap) const {
       return name;
     }
   }
-  MIRSymbol *sym = irMap.GetSSATab().GetMIRSymbolFromID(varMeExpr->GetOStIdx());
+  MIRSymbol *sym = varMeExpr->GetOst()->GetMIRSymbol();
   name = sym->GetName() + "\\nmx" + std::to_string(meExpr->GetExprID());
   if (node.GetKind() == kArrayNode) {
     name += ".length";

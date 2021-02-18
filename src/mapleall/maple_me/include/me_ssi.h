@@ -88,11 +88,11 @@ class DefPoint {
     }
   }
 
-  const OStIdx &GetOStIdx() const {
+  const OStIdx GetOStIdx() const {
     if (defKind == kDefByPi) {
-      return value.pi->GetRHS()->GetOStIdx();
+      return value.pi->GetRHS()->GetOst()->GetIndex();
     } else {
-      return value.phi->GetOpnd(0)->GetOStIdx();
+      return value.phi->GetOpnd(0)->GetOst()->GetIndex();
     }
   }
 

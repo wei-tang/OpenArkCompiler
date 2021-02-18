@@ -56,7 +56,7 @@ TyIdx SSADevirtual::GetInferredTyIdx(MeExpr &expr) const {
     if (varMeExpr->GetInferredTyIdx() == 0u) {
       // If varMeExpr->inferredTyIdx has not been set, we can double check
       // if it is coming from a static final field
-      const OriginalSt *ost = irMap->GetSSATab().GetOriginalStFromID(varMeExpr->GetOStIdx());
+      const OriginalSt *ost = varMeExpr->GetOst();
       const MIRSymbol *mirSym = ost->GetMIRSymbol();
       if (mirSym->IsStatic() && mirSym->IsFinal() && mirSym->GetInferredTyIdx() != kInitTyIdx &&
           mirSym->GetInferredTyIdx() != kNoneTyIdx) {
@@ -283,7 +283,7 @@ void SSADevirtual::PropVarInferredType(VarMeExpr &varMeExpr) const {
     // Parallel me will skip the setting for symbol's inferredTyIdx because it is independent of the function
     // optimization order
     if (!skipReturnTypeOpt && varMeExpr.GetInferredTyIdx() != 0u) {
-      OriginalSt *ost = irMap->GetSSATab().GetOriginalStFromID(defStmt.GetVarLHS()->GetOStIdx());
+      OriginalSt *ost = defStmt.GetVarLHS()->GetOst();
       MIRSymbol *mirSym = ost->GetMIRSymbol();
       if (mirSym->IsStatic() && mirSym->IsFinal()) {
         // static final field can store and propagate inferred typeinfo

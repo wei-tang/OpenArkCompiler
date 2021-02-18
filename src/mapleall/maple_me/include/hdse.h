@@ -22,14 +22,13 @@ namespace maple {
 class MeIRMap;
 class HDSE {
  public:
-  HDSE(MIRModule &mod, const MapleVector<BB*> &bbVec, BB &commonEntryBB, BB &commonExitBB, SSATab &ssaTab,
+  HDSE(MIRModule &mod, const MapleVector<BB*> &bbVec, BB &commonEntryBB, BB &commonExitBB,
        Dominance &pDom, IRMap &map, bool enabledDebug = false, bool decouple = false)
       : hdseDebug(enabledDebug),
         mirModule(mod),
         bbVec(bbVec),
         commonEntryBB(commonEntryBB),
         commonExitBB(commonExitBB),
-        ssaTab(ssaTab),
         postDom(pDom),
         irMap(map),
         bbRequired(bbVec.size(), false),
@@ -100,7 +99,6 @@ class HDSE {
   MapleVector<BB*> bbVec;
   BB &commonEntryBB;
   BB &commonExitBB;
-  SSATab &ssaTab;
   Dominance &postDom;
   IRMap &irMap;
   std::vector<bool> bbRequired;

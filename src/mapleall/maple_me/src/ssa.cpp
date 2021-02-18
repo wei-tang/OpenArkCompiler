@@ -36,7 +36,7 @@ void SSA::InitRenameStack(OriginalStTable &oTable, size_t bbSize, VersionStTable
 VersionSt *SSA::CreateNewVersion(VersionSt &vSym, BB &defBB) {
   CHECK_FATAL(vSym.GetVersion() == 0, "rename before?");
   // volatile variables will keep zero version.
-  OriginalSt *oSt = vSym.GetOrigSt();
+  OriginalSt *oSt = vSym.GetOst();
   if (oSt->IsVolatile() || oSt->IsSpecialPreg()) {
     return &vSym;
   }
