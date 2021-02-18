@@ -100,7 +100,7 @@ class MeABC {
   bool CollectABC();
   void ABCCollectArrayExpr(MeStmt &meStmt, MeExpr &meExpr, bool isUpdate = false);
   void CollectCareInsns();
-  bool IsVirtualVar(const VarMeExpr &var, const SSATab &ssaTab) const;
+  bool IsVirtualVar(const VarMeExpr &var) const;
   ESSABaseNode *GetOrCreateRHSNode(MeExpr &expr);
   void BuildPhiInGraph(MePhiNode &phi);
   void BuildSoloPiInGraph(const PiassignMeStmt &piMeStmt);

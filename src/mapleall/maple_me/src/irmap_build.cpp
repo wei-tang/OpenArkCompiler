@@ -32,7 +32,7 @@ VarMeExpr *IRMapBuild::GetOrCreateVarFromVerSt(VersionSt &vst) {
   OriginalSt *ost = vst.GetOst();
   ASSERT(ost->IsSymbolOst(), "GetOrCreateVarFromVerSt: wrong ost_type");
   auto *varx = irMap->NewInPool<VarMeExpr>(irMap->exprID++, ost, vindex,
-     GlobalTables::GetTypeTable().GetTypeTable()[ost->GetTyIdx().GetIdx()]->GetPrimType());
+      GlobalTables::GetTypeTable().GetTypeTable()[ost->GetTyIdx().GetIdx()]->GetPrimType());
   ASSERT(!GlobalTables::GetTypeTable().GetTypeTable().empty(), "container check");
   irMap->vst2MeExprTable[vindex] = varx;
   return varx;
@@ -47,8 +47,7 @@ RegMeExpr *IRMapBuild::GetOrCreateRegFromVerSt(VersionSt &vst) {
   }
   OriginalSt *ost = vst.GetOst();
   ASSERT(ost->IsPregOst(), "GetOrCreateRegFromVerSt: PregOST expected");
-  auto *regx = irMap->New<RegMeExpr>(irMap->exprID++,
-                                           ost, vindex, ost->GetMIRPreg()->GetPrimType());
+  auto *regx = irMap->New<RegMeExpr>(irMap->exprID++, ost, vindex, ost->GetMIRPreg()->GetPrimType());
   irMap->vst2MeExprTable[vindex] = regx;
   return regx;
 }
@@ -82,7 +81,7 @@ void IRMapBuild::BuildChiList(MeStmt &meStmt, TypeOfMayDefList &mayDefNodes,
     lhs->SetDefBy(kDefByChi);
     lhs->SetDefChi(*chiMeStmt);
     chiMeStmt->SetLHS(lhs);
-    (void)outList.insert(std::make_pair(lhs->GetOst()->GetIndex(), chiMeStmt));
+    (void)outList.insert(std::make_pair(lhs->GetOstIdx(), chiMeStmt));
   }
 }
 
@@ -126,7 +125,7 @@ void IRMapBuild::BuildMuList(TypeOfMayUseList &mayUseList, MapleMap<OStIdx, VarM
   for (auto &mayUseNode : mayUseList) {
     VersionSt *vst = mayUseNode.GetOpnd();
     VarMeExpr *varMeExpr = GetOrCreateVarFromVerSt(*vst);
-    (void)muList.insert(std::make_pair(varMeExpr->GetOst()->GetIndex(), varMeExpr));
+    (void)muList.insert(std::make_pair(varMeExpr->GetOstIdx(), varMeExpr));
   }
 }
 

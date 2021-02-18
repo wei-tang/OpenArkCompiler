@@ -19,7 +19,8 @@
 
 namespace maple {
 VarMeExpr *IRMap::CreateVarMeExprVersion(const VarMeExpr &origExpr) {
-  auto *varMeExpr = New<VarMeExpr>(&irMapAlloc, exprID++, origExpr.GetOst(), vst2MeExprTable.size(), origExpr.GetPrimType());
+  auto *varMeExpr = New<VarMeExpr>(&irMapAlloc, exprID++, origExpr.GetOst(),
+                                   vst2MeExprTable.size(), origExpr.GetPrimType());
   vst2MeExprTable.push_back(varMeExpr);
   return varMeExpr;
 }
@@ -35,7 +36,7 @@ MeExpr *IRMap::CreateAddrofMeExpr(OStIdx ostIdx) {
 MeExpr *IRMap::CreateAddrofMeExpr(MeExpr &expr) {
   if (expr.GetMeOp() == kMeOpVar) {
     auto &varMeExpr = static_cast<VarMeExpr&>(expr);
-    return CreateAddrofMeExpr(varMeExpr.GetOst()->GetIndex());
+    return CreateAddrofMeExpr(varMeExpr.GetOstIdx());
   } else {
     ASSERT(expr.GetMeOp() == kMeOpIvar, "expecting IVarMeExpr");
     auto &ivarExpr = static_cast<IvarMeExpr&>(expr);
@@ -196,7 +197,8 @@ VarMeExpr *IRMap::GetOrCreateZeroVersionVarMeExpr(OriginalSt &ost) {
     vst2MeExprTable.push_back(nullptr);
   }
   if (vst2MeExprTable[ost.GetZeroVersionIndex()] == nullptr) {
-    auto *varMeExpr = NewInPool<VarMeExpr>(exprID++, &ost, ost.GetZeroVersionIndex(), GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost.GetTyIdx())->GetPrimType());
+    auto *varMeExpr = NewInPool<VarMeExpr>(exprID++, &ost, ost.GetZeroVersionIndex(),
+        GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost.GetTyIdx())->GetPrimType());
     ASSERT(!GlobalTables::GetTypeTable().GetTypeTable().empty(), "container check");
     vst2MeExprTable[ost.GetZeroVersionIndex()] = varMeExpr;
     return varMeExpr;

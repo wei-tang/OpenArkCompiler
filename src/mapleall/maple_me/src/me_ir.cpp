@@ -517,7 +517,7 @@ BB *ScalarMeExpr::GetDefByBBMeStmt(const Dominance &dominance, MeStmtPtr &defMeS
   }
 }
 
-bool VarMeExpr::IsPureLocal(const SSATab &ssaTab, const MIRFunction &irFunc) const {
+bool VarMeExpr::IsPureLocal(const MIRFunction &irFunc) const {
   const MIRSymbol *st = GetOst()->GetMIRSymbol();
   return st->IsLocal() && !irFunc.IsAFormal(st);
 }
@@ -908,7 +908,7 @@ void NaryMeExpr::Dump(const IRMap *irMap, int32 indent) const {
   }
 }
 
-MeExpr *DassignMeStmt::GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
+MeExpr *DassignMeStmt::GetLHSRef(bool excludeLocalRefVar) {
   VarMeExpr *lhsOpnd = GetVarLHS();
   if (lhsOpnd->GetPrimType() != PTY_ref) {
     return nullptr;
@@ -923,7 +923,7 @@ MeExpr *DassignMeStmt::GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
   return lhsOpnd;
 }
 
-MeExpr *MaydassignMeStmt::GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
+MeExpr *MaydassignMeStmt::GetLHSRef(bool excludeLocalRefVar) {
   VarMeExpr *lhs = GetVarLHS();
   if (lhs->GetPrimType() != PTY_ref) {
     return nullptr;
@@ -938,7 +938,7 @@ MeExpr *MaydassignMeStmt::GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
   return lhs;
 }
 
-MeExpr *IassignMeStmt::GetLHSRef(SSATab&, bool) {
+MeExpr *IassignMeStmt::GetLHSRef(bool) {
   CHECK_FATAL(lhsVar != nullptr, "lhsVar is null");
   MIRType *baseType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(lhsVar->GetTyIdx());
   ASSERT(baseType != nullptr, "null ptr check");
@@ -976,7 +976,7 @@ MeExpr *IassignMeStmt::GetLHSRef(SSATab&, bool) {
   return lhsVar;
 }
 
-VarMeExpr *AssignedPart::GetAssignedPartLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
+VarMeExpr *AssignedPart::GetAssignedPartLHSRef(bool excludeLocalRefVar) {
   if (mustDefList.empty()) {
     return nullptr;
   }
@@ -1386,7 +1386,7 @@ bool VarMeExpr::PointsToStringLiteral() {
 
 MeExpr *MeExpr::FindSymAppearance(OStIdx oidx) {
   if (meOp == kMeOpVar) {
-    if (static_cast<VarMeExpr*>(this)->GetOst()->GetIndex() == oidx) {
+    if (static_cast<VarMeExpr*>(this)->GetOstIdx() == oidx) {
       return this;
     }
     return nullptr;
@@ -1440,7 +1440,7 @@ bool MeExpr::IsDexMerge() const {
 
 // check if MeExpr can be a pointer to something that requires incref for its
 // assigned target
-bool MeExpr::PointsToSomethingThatNeedsIncRef(SSATab &ssaTab) {
+bool MeExpr::PointsToSomethingThatNeedsIncRef() {
   if (op == OP_retype) {
     return true;
   }

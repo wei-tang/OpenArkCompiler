@@ -158,7 +158,7 @@ class MeExpr {
   MeExpr *ResolveMeExprValue();
   bool CouldThrowException() const;
   bool IsAllOpndsIdentical(const MeExpr &meExpr) const;
-  bool PointsToSomethingThatNeedsIncRef(SSATab &ssaTab);
+  bool PointsToSomethingThatNeedsIncRef();
   virtual uint32 GetHashIndex() const {
     return 0;
   }
@@ -230,6 +230,10 @@ class ScalarMeExpr : public MeExpr {
 
   OriginalSt *GetOst() const {
     return ost;
+  }
+
+  OStIdx GetOstIdx() const {
+    return ost->GetIndex();
   }
 
   size_t GetVstIdx() const {
@@ -320,11 +324,15 @@ class VarMeExpr final : public ScalarMeExpr {
 
   bool IsVolatile() const override;
   // indicate if the variable is local variable but not a function formal variable
-  bool IsPureLocal(const SSATab&, const MIRFunction&) const;
+  bool IsPureLocal(const MIRFunction&) const;
   bool IsZeroVersion() const;
   bool IsSameVariableValue(const VarMeExpr&) const override;
   VarMeExpr &ResolveVarMeValue();
   bool PointsToStringLiteral();
+
+  FieldID GetFieldID() const {
+    return GetOst()->GetFieldID();
+  }
 
   TyIdx GetInferredTyIdx() const {
     return inferredTyIdx;
@@ -1105,7 +1113,7 @@ class MeStmt {
     return nullptr;
   }
 
-  void EmitCallReturnVector(SSATab &ssaTab, CallReturnVector &nRets);
+  void EmitCallReturnVector(CallReturnVector &nRets);
   virtual MapleVector<MustDefMeNode> *GetMustDefList() {
     return nullptr;
   }
@@ -1173,7 +1181,7 @@ class MeStmt {
     return nullptr;
   }
 
-  virtual MeExpr *GetLHSRef(SSATab&, bool) {
+  virtual MeExpr *GetLHSRef(bool) {
     return nullptr;
   }
 
@@ -1559,7 +1567,7 @@ class DassignMeStmt : public MeStmt {
     return lhs;
   }
 
-  MeExpr *GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar);
+  MeExpr *GetLHSRef(bool excludeLocalRefVar);
   void UpdateLHS(VarMeExpr &var) {
     lhs = &var;
     var.SetDefBy(kDefByStmt);
@@ -1742,7 +1750,7 @@ class MaydassignMeStmt : public MeStmt {
     return chiList.begin()->second->GetLHS();
   }
 
-  MeExpr *GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar);
+  MeExpr *GetLHSRef(bool excludeLocalRefVar);
   StmtNode &EmitStmt(SSATab &ssaTab);
 
  private:
@@ -1812,7 +1820,7 @@ class IassignMeStmt : public MeStmt {
     chiList = value;
   }
 
-  MeExpr *GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar);
+  MeExpr *GetLHSRef(bool excludeLocalRefVar);
   bool NeedDecref() const {
     return needDecref;
   }
@@ -1966,7 +1974,7 @@ class AssignedPart {
   virtual ~AssignedPart() = default;
 
   void DumpAssignedPart(const IRMap *irMap) const;
-  VarMeExpr *GetAssignedPartLHSRef(SSATab &ssaTab, bool excludeLocalRefVar);
+  VarMeExpr *GetAssignedPartLHSRef(bool excludeLocalRefVar);
 
  protected:
   MapleVector<MustDefMeNode> mustDefList;
@@ -2046,8 +2054,8 @@ class CallMeStmt : public NaryMeStmt, public MuChiMePart, public AssignedPart {
     return mustDefList.empty() ? nullptr : mustDefList.front().GetLHS();
   }
 
-  MeExpr *GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
-    return GetAssignedPartLHSRef(ssaTab, excludeLocalRefVar);
+  MeExpr *GetLHSRef(bool excludeLocalRefVar) {
+    return GetAssignedPartLHSRef(excludeLocalRefVar);
   }
 
   VarMeExpr *GetVarLHS() {
@@ -2141,8 +2149,8 @@ class IcallMeStmt : public NaryMeStmt, public MuChiMePart, public AssignedPart {
     return mustDefList.empty() ? nullptr : mustDefList.front().GetLHS();
   }
 
-  MeExpr *GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
-    return GetAssignedPartLHSRef(ssaTab, excludeLocalRefVar);
+  MeExpr *GetLHSRef(bool excludeLocalRefVar) {
+    return GetAssignedPartLHSRef(excludeLocalRefVar);
   }
 
   bool NeedDecref() const {
@@ -2261,8 +2269,8 @@ class IntrinsiccallMeStmt : public NaryMeStmt, public MuChiMePart, public Assign
     return mustDefList.empty() ? nullptr : mustDefList.front().GetLHS();
   }
 
-  MeExpr *GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
-    return GetAssignedPartLHSRef(ssaTab, excludeLocalRefVar);
+  MeExpr *GetLHSRef(bool excludeLocalRefVar) {
+    return GetAssignedPartLHSRef(excludeLocalRefVar);
   }
 
   bool NeedDecref() const {

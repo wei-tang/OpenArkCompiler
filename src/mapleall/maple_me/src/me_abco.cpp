@@ -66,7 +66,7 @@ bool MeABC::CollectABC() {
   return !arrayChecks.empty();
 }
 
-bool MeABC::IsVirtualVar(const VarMeExpr &var, const SSATab &ssaTab) const {
+bool MeABC::IsVirtualVar(const VarMeExpr &var) const {
   const OriginalSt *ost = var.GetOst();
   return ost->GetIndirectLev() > 0;
 }
@@ -95,7 +95,7 @@ void MeABC::BuildPhiInGraph(MePhiNode &phi) {
     return;
   }
   VarMeExpr *lhsExpr = static_cast<VarMeExpr*>(phi.GetLHS());
-  if (lhsExpr != nullptr && IsVirtualVar(*lhsExpr, irMap->GetSSATab())) {
+  if (lhsExpr != nullptr && IsVirtualVar(*lhsExpr)) {
     return;
   }
   for (auto *phiRHS : phi.GetOpnds()) {
@@ -1053,8 +1053,8 @@ void MeABC::ExecuteABCO() {
       BuildInequalityGraph();
       if (MeABC::isDebug) {
         meFunc->GetTheCfg()->DumpToFile(meFunc->GetName());
-        inequalityGraph->DumpDotFile(*irMap, DumpType::kDumpUpperAndNone);
-        inequalityGraph->DumpDotFile(*irMap, DumpType::kDumpLowerAndNone);
+        inequalityGraph->DumpDotFile(DumpType::kDumpUpperAndNone);
+        inequalityGraph->DumpDotFile(DumpType::kDumpLowerAndNone);
       }
       FindRedundantABC(*(pair.first), *(static_cast<NaryMeExpr*>(pair.second)));
     }
