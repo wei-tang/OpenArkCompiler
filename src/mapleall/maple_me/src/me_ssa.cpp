@@ -80,7 +80,7 @@ void MeSSA::CollectDefBBs(std::map<OStIdx, std::set<BBId>> &ostDefBBs) {
       }
       if (stmt.GetOpCode() == OP_dassign || stmt.GetOpCode() == OP_maydassign) {
         VersionSt *vst = GetSSATab()->GetStmtsSSAPart().GetAssignedVarOf(stmt);
-        OriginalSt *ost = vst->GetOrigSt();
+        OriginalSt *ost = vst->GetOst();
         if (ost != nullptr && (!ost->IsFinal() || func->GetMirFunc()->IsConstructor())) {
           ostDefBBs[vst->GetOrigIdx()].insert(bb->GetBBId());
         }
@@ -91,7 +91,7 @@ void MeSSA::CollectDefBBs(std::map<OStIdx, std::set<BBId>> &ostDefBBs) {
       }
       MapleVector<MustDefNode> &mustDefs = GetSSATab()->GetStmtsSSAPart().GetMustDefNodesOf(stmt);
       for (auto iter = mustDefs.begin(); iter != mustDefs.end(); ++iter) {
-        OriginalSt *ost = iter->GetResult()->GetOrigSt();
+        OriginalSt *ost = iter->GetResult()->GetOst();
         if (ost != nullptr && (!ost->IsFinal() || func->GetMirFunc()->IsConstructor())) {
           ostDefBBs[ost->GetIndex()].insert(bb->GetBBId());
         }

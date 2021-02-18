@@ -37,7 +37,7 @@ class SSAEPre : public SSAPre {
   void CollectVarForCand(MeRealOcc &realOcc, std::vector<MeExpr*> &varVec) const;
   bool LeafIsVolatile(const MeExpr *x) const {
     const VarMeExpr *v = safe_cast<VarMeExpr>(x);
-    return v != nullptr && v->IsVolatile(irMap->GetSSATab());
+    return v != nullptr && v->IsVolatile();
   }
   virtual bool IsThreadObjField(const IvarMeExpr &expr) const {
     (void)expr;
