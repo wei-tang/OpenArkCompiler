@@ -537,7 +537,7 @@ void EliminateSpecifcSXTAArch64::Run(BB &bb, Insn &insn) {
 void EliminateSpecifcUXTAArch64::Run(BB &bb, Insn &insn) {
   MOperator thisMop = insn.GetMachineOpcode();
   Insn *prevInsn = insn.GetPreviousMachineInsn();
-  if (prevInsn == nullptr) {
+  if ((prevInsn == nullptr) || (prevInsn->IsCall() && prevInsn->GetIsCallReturnSigned())) {
     return;
   }
   auto &regOpnd0 = static_cast<RegOperand&>(insn.GetOperand(kInsnFirstOpnd));
