@@ -30,7 +30,7 @@ sources_common = [
 ]
 
 include_common = [
-  "${THIRD_PARTY_ROOT}/libnativehelper/include_jni",
+  "${AOSP_ROOT}/libnativehelper/include_jni",
   "${MAPLE_MRT_ROOT}/libcore-static-binding-jni/include",
   "${MAPLE_MRT_ROOT}/maplert/include",
   "${MAPLE_MRT_ROOT}/compiler-rt/include",
