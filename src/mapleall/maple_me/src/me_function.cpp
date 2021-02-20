@@ -171,6 +171,17 @@ void MeFunction::CreateBasicBlocks() {
         }
         break;
       }
+      case OP_igoto: {
+        if (curBB->IsEmpty()) {
+          curBB->SetFirst(stmt);
+        }
+        curBB->SetLast(stmt);
+        curBB->SetKind(kBBIgoto);
+        if (nextStmt != nullptr) {
+          curBB = NewBasicBlock();
+        }
+        break;
+      }
       case OP_dassign: {
         if (curBB->IsEmpty()) {
           curBB->SetFirst(stmt);

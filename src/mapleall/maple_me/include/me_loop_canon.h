@@ -35,7 +35,7 @@ class MeDoLoopCanon : public MeFuncPhase {
   using Key = std::pair<BB*, BB*>;
   std::map<BBId, std::vector<BB*>> heads;
   void Convert(MeFunction &func, BB &bb, BB &pred, MapleMap<Key, bool> &swapSuccs);
-  bool NeedConvert(BB &bb, BB &pred, MapleAllocator &alloc, MapleMap<Key, bool> &swapSuccs) const;
+  bool NeedConvert(MeFunction *func, BB &bb, BB &pred, MapleAllocator &alloc, MapleMap<Key, bool> &swapSuccs) const;
   void FindHeadBBs(MeFunction &func, Dominance &dom, const BB *bb);
   bool IsDoWhileLoop(MeFunction &func, const LoopDesc &loop) const;
   void Merge(MeFunction &func);

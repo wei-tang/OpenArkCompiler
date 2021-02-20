@@ -219,6 +219,13 @@ void MeCFG::BuildMirCFG() {
         }
         break;
       }
+      case kBBIgoto: {
+        for (LabelIdx lidx : func.GetMirFunc()->GetLabelTab()->GetAddrTakenLabels()) {
+          BB *mebb = func.GetLabelBBAt(lidx);
+          bb->AddSucc(*mebb);
+        }
+        break;
+      }
       case kBBReturn:
         break;
       default: {
