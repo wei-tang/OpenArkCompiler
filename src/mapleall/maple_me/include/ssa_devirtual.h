@@ -33,6 +33,7 @@ class SSADevirtual {
         kh(&currKh),
         dom(&currDom),
         bbVisited(bbVecSize, false, devirtualAlloc.Adapter()),
+        inferredTypeCandidatesMap(devirtualAlloc.Adapter()),
         clone(nullptr),
         retTy(kNotSeen),
         inferredRetTyIdx(0),
@@ -63,7 +64,7 @@ class SSADevirtual {
   virtual BB *GetBB(BBId id) const = 0;
   void TraversalBB(BB*);
   void TraversalMeStmt(MeStmt &Stmt);
-  void VisitVarPhiNode(MePhiNode&) const;
+  void VisitVarPhiNode(MePhiNode&);
   void VisitMeExpr(MeExpr*) const;
   void PropVarInferredType(VarMeExpr&) const;
   void PropIvarInferredType(IvarMeExpr&) const;
@@ -82,6 +83,7 @@ class SSADevirtual {
   KlassHierarchy *kh;
   Dominance *dom;
   MapleVector<bool> bbVisited;  // needed because dominator tree is a DAG in wpo
+  MapleMap<int, MapleVector<TyIdx>*> inferredTypeCandidatesMap;  // key is VarMeExpr's exprID
   Clone *clone;
   enum TagRetTyIdx {
     kNotSeen,

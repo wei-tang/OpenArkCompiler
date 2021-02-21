@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -140,7 +140,7 @@ AnalysisResult *MeDoSplitCEdge::Run(MeFunction *func, MeFuncResultMgr *m, Module
     }
     // current BB is a merge
     for (BB *pred : preds) {
-      if (pred->GetKind() == kBBGoto) {
+      if (pred->GetKind() == kBBGoto || pred->GetKind() == kBBIgoto) {
         continue;
       }
       if (pred->GetSucc().size() > 1) {

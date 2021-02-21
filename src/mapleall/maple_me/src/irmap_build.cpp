@@ -31,7 +31,7 @@ VarMeExpr *IRMapBuild::GetOrCreateVarFromVerSt(VersionSt &vst) {
   }
   OriginalSt *ost = vst.GetOst();
   ASSERT(ost->IsSymbolOst(), "GetOrCreateVarFromVerSt: wrong ost_type");
-  auto *varx = irMap->NewInPool<VarMeExpr>(irMap->exprID++, ost, vindex,
+  auto *varx = irMap->New<VarMeExpr>(irMap->exprID++, ost, vindex,
       GlobalTables::GetTypeTable().GetTypeTable()[ost->GetTyIdx().GetIdx()]->GetPrimType());
   ASSERT(!GlobalTables::GetTypeTable().GetTypeTable().empty(), "container check");
   irMap->vst2MeExprTable[vindex] = varx;
@@ -165,6 +165,11 @@ MeExpr *IRMapBuild::BuildAddrofMeExpr(const BaseNode &mirNode) const {
 
 MeExpr *IRMapBuild::BuildAddroffuncMeExpr(const BaseNode &mirNode) const {
   auto meExpr = new AddroffuncMeExpr(kInvalidExprID, static_cast<const AddroffuncNode&>(mirNode).GetPUIdx());
+  return meExpr;
+}
+
+MeExpr *IRMapBuild::BuildAddroflabelMeExpr(const BaseNode &mirNode) const {
+  auto meExpr = new AddroflabelMeExpr(kInvalidExprID, static_cast<const AddroflabelNode&>(mirNode).GetOffset());
   return meExpr;
 }
 
@@ -331,6 +336,7 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode) {
 void IRMapBuild::InitMeExprBuildFactory() {
   RegisterFactoryFunction<MeExprBuildFactory>(OP_addrof, &IRMapBuild::BuildAddrofMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_addroffunc, &IRMapBuild::BuildAddroffuncMeExpr);
+  RegisterFactoryFunction<MeExprBuildFactory>(OP_addroflabel, &IRMapBuild::BuildAddroflabelMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_gcmalloc, &IRMapBuild::BuildGCMallocMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_gcpermalloc, &IRMapBuild::BuildGCMallocMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_sizeoftype, &IRMapBuild::BuildSizeoftypeMeExpr);
@@ -428,6 +434,7 @@ MeStmt *IRMapBuild::BuildMeStmtWithNoSSAPart(StmtNode &stmt) {
     }
     case OP_assertnonnull:
     case OP_eval:
+    case OP_igoto:
     case OP_free:
     case OP_switch: {
       auto &unaryStmt = static_cast<UnaryStmtNode&>(stmt);

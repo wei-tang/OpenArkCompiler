@@ -53,6 +53,7 @@ class IRMapBuild {
 
   MeExpr *BuildAddrofMeExpr(const BaseNode &mirNode) const;
   MeExpr *BuildAddroffuncMeExpr(const BaseNode &mirNode) const;
+  MeExpr *BuildAddroflabelMeExpr(const BaseNode &mirNode) const;
   MeExpr *BuildGCMallocMeExpr(const BaseNode &mirNode) const;
   MeExpr *BuildSizeoftypeMeExpr(const BaseNode &mirNode) const;
   MeExpr *BuildFieldsDistMeExpr(const BaseNode &mirNode) const;

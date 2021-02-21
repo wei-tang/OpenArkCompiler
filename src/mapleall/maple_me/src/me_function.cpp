@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -168,6 +168,17 @@ void MeFunction::CreateBasicBlocks() {
             SetTryBlockInfo(nextStmt, tryStmt, lastTryBB, curBB, newBB);
           }
           curBB = newBB;
+        }
+        break;
+      }
+      case OP_igoto: {
+        if (curBB->IsEmpty()) {
+          curBB->SetFirst(stmt);
+        }
+        curBB->SetLast(stmt);
+        curBB->SetKind(kBBIgoto);
+        if (nextStmt != nullptr) {
+          curBB = NewBasicBlock();
         }
         break;
       }

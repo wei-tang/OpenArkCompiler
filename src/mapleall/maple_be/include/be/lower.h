@@ -136,7 +136,7 @@ class CGLowerer {
   BaseNode *LowerArray(ArrayNode &array, const BaseNode &parent);
 
   DassignNode *SaveReturnValueInLocal(StIdx, uint16);
-  void LowerCallStmt(StmtNode&, StmtNode*&, BlockNode&);
+  void LowerCallStmt(StmtNode&, StmtNode*&, BlockNode&, MIRType *retTy = nullptr);
   BlockNode *LowerCallAssignedStmt(StmtNode &stmt);
   BaseNode *LowerRem(BaseNode &rem, BlockNode &block);
 
@@ -156,7 +156,7 @@ class CGLowerer {
   virtual BlockNode *LowerReturn(NaryStmtNode &retNode);
   void LowerEntry(MIRFunction &func);
 
-  StmtNode *LowerCall(CallNode &call, StmtNode *&stmt, BlockNode &block);
+  StmtNode *LowerCall(CallNode &call, StmtNode *&stmt, BlockNode &block, MIRType *retTy = nullptr);
   void SplitCallArg(CallNode &callNode, BaseNode *newOpnd, size_t i, BlockNode &newBlk);
 
   void CleanupBranches(MIRFunction &func) const;
