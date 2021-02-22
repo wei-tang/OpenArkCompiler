@@ -33,7 +33,7 @@ void PregRenamer::RunSelf() {
     }
     MapleMap<OStIdx, MePhiNode *> &mePhiList =  bb->GetMePhiList();
     for (auto it = mePhiList.begin(); it != mePhiList.end(); ++it) {
-      OriginalSt *ost = func->GetMeSSATab()->GetOriginalStFromID(it->first);
+      OriginalSt *ost = func->GetMeSSATab()->GetOriginalStTable().GetOriginalStFromID(it->first);
       if (!ost->IsPregOst()) { // only handle reg phi
         continue;
       }
@@ -92,6 +92,7 @@ void PregRenamer::RunSelf() {
       continue;
     }
     newpregidx = pregtab->ClonePreg(*pregtab->PregFromPregIdx(regMeexpr->GetRegIdx()));
+    OriginalSt *newost = func->GetMeSSATab()->GetOriginalStTable().CreatePregOriginalSt(newpregidx, func->GetMirFunc()->GetPuidx());
     renameCount++;
     if (DEBUGFUNC(func)) {
       LogInfo::MapleLogger() << "%" << pregtab->PregFromPregIdx(regMeexpr->GetRegIdx())->GetPregNo();
@@ -100,7 +101,7 @@ void PregRenamer::RunSelf() {
     // reneme all the register
     for (uint32 i = 0; i < vec.size(); ++i) {
       RegMeExpr *canregnode =  static_cast<RegMeExpr *> (regmeexprtable[vec[i]]);
-      canregnode->SetRegIdx(newpregidx);  // rename it to a new register
+      canregnode->SetOst(newost);  // rename it to a new register
     }
   }
 }
