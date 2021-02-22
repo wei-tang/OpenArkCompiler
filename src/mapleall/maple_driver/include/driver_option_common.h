@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -24,7 +24,17 @@ enum DriverOptionIndex {
   kInFile,
   kInMplt,
   kOptimization0,
+  kOptimization1,
   kOptimization2,
+  kWithIpa,
+  kJbc2mplOpt,
+  kDex2mplOpt,
+  kMplipaOpt,
+  kVerify,
+  // Common options for each compiler
+  kDecoupleStatic,
+  // DAI2.0
+  kDecoupleInit,
   kProfilePath,
   kGCOnly,
   kMplcgOpt,

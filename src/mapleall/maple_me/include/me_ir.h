@@ -104,7 +104,7 @@ class MeExpr {
     (void)indent;
   }
 
-  virtual size_t GetDepth() const {
+  virtual uint8 GetDepth() const {
     return 0;
   }
 
@@ -776,7 +776,7 @@ class OpMeExpr : public MeExpr {
   bool IsUseSameSymbol(const MeExpr&) const override;
   MeExpr *GetIdenticalExpr(MeExpr &expr, bool) const override;
   BaseNode &EmitExpr(SSATab&) override;
-  size_t GetDepth() const override {
+  uint8 GetDepth() const override {
     return depth;
   }
   MeExpr *GetOpnd(size_t i) const override {
@@ -879,7 +879,7 @@ class IvarMeExpr : public MeExpr {
   ~IvarMeExpr() = default;
 
   void Dump(const IRMap*, int32 indent = 0) const override;
-  size_t GetDepth() const override {
+  uint8 GetDepth() const override {
     return base->GetDepth() + 1;
   }
   BaseNode &EmitExpr(SSATab&) override;
@@ -1005,7 +1005,7 @@ class NaryMeExpr : public MeExpr {
   ~NaryMeExpr() = default;
 
   void Dump(const IRMap*, int32 indent = 0) const override;
-  size_t GetDepth() const override {
+  uint8 GetDepth() const override {
     return depth;
   }
   bool IsIdentical(NaryMeExpr&) const;

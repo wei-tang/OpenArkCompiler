@@ -168,6 +168,21 @@ bool MIRSymbol::IsArrayClassCacheName() const {
   return StringUtils::StartsWith(GetName(), kArrayClassCacheNameTable);
 }
 
+bool MIRSymbol::IsForcedGlobalFunc() const {
+  return StringUtils::StartsWith(GetName(), kJavaLangClassStr) ||
+         StringUtils::StartsWith(GetName(), kReflectionClassesPrefixStr) ||
+         StringUtils::StartsWith(GetName(), "Ljava_2Fnio_2FDirectByteBuffer_3B_7C_3Cinit_3E_7C_28JI_29V");
+}
+
+// mrt/maplert/include/mrt_classinfo.h
+bool MIRSymbol::IsForcedGlobalClassinfo() const {
+  std::unordered_set<std::string> mrtUse {
+#include "mrt_direct_classinfo_list.def"
+  };
+  return std::find(mrtUse.begin(), mrtUse.end(), GetName()) != mrtUse.end() ||
+         StringUtils::StartsWith(GetName(), "__cinf_Llibcore_2Freflect_2FGenericSignatureParser_3B");
+}
+
 bool MIRSymbol::IsClassInitBridge() const {
   return StringUtils::StartsWith(GetName(), CLASS_INIT_BRIDGE_PREFIX_STR);
 }
@@ -356,6 +371,11 @@ void MIRSymbol::DumpAsLiteralVar() const {
   }
 }
 
+const std::set<std::string> MIRSymbol::staticFinalBlackList{
+    "Ljava_2Flang_2FSystem_3B_7Cout",
+    "Ljava_2Flang_2FSystem_3B_7Cerr",
+    "Ljava_2Flang_2FSystem_3B_7Cin",
+};
 
 void MIRSymbolTable::Dump(bool isLocal, int32 indent, bool printDeleted) const {
   size_t size = symbolTable.size();

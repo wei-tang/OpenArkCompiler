@@ -19,6 +19,7 @@
 #include "me_cfg.h"
 #include "mir_lower.h"
 #include "mir_builder.h"
+#include "constantfold.h"
 #include "me_irmap.h"
 #include "me_phase.h"
 
@@ -35,6 +36,8 @@ void MeFunction::PartialInit(bool isSecondPass) {
   regNum = 0;
   hasEH = false;
   secondPass = isSecondPass;
+  ConstantFold cf(mirModule);
+  cf.Simplify(mirModule.CurFunction()->GetBody());
   if (mirModule.IsJavaModule() && (!mirModule.CurFunction()->GetInfoVector().empty())) {
     std::string string("INFO_registers");
     GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(string);

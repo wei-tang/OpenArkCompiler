@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -17,6 +17,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <mutex>
+#include "thread_env.h"
 #include "securec.h"
 #include "mpl_logging.h"
 
@@ -24,10 +26,30 @@ namespace maple {
 MemPoolCtrler memPoolCtrler;
 bool MemPoolCtrler::freeMemInTime = false;
 
+static inline bool IsGlobalCtrler(const MemPoolCtrler &mpCtrler) {
+  return &mpCtrler == &maple::memPoolCtrler;
+}
+
+static inline bool IsMpManagedByGlobalCtrler(const MemPool &mp) {
+  return &mp.GetCtrler() == &maple::memPoolCtrler;
+}
+
+inline bool MemPoolCtrler::HaveRace() const {
+  return ThreadEnv::IsMeParallel() && IsGlobalCtrler(*this);
+}
+
+inline bool MemPool::HaveRace() const {
+  return ThreadEnv::IsMeParallel() && IsMpManagedByGlobalCtrler(*this);
+}
 // Destructor, free all allocated memory pool and blocks
 MemPoolCtrler::~MemPoolCtrler() {
   // Delete Memory Pool
   for (MemPool *memPool : memPools) {
+#ifdef MP_DEBUG
+    if (memPool != nullptr) {
+      LogInfo::MapleLogger() << "MEMPOOL: Left mempool " << memPool->name << "\n";
+    }
+#endif
     delete memPool;
   }
   // Delete all free_memory_block
@@ -55,6 +77,13 @@ MemPool *MemPoolCtrler::NewMemPool(const std::string &name) {
 // Re-cycle all memory blocks allocated on a memory pool to free list
 void MemPoolCtrler::DeleteMemPool(MemPool *memPool) {
   CHECK_NULL_FATAL(memPool);
+
+#ifdef MP_DEBUG
+  if (!memPool->IsValid()) {
+    CHECK_FATAL(false, "MEMPOOL: Re-cycled wrong memory pool\n");
+    return;
+  }
+#endif
   // Transfer memory blocks to ctrler->freeMemBlocks stack
   while (!memPool->memBlockStack.empty()) {
     MemBlock *mb = memPool->memBlockStack.top();
@@ -105,10 +134,22 @@ MemPool::~MemPool() {
     free(largeMemBlockStack.top());
     largeMemBlockStack.pop();
   }
+#ifdef MP_DEBUG
+  LogInfo::MapleLogger() << "MEMPOOL: Deleted " << name << "\n";
+#endif
 }
 
 // Return a pointer that points to size of memory from memory block
 void *MemPool::Malloc(size_t size) {
+#ifdef MP_DEBUG
+  // If controller is not set, or the memory pool is invalid
+  if (!IsValid()) {
+    return nullptr;
+  }
+  if (size > UINT_MAX) {
+    CHECK_FATAL(false, "ERROR: MemPool allocator cannot handle block size larger than 4GB\n");
+  }
+#endif
   void *result = nullptr;
   MemPoolCtrler::MemBlock *b = nullptr;
   // If size is smaller than 2K, fetch size of memory from the last memory block
@@ -135,6 +176,11 @@ void *MemPool::Malloc(size_t size) {
 
 // Malloc size of memory from memory pool, then set 0
 void *MemPool::Calloc(size_t size) {
+#ifdef MP_DEBUG
+  if (!IsValid()) {
+    return nullptr;
+  }
+#endif
   void *p = Malloc(BITS_ALIGN(size));
   if (p == nullptr) {
     CHECK_FATAL(false, "ERROR: Calloc error\n");
@@ -149,6 +195,11 @@ void *MemPool::Calloc(size_t size) {
 
 // Realloc new size of memory
 void *MemPool::Realloc(const void *ptr, size_t oldSize, size_t newSize) {
+#ifdef MP_DEBUG
+  if (!IsValid()) {
+    return nullptr;
+  }
+#endif
   void *result = Malloc(newSize);
   if (result != nullptr) {
     size_t copySize = ((newSize > oldSize) ? oldSize : newSize);
@@ -239,4 +290,14 @@ MemPoolCtrler::MemBlock *MemPool::GetLargeMemBlock(size_t size) {
   return block;
 }
 
+#ifdef MP_DEBUG
+// Whether the memory pool is valid
+bool MemPool::IsValid(void) {
+  if (frozen) {
+    CHECK_FATAL(false, "Operate on a frozen pool %s", name.c_str());
+    return false;
+  }
+  return true;
+}
+#endif
 }  // namespace maple
