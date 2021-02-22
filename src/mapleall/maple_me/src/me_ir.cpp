@@ -722,12 +722,12 @@ void MePhiNode::Dump(const IRMap *irMap) const {
     LogInfo::MapleLogger() << "VAR:";
     ost->Dump();
   } else {
-    PregIdx16 regId = static_cast<RegMeExpr*>(lhs)->GetRegIdx();
+    PregIdx regId = static_cast<RegMeExpr*>(lhs)->GetRegIdx();
     LogInfo::MapleLogger() << "REGVAR: " << regId;
     LogInfo::MapleLogger() << "(%"
                            << irMap->GetMIRModule().CurFunction()
                                                    ->GetPregTab()
-                                                   ->PregFromPregIdx(static_cast<PregIdx>(regId))
+                                                   ->PregFromPregIdx(regId)
                                                    ->GetPregNo()
                            << ")";
   }
@@ -762,7 +762,7 @@ void RegMeExpr::Dump(const IRMap *irMap, int32) const {
   LogInfo::MapleLogger() << "REGINDX:" << GetRegIdx();
   LogInfo::MapleLogger()
       << " %"
-      << irMap->GetMIRModule().CurFunction()->GetPregTab()->PregFromPregIdx(static_cast<PregIdx>(GetRegIdx()))->GetPregNo();
+      << irMap->GetMIRModule().CurFunction()->GetPregTab()->PregFromPregIdx(GetRegIdx())->GetPregNo();
   LogInfo::MapleLogger() << " mx" << GetExprID();
 }
 

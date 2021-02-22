@@ -24,6 +24,14 @@
 namespace maple {
 class BinaryMplt {
  public:
+  std::vector<std::string> seUsage = {
+    "out/soong/.intermediates/vendor/huawei/maple/Lib/core/libmaplecore-all/android_arm64_armv8-a_core_shared/obj/classes.mpl",
+    "out/soong/.intermediates/vendor/huawei/maple/Lib/services/libmapleservices/android_arm64_armv8-a_core_shared/obj/classes.mrg.mpl",
+    "out/target/product/generic_a15/obj/SHARED_LIBRARIES/libmaplehwServices_intermediates/classes.mpl",
+    "out/soong/.intermediates/vendor/huawei/maple/Lib/frameworks/libmapleframework/android_arm64_armv8-a_core_shared/obj/classes.mrg.mpl",
+    "libcore-all.mpl",
+    "./libcore-all.mpl"
+  };
 
   explicit BinaryMplt(MIRModule &md) : mirModule(md), binImport(md), binExport(md) {}
 
@@ -34,6 +42,22 @@ class BinaryMplt {
   }
 
   bool Import(const std::string &modID, bool readCG = false, bool readSE = false) {
+    bool found = true;
+    for (size_t i = 0; i < seUsage.size(); ++i) {
+      if (seUsage[i] == mirModule.GetFileName()) {
+        found = true;
+        break;
+      }
+    }
+    readSE = readSE && found;
+#ifdef MPLT_DEBUG
+    if (readCG) {
+      LogInfo::MapleLogger() << "READING CG mpl file : " << _mod.fileName << '\n';
+    }
+    if (readSE) {
+      LogInfo::MapleLogger() << "READING SE mpl file : " << _mod.fileName << '\n';
+    }
+#endif
     importFileName = modID;
     return binImport.Import(modID, readCG, readSE);
   }

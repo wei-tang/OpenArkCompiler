@@ -24,6 +24,7 @@
 #include "mir_nodes.h"
 #include "profile.h"
 
+#define DEBUGME true
 
 namespace maple {
 // mapping src (java) variable to mpl variables to display debug info
@@ -95,6 +96,7 @@ class MIRFunction {
 
   const std::string &GetBaseFuncNameWithType() const;
 
+  const std::string &GetBaseFuncSig() const;
 
   const std::string &GetSignature() const;
 
@@ -398,10 +400,23 @@ class MIRFunction {
 
   const MIRType *GetNodeType(const BaseNode &node) const;
 
+#ifdef DEBUGME
   void SetUpGDBEnv();
   void ResetGDBEnv();
+#endif
+  void ReleaseMemory() {
+    memPoolCtrler.DeleteMemPool(codeMemPoolTmp);
+    codeMemPoolTmp = nullptr;
+  }
 
   MemPool *GetCodeMempool() {
+    if (useTmpMemPool) {
+      if (codeMemPoolTmp == nullptr) {
+        codeMemPoolTmp = memPoolCtrler.NewMemPool("func code mempool");
+        codeMemPoolTmpAllocator.SetMemPool(codeMemPoolTmp);
+      }
+      return codeMemPoolTmp;
+    }
     if (codeMemPool == nullptr) {
       codeMemPool = memPoolCtrler.NewMemPool("func code mempool");
       codeMemPoolAllocator.SetMemPool(codeMemPool);
@@ -411,6 +426,9 @@ class MIRFunction {
 
   MapleAllocator &GetCodeMemPoolAllocator() {
     GetCodeMempool();
+    if (useTmpMemPool) {
+      return codeMemPoolTmpAllocator;
+    }
     return codeMemPoolAllocator;
   }
 
@@ -450,6 +468,12 @@ class MIRFunction {
     symbolTableIdx = stIdx;
   }
 
+  int32 GetSCCId() const {
+    return sccID;
+  }
+  void SetSCCId(int32 id) {
+    sccID = id;
+  }
 
   MIRFuncType *GetMIRFuncType() {
     return funcType;
@@ -603,6 +627,25 @@ class MIRFunction {
     (*aliasVarMap)[idx] = vars;
   }
 
+  bool HasVlaOrAlloca() const {
+    return hasVlaOrAlloca;
+  }
+  void SetVlaOrAlloca(bool has) {
+    hasVlaOrAlloca = has;
+  }
+
+  bool HasFreqMap() {
+    return floatReqMap != nullptr;
+  }
+  const MapleMap<uint32, uint32> &GetFreqMap() const {
+    return *floatReqMap;
+  }
+  void SetFreqMap(uint32 stmtID, uint32 freq) {
+    if (floatReqMap == nullptr) {
+      floatReqMap = module->GetMemPool()->New<MapleMap<uint32, uint32>>(module->GetMPAllocator().Adapter());
+    }
+    (*floatReqMap)[stmtID] = freq;
+  }
 
   bool WithLocInfo() const {
     return withLocInfo;
@@ -611,6 +654,19 @@ class MIRFunction {
     withLocInfo = withInfo;
   }
 
+  bool IsDirty() const {
+    return isDirty;
+  }
+  void SetDirty(bool dirty) {
+    isDirty = dirty;
+  }
+
+  bool IsFromMpltInline() const {
+    return fromMpltInline;
+  }
+  void SetFromMpltInline(bool isInline) {
+    fromMpltInline = isInline;
+  }
 
   uint8 GetLayoutType() const {
     return layoutType;
@@ -846,6 +902,13 @@ class MIRFunction {
     return genericLocalVar[str];
   }
 
+  MemPool *GetCodeMemPoolTmp() {
+    if (codeMemPoolTmp == nullptr) {
+      codeMemPoolTmp = memPoolCtrler.NewMemPool("func code mempool");
+      codeMemPoolTmpAllocator.SetMemPool(codeMemPoolTmp);
+    }
+    return codeMemPoolTmp;
+  }
 
   void AddProfileDesc(uint64 hash, uint32 start, uint32 end) {
     profileDesc = module->GetMemPool()->New<IRProfileDesc>(hash, start, end);
@@ -864,6 +927,7 @@ class MIRFunction {
   PUIdx puIdx = 0;           // the PU index of this function
   PUIdx puIdxOrigin = 0;     // the original puIdx when initial generation
   StIdx symbolTableIdx;  // the symbol table index of this function
+  int32 sccID = -1;  // the scc id of this function, for mplipa
   MIRFuncType *funcType = nullptr;
   TyIdx inferredReturnTyIdx{0};     // the actual return type of of this function (may be a
                                     // subclass of the above). 0 means can not be inferred.
@@ -892,8 +956,12 @@ class MIRFunction {
   MapleVector<bool> infoIsString{module->GetMPAllocator().Adapter()};  // tells if an entry has string value
   MapleMap<GStrIdx, MIRAliasVars> *aliasVarMap = nullptr;  // source code alias variables
                                                                                     // for debuginfo
+  MapleMap<uint32, uint32> *floatReqMap = nullptr;  // save bb frequency in its last_stmt.
+  bool hasVlaOrAlloca = false;
   bool withLocInfo = true;
 
+  bool isDirty = false;
+  bool fromMpltInline = false;  // Whether this function is imported from mplt_inline file or not.
   uint8_t layoutType = kLayoutUnused;
   uint16 frameSize = 0;
   uint16 upFormalSize = 0;
@@ -941,6 +1009,9 @@ class MIRFunction {
   // funcname + types of args, no type of retv
   GStrIdx baseFuncSigStrIdx{0};
   GStrIdx signatureStrIdx{0};
+  MemPool *codeMemPoolTmp{nullptr};
+  MapleAllocator codeMemPoolTmpAllocator{nullptr};
+  bool useTmpMemPool = false;
 
   void DumpFlavorLoweredThanMmpl() const;
   MIRFuncType *ReconstructFormals(const std::vector<MIRSymbol*> &symbols, bool clearOldArgs);

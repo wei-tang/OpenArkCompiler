@@ -58,6 +58,14 @@ bool MeABC::CollectABC() {
   auto eIt = meFunc->valid_end();
   for (auto bIt = meFunc->valid_begin(); bIt != eIt; ++bIt) {
     for (auto &meStmt : (*bIt)->GetMeStmts()) {
+      if (meStmt.GetOp() == OP_callassigned) {
+        auto *callNode = static_cast<CallMeStmt*>(&meStmt);
+        MIRFunction *callFunc = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(callNode->GetPUIdx());
+        if (callFunc->GetBaseClassName().compare("Ljava_2Flang_2FSystem_3B") == 0 &&
+            callFunc->GetBaseFuncName().compare("arraycopy") == 0) {
+          arrayChecks[&meStmt] = nullptr;
+        }
+      }
       for (size_t i = 0; i < meStmt.NumMeStmtOpnds(); ++i) {
         ABCCollectArrayExpr(meStmt, *(meStmt.GetOpnd(i)));
       }
@@ -756,6 +764,9 @@ void MeABC::AddUseDef(MeExpr &meExpr) {
 void MeABC::CollectCareInsns() {
   for (auto pair : arrayChecks) {
     MeStmt *meStmt = pair.first;
+    if (IsCallAssigned(meStmt->GetOp())) {
+      arrayNewChecks[meStmt] = nullptr;
+    }
     for (size_t i = 0; i < meStmt->NumMeStmtOpnds(); ++i) {
       ABCCollectArrayExpr(*meStmt, *(meStmt->GetOpnd(i)), true);
     }
@@ -1048,15 +1059,20 @@ void MeABC::ExecuteABCO() {
     ssi->ConvertToSSI();
     CollectCareInsns();
     for (auto pair : arrayNewChecks) {
-      InitNewStartPoint(*(pair.first), *((static_cast<NaryMeExpr *>(pair.second))->GetOpnd(0)),
-                        *((static_cast<NaryMeExpr *>(pair.second))->GetOpnd(1)));
-      BuildInequalityGraph();
-      if (MeABC::isDebug) {
-        meFunc->GetTheCfg()->DumpToFile(meFunc->GetName());
-        inequalityGraph->DumpDotFile(DumpType::kDumpUpperAndNone);
-        inequalityGraph->DumpDotFile(DumpType::kDumpLowerAndNone);
+      if (pair.first->GetOp() == OP_callassigned) {
+        auto *callNode = static_cast<CallMeStmt*>(pair.first);
+        ProcessCallParameters(*callNode);
+      } else {
+        InitNewStartPoint(*(pair.first), *((static_cast<NaryMeExpr *>(pair.second))->GetOpnd(0)),
+                          *((static_cast<NaryMeExpr *>(pair.second))->GetOpnd(1)));
+        BuildInequalityGraph();
+        if (MeABC::isDebug) {
+          meFunc->GetTheCfg()->DumpToFile(meFunc->GetName());
+          inequalityGraph->DumpDotFile(DumpType::kDumpUpperAndNone);
+          inequalityGraph->DumpDotFile(DumpType::kDumpLowerAndNone);
+        }
+        FindRedundantABC(*(pair.first), *(static_cast<NaryMeExpr*>(pair.second)));
       }
-      FindRedundantABC(*(pair.first), *(static_cast<NaryMeExpr*>(pair.second)));
     }
     ssi->ConvertToSSA();
     DeleteABC();

@@ -304,7 +304,7 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
       MeExpr *propedMeExpr = &propagater->PropVar(*varMeExpr, atParm, true);
       MeExpr *simplifiedMeexpr = nullptr;
       if (propedMeExpr->GetMeOp() == kMeOpOp) {
-         simplifiedMeexpr = irMap->SimplifyOpMeExpr(static_cast<OpMeExpr *>(propedMeExpr));
+        simplifiedMeexpr = irMap->SimplifyOpMeExpr(static_cast<OpMeExpr *>(propedMeExpr));
       }
       retmeexpr = simplifiedMeexpr ? simplifiedMeexpr : propedMeExpr;
     } else {
@@ -314,8 +314,9 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
     if (typesize < GetPrimTypeSize(addrOfNode.GetPrimType()) && typesize != 0) {
       // need to insert a convert
       if (typesize < 4) {
-        OpMeExpr opmeexpr(-1, IsSignedInteger(addrOfNode.GetPrimType()) ? OP_sext : OP_zext, addrOfNode.GetPrimType(), 1);
-        opmeexpr.SetBitsSize(typesize * 8);
+        OpMeExpr opmeexpr(kInvalidExprID, IsSignedInteger(addrOfNode.GetPrimType()) ? OP_sext : OP_zext,
+                          addrOfNode.GetPrimType(), 1);
+        opmeexpr.SetBitsSize(static_cast<uint8>(typesize * 8));
         opmeexpr.SetOpnd(0, retmeexpr);
         retmeexpr = irMap->HashMeExpr(opmeexpr);
       } else {
@@ -358,7 +359,7 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
       MeExpr *propedMeExpr = &propagater->PropIvar(*canIvar);
       MeExpr *simplifiedMeexpr = nullptr;
       if (propedMeExpr->GetMeOp() == kMeOpOp) {
-         simplifiedMeexpr = irMap->SimplifyOpMeExpr(static_cast<OpMeExpr *>(propedMeExpr));
+        simplifiedMeexpr = irMap->SimplifyOpMeExpr(static_cast<OpMeExpr *>(propedMeExpr));
       }
       retmeexpr = simplifiedMeexpr ? simplifiedMeexpr : propedMeExpr;
     } else {
@@ -368,8 +369,9 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
     if (typesize < GetPrimTypeSize(iReadSSANode.GetPrimType()) && typesize != 0) {
       // need to insert a convert
       if (typesize < 4) {
-        OpMeExpr opmeexpr(-1, IsSignedInteger(iReadSSANode.GetPrimType()) ? OP_sext : OP_zext, iReadSSANode.GetPrimType(), 1);
-        opmeexpr.SetBitsSize(typesize * 8);
+        OpMeExpr opmeexpr(kInvalidExprID, IsSignedInteger(iReadSSANode.GetPrimType()) ? OP_sext : OP_zext,
+                          iReadSSANode.GetPrimType(), 1);
+        opmeexpr.SetBitsSize(static_cast<uint8>(typesize * 8));
         opmeexpr.SetOpnd(0, retmeexpr);
         retmeexpr = irMap->HashMeExpr(opmeexpr);
       } else {
@@ -712,13 +714,13 @@ void IRMapBuild::BuildBB(BB &bb, std::vector<bool> &bbIRMapProcessed) {
     propagater->SetCurBB(&bb);
     uint32 vstVecsize = propagater->GetVstLiveStackVecSize();
     curStackSizeVec.resize(vstVecsize);
-    for (uint32 i = 1; i < vstVecsize; i++) {
+    for (uint32 i = 1; i < vstVecsize; ++i) {
       curStackSizeVec[i] = 0;
-      curStackSizeVec[i] = propagater->GetVstLiveStackVec(i)->size();
+      curStackSizeVec[i] = static_cast<uint32>(propagater->GetVstLiveStackVec(i)->size());
     }
     // traversal phi nodes
     MapleMap<OStIdx, MePhiNode *> &mePhiList = bb.GetMePhiList();
-    for (MapleMap<OStIdx, MePhiNode *>::iterator it = mePhiList.begin(); it != mePhiList.end(); it++) {
+    for (auto it = mePhiList.begin(); it != mePhiList.end(); ++it) {
       MePhiNode *phimenode = it->second;
       propagater->PropUpdateDef(*phimenode->GetLHS());
     }
@@ -747,5 +749,4 @@ void IRMapBuild::BuildBB(BB &bb, std::vector<bool> &bbIRMapProcessed) {
     }
   }
 }
-
 }  // namespace maple

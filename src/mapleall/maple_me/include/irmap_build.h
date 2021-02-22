@@ -19,7 +19,7 @@
 #include "dominance.h"
 
 namespace maple {
-class Prop;
+class Prop; // circular dependency exists, no other choice
 
 // This class contains methods to convert Maple IR to MeIR.
 class IRMapBuild {

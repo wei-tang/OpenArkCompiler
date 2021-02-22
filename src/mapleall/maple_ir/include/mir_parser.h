@@ -194,6 +194,7 @@ class MIRParser {
   void PrepareParsingMplt();
   bool ParseMIR(uint32 fileIdx = 0, uint32 option = 0, bool isIpa = false, bool isComb = false);
   bool ParseMIR(std::ifstream&);  // the main entry point
+  bool ParseInlineFuncBody(std::ifstream&);
   bool ParseMPLT(std::ifstream&, const std::string&);
   bool ParseMPLTStandalone(std::ifstream &mpltfile, const std::string &importfilename);
   bool ParseTypeFromString(const std::string&, TyIdx&);

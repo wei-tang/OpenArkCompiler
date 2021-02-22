@@ -153,7 +153,7 @@ class Emitter {
                             uint64 fieldOffset);
   void EmitScalarConstant(MIRConst &mirConst, bool newLine = true, bool flag32 = false, bool isIndirect = false);
   void EmitStr(const std::string& mplStr, bool emitAscii = false, bool emitNewline = false);
-  void EmitStrConstant(const MIRStrConst &mirStrConst, bool isAscii = false, bool isIndirect = false);
+  void EmitStrConstant(const MIRStrConst &mirStrConst, bool isIndirect = false);
   void EmitStr16Constant(const MIRStr16Const &mirStr16Const);
   void EmitIntConst(const MIRSymbol &mirSymbol, MIRAggConst &aggConst, uint32 itabConflictIndex,
                     const std::map<GStrIdx, MIRType*> &strIdx2Type, size_t idx);
@@ -184,7 +184,7 @@ class Emitter {
   void MarkVtabOrItabEndFlag(const std::vector<MIRSymbol*> &mirSymbolVec);
   void EmitArrayConstant(MIRConst &mirConst);
   void EmitStructConstant(MIRConst &mirConst);
-  void EmitLocalVariable(CGFunc &cgFunc);
+  void EmitLocalVariable(const CGFunc &cgFunc);
   void EmitGlobalVariable();
   void EmitGlobalRootList(const MIRSymbol &mirSymbol);
   void EmitMuidTable(const std::vector<MIRSymbol*> &vec, const std::map<GStrIdx, MIRType*> &strIdx2Type,

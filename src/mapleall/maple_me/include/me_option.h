@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -63,12 +63,26 @@ class MeOption : public MapleDriverOptionBase {
   static bool noDot;
   static bool stmtNum;
   static bool rcLowering;
+  static bool noRC;
+  static bool strictNaiveRC;
+  static std::unordered_set<std::string> checkRefUsedInFuncs;
+  static bool gcOnly;
+  static bool gcOnlyOpt;
+  static bool noGCBar;
+  static bool noReflection;
+  static bool realCheckCast;
+  static bool regNativeFunc;
+  static bool warnNativeFunc;
+  static bool lazyDecouple;
   static uint8 optLevel;
   static uint32 stmtprePULimit;
   static uint32 epreLimit;
   static uint32 eprePULimit;
   static uint32 lpreLimit;
   static uint32 lprePULimit;
+  static uint32 parserOpt;
+  static uint32 threads;
+  static bool ignoreInferredRetType;
   static uint32 pregRenameLimit;
   static uint32 delRcPULimit;
   static uint32 profileBBHotRate;
@@ -84,6 +98,9 @@ class MeOption : public MapleDriverOptionBase {
   static bool lessThrowAlias;
   static bool noDelegateRC;
   static bool noCondBasedRC;
+  static bool enableEA;
+  static bool checkCastOpt;
+  static bool parmToPtr;
   static bool nullCheckPre;
   static bool assign2FinalPre;
   static bool clinitPre;
@@ -99,6 +116,18 @@ class MeOption : public MapleDriverOptionBase {
   static bool spillAtCatch;
   static bool optDirectCall;
   static bool decoupleStatic;
+  static bool nativeOpt;
+  static bool placementRC;
+  static bool subsumRC;
+  static std::string inlineFuncList;
+#if MIR_JAVA
+  static std::string acquireFuncName;
+  static std::string releaseFuncName;
+  static unsigned int warningLevel;
+  static bool mplToolOnly;
+  static bool mplToolStrict;
+  static bool skipVirtualMethod;
+#endif
  private:
   void DecideMeRealLevel(const std::vector<mapleOption::Option> &inputOptions) const;
   std::unordered_set<std::string> skipPhases;

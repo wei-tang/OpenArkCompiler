@@ -437,7 +437,8 @@ ConstvalNode *ConstantFold::FoldIntConstComparison(Opcode opcode, PrimType resul
   return resultConst;
 }
 
-MIRConst *ConstantFold::FoldIntConstBinaryMIRConst(Opcode opcode, PrimType resultType, const MIRIntConst *intConst0, const MIRIntConst *intConst1) const {
+MIRConst *ConstantFold::FoldIntConstBinaryMIRConst(Opcode opcode, PrimType resultType, const MIRIntConst *intConst0,
+                                                   const MIRIntConst *intConst1) const {
   int64 intValueOfConst0 = intConst0->GetValue();
   int64 intValueOfConst1 = intConst1->GetValue();
   uint64 result64 = 0;

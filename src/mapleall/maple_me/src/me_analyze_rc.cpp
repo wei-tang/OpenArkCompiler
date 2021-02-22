@@ -417,7 +417,11 @@ void AnalyzeRC::RemoveUnneededCleanups() {
 }
 
 void AnalyzeRC::Run() {
-  func.SetHints(func.GetHints() | kAnalyzeRCed);
+  if (func.GetHints() & kPlacementRCed) {
+    skipLocalRefVars = true;
+  } else {
+    func.SetHints(func.GetHints() | kAnalyzeRCed);
+  }
   IdentifyRCStmts();
   if (!skipLocalRefVars) {
     CreateCleanupIntrinsics();

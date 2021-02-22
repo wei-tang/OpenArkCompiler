@@ -55,8 +55,15 @@ const std::set<maple::MIRIntrinsicID> canThrowIntrinsicsList {
     maple::INTRN_MPL_CLINIT_CHECK,
     maple::INTRN_MPL_BOUNDARY_CHECK,
     maple::INTRN_JAVA_CLINIT_CHECK,
+    maple::INTRN_JAVA_CLINIT_CHECK_SGET,
+    maple::INTRN_JAVA_CLINIT_CHECK_SPUT,
+    maple::INTRN_JAVA_CLINIT_CHECK_NEW,
     maple::INTRN_JAVA_CHECK_CAST,
     maple::INTRN_JAVA_THROW_ARITHMETIC,
+    maple::INTRN_JAVA_THROW_CLASSCAST,
+};
+const std::set<std::string> whitelistFunc {
+#include "rcwhitelist.def"
 };
 }
 
@@ -300,6 +307,10 @@ RegMeExpr *DelegateRC::RHSTempDelegated(MeExpr &rhs, const MeStmt &useStmt) {
   if (ost->IsFormal() || ost->GetMIRSymbol()->IsGlobal()) {
     return nullptr;
   }
+  // The index number in originalStVector is bigger than two.
+  if ((func.GetHints() & kPlacementRCed) && ssaTab.GetVersionsIndexSize(ost->GetIndex()) > 2) {
+    return nullptr;
+  }
   if (rhsVar.GetDefBy() == kDefByMustDef) {
     MustDefMeNode &mustDef = rhsVar.GetDefMustDef();
     ASSERT(mustDef.GetLHS() == &rhsVar, "DelegateRCTemp: inconsistent mustdef");
@@ -408,6 +419,10 @@ void DelegateRC::DelegateRCTemp(MeStmt &stmt) {
       }
       VarMeExpr *lhsVar = stmt.GetVarLHS();
       CHECK_FATAL(lhsVar != nullptr, "null lhs check");
+      const OriginalSt *ost = lhsVar->GetOst();
+      if (Options::lazyBinding != 0 || !ost->GetMIRSymbol()->IsGlobal()) {
+        break;
+      }
       MeExpr *rhs = stmt.GetRHS();
       CHECK_FATAL(rhs != nullptr, "null rhs check");
       RegMeExpr *curReg = RHSTempDelegated(*rhs, stmt);
@@ -418,6 +433,10 @@ void DelegateRC::DelegateRCTemp(MeStmt &stmt) {
       break;
     }
     case OP_return: {
+      std::string funcName = func.GetMirFunc()->GetName();
+      if (whitelistFunc.find(funcName) != whitelistFunc.end()) {
+        break;
+      }
       auto &retStmt = static_cast<RetMeStmt&>(stmt);
       if (!retStmt.NumMeStmtOpnds()) {
         break;

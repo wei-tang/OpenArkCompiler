@@ -15,6 +15,15 @@
 #include "me_ssa_epre.h"
 #include "me_dominance.h"
 #include "me_ssa_update.h"
+#include "me_placement_rc.h"
+
+namespace {
+const std::set<std::string> propWhiteList {
+#define PROPILOAD(funcName) #funcName,
+#include "propiloadlist.def"
+#undef PROPILOAD
+};
+}
 
 // accumulate the BBs that are in the iterated dominance frontiers of bb in
 // the set dfSet, visiting each BB only once
@@ -75,9 +84,15 @@ AnalysisResult *MeDoSSAEPre::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRes
       (eprePULimitSpecified && puCount != MeOption::eprePULimit) ? UINT32_MAX : MeOption::epreLimit;
   MemPool *ssaPreMemPool = NewMemPool();
   bool epreIncludeRef = MeOption::epreIncludeRef;
+  if (!MeOption::gcOnly && propWhiteList.find(func->GetName()) != propWhiteList.end()) {
+    epreIncludeRef = false;
+  }
   MeSSAEPre ssaPre(*func, *irMap, *dom, *kh, *ssaPreMemPool, *NewMemPool(), epreLimitUsed, epreIncludeRef,
                    MeOption::epreLocalRefVar, MeOption::epreLHSIvar);
   ssaPre.SetSpillAtCatch(MeOption::spillAtCatch);
+  if (func->GetHints() & kPlacementRCed) {
+    ssaPre.SetPlacementRC(true);
+  }
   if (eprePULimitSpecified && puCount == MeOption::eprePULimit && epreLimitUsed != UINT32_MAX) {
     LogInfo::MapleLogger() << "applying EPRE limit " << epreLimitUsed << " in function " <<
         func->GetMirFunc()->GetName() << "\n";
@@ -90,6 +105,11 @@ AnalysisResult *MeDoSSAEPre::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRes
     MemPool *tmp = NewMemPool();
     MeSSAUpdate ssaUpdate(*func, *func->GetMeSSATab(), *dom, ssaPre.GetCandsForSSAUpdate(), *tmp);
     ssaUpdate.Run();
+  }
+  if ((func->GetHints() & kPlacementRCed) && ssaPre.GetAddedNewLocalRefVars()) {
+    PlacementRC placeRC(*func, *dom, *ssaPreMemPool, DEBUGFUNC(func));
+    placeRC.preKind = MeSSUPre::kSecondDecrefPre;
+    placeRC.ApplySSUPre();
   }
   if (DEBUGFUNC(func)) {
     LogInfo::MapleLogger() << "\n============== EPRE =============" << "\n";

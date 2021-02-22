@@ -84,7 +84,7 @@ void PregRenamer::RunSelf() {
     }
     // get all the nodes in candidates the same register
     RegMeExpr *regMeexpr = static_cast<RegMeExpr *>(regmeexprtable[it->first]);
-    PregIdx16 newpregidx = regMeexpr->GetRegIdx();
+    PregIdx newpregidx = regMeexpr->GetRegIdx();
     ASSERT(static_cast<uint32>(newpregidx) < firstappeartable.size(), "oversize ");
     if (!firstappeartable[newpregidx]) {
       // use the previous register
@@ -92,7 +92,8 @@ void PregRenamer::RunSelf() {
       continue;
     }
     newpregidx = pregtab->ClonePreg(*pregtab->PregFromPregIdx(regMeexpr->GetRegIdx()));
-    OriginalSt *newost = func->GetMeSSATab()->GetOriginalStTable().CreatePregOriginalSt(newpregidx, func->GetMirFunc()->GetPuidx());
+    OriginalSt *newost =
+        func->GetMeSSATab()->GetOriginalStTable().CreatePregOriginalSt(newpregidx, func->GetMirFunc()->GetPuidx());
     renameCount++;
     if (DEBUGFUNC(func)) {
       LogInfo::MapleLogger() << "%" << pregtab->PregFromPregIdx(regMeexpr->GetRegIdx())->GetPregNo();

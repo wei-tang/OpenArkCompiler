@@ -255,6 +255,7 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
 }
 
 void AArch64AsmEmitter::EmitBBHeaderLabel(FuncEmitInfo &funcEmitInfo, const std::string &name, LabelIdx labIdx) {
+  (void)name;
   CGFunc &cgFunc = funcEmitInfo.GetCGFunc();
   AArch64CGFunc &aarchCGFunc = static_cast<AArch64CGFunc&>(cgFunc);
   CG *currCG = cgFunc.GetCG();
@@ -265,14 +266,13 @@ void AArch64AsmEmitter::EmitBBHeaderLabel(FuncEmitInfo &funcEmitInfo, const std:
     label.SetLabelOrder(currCG->GetLabelOrderCnt());
     currCG->IncreaseLabelOrderCnt();
   }
-
   PUIdx pIdx = currCG->GetMIRModule()->CurFunction()->GetPuidx();
   const char *puIdx = strdup(std::to_string(pIdx).c_str());
   const std::string &labelName = cgFunc.GetFunction().GetLabelTab()->GetName(labIdx);
   if (currCG->GenerateVerboseCG()) {
     emitter.Emit(".L.").Emit(puIdx).Emit("__").Emit(labIdx).Emit(":\t//label order ").Emit(label.GetLabelOrder());
     if (!labelName.empty() && labelName.at(0) != '@') {
-      //If label name has @ as its first char, it is not from MIR
+      /* If label name has @ as its first char, it is not from MIR */
       emitter.Emit(", MIR: @").Emit(labelName).Emit("\n");
     } else {
       emitter.Emit("\n");
@@ -381,7 +381,6 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
       LSDAHeader *lsdaHeader = ehFunc->GetLSDAHeader();
       PUIdx pIdx = emitter.GetCG()->GetMIRModule()->CurFunction()->GetPuidx();
       const std::string &idx = strdup(std::to_string(pIdx).c_str());
-
       /*  .word .Label.lsda_label-func_start_label */
       (void)emitter.Emit("\t.word .L." + idx).Emit("__").Emit(lsdaHeader->GetLSDALabel()->GetLabelIdx());
       (void)emitter.Emit("-.L." + idx).Emit("__").Emit(cgFunc.GetStartLabel()->GetLabelIdx()).Emit("\n");
