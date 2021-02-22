@@ -227,13 +227,13 @@ void Prop::PropUpdateDef(MeExpr &meExpr) {
   ASSERT(meExpr.GetMeOp() == kMeOpVar || meExpr.GetMeOp() == kMeOpReg, "meExpr error");
   OStIdx ostIdx;
   if (meExpr.GetMeOp() == kMeOpVar) {
-    ostIdx = static_cast<VarMeExpr&>(meExpr).GetOst()->GetIndex();
+    ostIdx = static_cast<VarMeExpr&>(meExpr).GetOstIdx();
   } else {
     auto &regExpr = static_cast<RegMeExpr&>(meExpr);
     if (!regExpr.IsNormalReg()) {
       return;
     }
-    ostIdx = regExpr.GetOst()->GetIndex();
+    ostIdx = regExpr.GetOstIdx();
   }
   vstLiveStackVec.at(ostIdx).push(meExpr);
 }
@@ -277,9 +277,9 @@ bool Prop::IsVersionConsistent(const std::vector<const MeExpr*> &vstVec,
     CHECK_FATAL(subExpr->GetMeOp() == kMeOpVar || subExpr->GetMeOp() == kMeOpReg, "error: sub expr error");
     uint32 stackIdx = 0;
     if (subExpr->GetMeOp() == kMeOpVar) {
-      stackIdx = static_cast<const VarMeExpr*>(subExpr)->GetOst()->GetIndex();
+      stackIdx = static_cast<const VarMeExpr*>(subExpr)->GetOstIdx();
     } else {
-      stackIdx = static_cast<const RegMeExpr*>(subExpr)->GetOst()->GetIndex();
+      stackIdx = static_cast<const RegMeExpr*>(subExpr)->GetOstIdx();
     }
     auto &pStack = vstLiveStack.at(stackIdx);
     if (pStack.empty()) {

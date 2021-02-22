@@ -33,34 +33,31 @@ GeneralBB::~GeneralBB() {
   stmtNoAuxTail = nullptr;
 }
 
-void GeneralBB::AppendStmt(const GeneralStmt *stmt) {
-  if (stmt == nullptr) {
-    return;
-  }
+void GeneralBB::AppendStmt(GeneralStmt &stmt) {
   if (stmtHead == nullptr) {
-    stmtHead = stmt;
+    stmtHead = &stmt;
   }
-  stmtTail = stmt;
-  if (stmt->IsAux() == false) {
+  stmtTail = &stmt;
+  if (stmt.IsAux() == false) {
     if (stmtNoAuxHead == nullptr) {
-      stmtNoAuxHead = stmt;
+      stmtNoAuxHead = &stmt;
     }
-    stmtNoAuxTail = stmt;
+    stmtNoAuxTail = &stmt;
   }
 }
 
-void GeneralBB::AddStmtAuxPre(const GeneralStmt *stmt) {
-  if (stmt == nullptr || stmt->IsAuxPre() == false) {
+void GeneralBB::AddStmtAuxPre(GeneralStmt &stmt) {
+  if (stmt.IsAuxPre() == false) {
     return;
   }
-  stmtHead = stmt;
+  stmtHead = &stmt;
 }
 
-void GeneralBB::AddStmtAuxPost(const GeneralStmt *stmt) {
-  if (stmt == nullptr || stmt->IsAuxPost() == false) {
+void GeneralBB::AddStmtAuxPost(GeneralStmt &stmt) {
+  if (stmt.IsAuxPost() == false) {
     return;
   }
-  stmtTail = stmt;
+  stmtTail = &stmt;
 }
 
 bool GeneralBB::IsPredBB(uint32 bbID) {

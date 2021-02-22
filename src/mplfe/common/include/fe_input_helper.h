@@ -38,19 +38,18 @@ class FEInputPragmaHelper {
  public:
   FEInputPragmaHelper() = default;
   virtual ~FEInputPragmaHelper() = default;
-  MIRPragma *GenerateMIRPragma(MapleAllocator &allocator) {
-    return GenerateMIRPragmaImpl(allocator);
+  std::vector<MIRPragma*> &GenerateMIRPragmas() {
+    return GenerateMIRPragmasImpl();
   }
 
  protected:
-  virtual MIRPragma *GenerateMIRPragmaImpl(MapleAllocator &allocator) = 0;
+  virtual std::vector<MIRPragma*> &GenerateMIRPragmasImpl() = 0;
 };
 
 class FEInputStructHelper;
 class FEInputFieldHelper {
  public:
-  FEInputFieldHelper(MapleAllocator &allocator)
-      : pragmaHelpers(allocator.Adapter()) {}
+  FEInputFieldHelper(MapleAllocator &allocator) {}
   virtual ~FEInputFieldHelper() = default;
   const FieldPair &GetMIRFieldPair() const {
     return mirFieldPair;
@@ -64,16 +63,14 @@ class FEInputFieldHelper {
     return ProcessDeclImpl(allocator);
   }
 
-  bool ProcessDeclWithContainer(MapleAllocator &allocator, const FEInputStructHelper &structHelper) {
-    return ProcessDeclWithContainerImpl(allocator, structHelper);
+  bool ProcessDeclWithContainer(MapleAllocator &allocator) {
+    return ProcessDeclWithContainerImpl(allocator);
   }
 
  protected:
   virtual bool ProcessDeclImpl(MapleAllocator &allocator) = 0;
-  virtual bool ProcessDeclWithContainerImpl(MapleAllocator &allocator, const FEInputStructHelper &structHelper) = 0;
-
+  virtual bool ProcessDeclWithContainerImpl(MapleAllocator &allocator) = 0;
   FieldPair mirFieldPair;
-  MapleList<FEInputPragmaHelper*> pragmaHelpers;
 };
 
 class FEInputMethodHelper {
@@ -82,7 +79,6 @@ class FEInputMethodHelper {
       : srcLang(kSrcLangUnknown),
         feFunc(nullptr),
         mirFunc(nullptr),
-        pragmaHelpers(allocator.Adapter()),
         retType(nullptr),
         argTypes(allocator.Adapter()),
         methodNameIdx(GStrIdx(0)) {}
@@ -125,6 +121,14 @@ class FEInputMethodHelper {
     return IsStaticImpl();
   }
 
+  bool IsVirtual() const {
+    return IsVirtualImpl();
+  }
+
+  bool IsNative() const {
+    return IsNativeImpl();
+  }
+
   bool IsVarg() const {
     return IsVargImpl();
   }
@@ -141,21 +145,32 @@ class FEInputMethodHelper {
     return methodNameIdx;
   }
 
+  bool HasCode() const {
+    return HasCodeImpl();
+  }
+
+  void SetClassTypeInfo(const MIRStructType &structType) {
+    mirFunc->SetClassTyIdx(structType.GetTypeIndex());
+  }
+
+
  protected:
   virtual bool ProcessDeclImpl(MapleAllocator &allocator);
   virtual void SolveReturnAndArgTypesImpl(MapleAllocator &allocator) = 0;
   virtual std::string GetMethodNameImpl(bool inMpl, bool full) const = 0;
   virtual FuncAttrs GetAttrsImpl() const = 0;
   virtual bool IsStaticImpl() const = 0;
+  virtual bool IsVirtualImpl() const = 0;
+  virtual bool IsNativeImpl() const = 0;
   virtual bool IsVargImpl() const = 0;
   virtual bool HasThisImpl() const = 0;
   virtual MIRType *GetTypeForThisImpl() const = 0;
+  virtual bool HasCodeImpl() const = 0;
 
   MIRSrcLang srcLang;
   FEFunction *feFunc;
   MIRFunction *mirFunc;
   MethodPair mirMethodPair;
-  MapleList<FEInputPragmaHelper*> pragmaHelpers;
   FEIRType *retType;
   MapleVector<FEIRType*> argTypes;
   GStrIdx methodNameIdx;
@@ -169,13 +184,14 @@ class FEInputStructHelper : public FEInputContainer {
         mirSymbol(nullptr),
         fieldHelpers(allocator.Adapter()),
         methodHelpers(allocator.Adapter()),
-        pragmaHelpers(allocator.Adapter()),
+        pragmaHelper(nullptr),
         isSkipped(false),
         srcLang(kSrcLangUnknown) {}
 
   virtual ~FEInputStructHelper() {
     mirStructType = nullptr;
     mirSymbol = nullptr;
+    pragmaHelper = nullptr;
   }
 
   bool IsSkipped() const {
@@ -213,7 +229,7 @@ class FEInputStructHelper : public FEInputContainer {
     return GetStructNameMplImpl();
   }
 
-  std::vector<std::string> GetSuperClassNames() const {
+  std::list<std::string> GetSuperClassNames() const {
     return GetSuperClassNamesImpl();
   }
 
@@ -249,13 +265,31 @@ class FEInputStructHelper : public FEInputContainer {
     InitMethodHelpersImpl();
   }
 
+  void SetPragmaHelper(FEInputPragmaHelper *pragmaHelperIn) {
+    pragmaHelper = pragmaHelperIn;
+  }
+
+  void SetStaticFieldsConstVal(const std::vector<MIRConst*> &val) {
+    staticFieldsConstVal = val;
+  }
+
+  void SetFinalStaticStringIDVec(const std::vector<uint32> &stringIDVec) {
+    finalStaticStringID = stringIDVec;
+  }
+
+  void SetIsOnDemandLoad(bool flag) {
+    isOnDemandLoad = flag;
+  }
+
+  void ProcessPragma();
+
  protected:
   MIRStructType *GetContainerImpl();
   virtual bool PreProcessDeclImpl();
   virtual bool ProcessDeclImpl();
   virtual std::string GetStructNameOrinImpl() const = 0;
   virtual std::string GetStructNameMplImpl() const = 0;
-  virtual std::vector<std::string> GetSuperClassNamesImpl() const = 0;
+  virtual std::list<std::string> GetSuperClassNamesImpl() const = 0;
   virtual std::vector<std::string> GetInterfaceNamesImpl() const = 0;
   virtual std::string GetSourceFileNameImpl() const = 0;
   virtual std::string GetSrcFileNameImpl() const;
@@ -273,15 +307,19 @@ class FEInputStructHelper : public FEInputContainer {
   void ProcessDeclDefInfoImplementNameForJava();
   void ProcessFieldDef();
   void ProcessMethodDef();
+  void ProcessStaticFields();
 
   MapleAllocator &allocator;
   MIRStructType *mirStructType;
   MIRSymbol *mirSymbol;
   MapleList<FEInputFieldHelper*> fieldHelpers;
   MapleList<FEInputMethodHelper*> methodHelpers;
-  MapleList<FEInputPragmaHelper*> pragmaHelpers;
+  FEInputPragmaHelper *pragmaHelper;
+  std::vector<MIRConst*> staticFieldsConstVal;
+  std::vector<uint32> finalStaticStringID;
   bool isSkipped;
   MIRSrcLang srcLang;
+  bool isOnDemandLoad = false;
 };
 
 class FEInputHelper {
@@ -295,16 +333,16 @@ class FEInputHelper {
   bool PreProcessDecl();
   bool ProcessDecl();
   bool ProcessImpl() const;
-  void RegisterFieldHelper(FEInputFieldHelper *helper) {
-    fieldHelpers.push_back(helper);
+  void RegisterFieldHelper(FEInputFieldHelper &helper) {
+    fieldHelpers.push_back(&helper);
   }
 
-  void RegisterMethodHelper(FEInputMethodHelper *helper) {
-    methodHelpers.push_back(helper);
+  void RegisterMethodHelper(FEInputMethodHelper &helper) {
+    methodHelpers.push_back(&helper);
   }
 
-  void RegisterStructHelper(FEInputStructHelper *helper) {
-    structHelpers.push_back(helper);
+  void RegisterStructHelper(FEInputStructHelper &helper) {
+    structHelpers.push_back(&helper);
   }
 
  private:

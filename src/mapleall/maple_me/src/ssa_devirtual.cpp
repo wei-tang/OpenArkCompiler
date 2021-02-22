@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -351,7 +351,7 @@ void SSADevirtual::VisitVarPhiNode(MePhiNode &varPhi) {
 
   auto mapit = inferredTypeCandidatesMap.find(lhsVar->GetExprID());
   if (mapit == inferredTypeCandidatesMap.end()) {
-    MapleVector<TyIdx> *tyIdxCandidates = devirtualAlloc.GetMemPool()->New<MapleVector<TyIdx>>(devirtualAlloc.Adapter());
+    auto tyIdxCandidates = devirtualAlloc.GetMemPool()->New<MapleVector<TyIdx>>(devirtualAlloc.Adapter());
     inferredTypeCandidatesMap[lhsVar->GetExprID()] = tyIdxCandidates;
   }
   MapleVector<TyIdx> &inferredTypeCandidates = *inferredTypeCandidatesMap[lhsVar->GetExprID()];

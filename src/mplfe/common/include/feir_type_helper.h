@@ -23,7 +23,7 @@ namespace maple {
 class FEIRTypeHelper {
  public:
   static UniqueFEIRType CreateTypeByPrimType(PrimType primType, TypeDim dim = 0, bool usePtr = false);
-  static UniqueFEIRType CreateTypeByJavaName(const std::string typeName, bool inMpl, bool usePtr);
+  static UniqueFEIRType CreateTypeByJavaName(const std::string &typeName, bool inMpl, bool usePtr);
   static UniqueFEIRType CreatePointerType(UniqueFEIRType baseType, PrimType primType = PTY_ptr);
   static UniqueFEIRType CreateTypeByDimIncr(const UniqueFEIRType &srcType, uint8 delta, bool usePtr = false,
                                             PrimType primType = PTY_ptr);

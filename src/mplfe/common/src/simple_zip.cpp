@@ -162,7 +162,7 @@ SimpleZip::SimpleZip(BasicIOMapFile &file) : BasicIORead(file, false) {}
 
 SimpleZip::~SimpleZip() {}
 
-bool SimpleZip::ParseFile() {
+void SimpleZip::ParseFile() {
   while (true) {
     std::unique_ptr<ZipLocalFile> zf = ZipLocalFile::Parse(*this);
     if (zf != nullptr) {
@@ -171,6 +171,5 @@ bool SimpleZip::ParseFile() {
       break;
     }
   }
-  return true;
 }
 }  // namespace maple

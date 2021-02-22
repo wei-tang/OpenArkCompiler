@@ -76,7 +76,7 @@ class JBCFunction : public FEFunction {
   // interface implement
   void InitImpl() override;
   void PreProcessImpl() override;
-  void ProcessImpl() override;
+  bool ProcessImpl() override;
   void FinishImpl() override;
   bool PreProcessTypeNameIdx() override;
   void GenerateGeneralStmtFailCallBack() override;
@@ -90,6 +90,11 @@ class JBCFunction : public FEFunction {
   bool HasThis() override {
     return methodHelper.HasThis();
   }
+
+  bool IsNative() override {
+    return methodHelper.IsNative();
+  }
+
   void EmitToFEIRStmt(const JBCBB &bb);
 
  LLT_PRIVATE:

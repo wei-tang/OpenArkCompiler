@@ -40,7 +40,7 @@ JBCInput::~JBCInput() {
 }
 
 void JBCInput::ReleaseMemPool() {
-  memPoolCtrler.DeleteMemPool(mp);
+  delete mp;
   mp = nullptr;
 }
 
@@ -84,11 +84,7 @@ bool JBCInput::ReadJarFile(const std::string &fileName) {
     return false;
   }
   SimpleZip zipFile(file);
-  if (zipFile.ParseFile() == false) {
-    ERR(kLncErr, "Unable to unzip jar file %s", fileName.c_str());
-    file.Close();
-    return false;
-  }
+  zipFile.ParseFile();
   for (const std::unique_ptr<ZipLocalFile> &zipLocalFile : zipFile.GetFiles()) {
     std::string zipLocalFileName = zipLocalFile->GetFileName();
     size_t len = zipLocalFileName.length();

@@ -19,18 +19,26 @@
 
 namespace maple {
 std::string FEIRVarReg::GetNameImpl(const MIRType &mirType) const {
-  std::stringstream ss;
-  ss << "Reg" << regNum << "_";
+  thread_local static std::stringstream ss("");
+  ss.str("");
+  ss << "Reg";
+  ss << regNum;
+  ss << "_";
   if (type->IsPreciseRefType()) {
     ss << "R" << mirType.GetTypeIndex().GetIdx();
   } else {
-    ss << GetPrimTypeName(type->GetPrimType());
+    if (type->GetSrcLang() == kSrcLangJava) {
+      ss << GetPrimTypeJavaName(type->GetPrimType());
+    } else {
+      ss << GetPrimTypeName(type->GetPrimType());
+    }
   }
   return ss.str();
 }
 
 std::string FEIRVarReg::GetNameRawImpl() const {
-  std::stringstream ss;
+  thread_local static std::stringstream ss("");
+  ss.str("");
   ss << "Reg" << regNum;
   return ss.str();
 }
@@ -51,5 +59,36 @@ bool FEIRVarReg::EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const {
 
 size_t FEIRVarReg::HashImpl() const {
   return std::hash<uint32>{}(regNum);
+}
+
+// ========== FEIRVarAccumulator ==========
+std::string FEIRVarAccumulator::GetNameImpl(const MIRType &mirType) const {
+  thread_local static std::stringstream ss("");
+  ss.str("");
+  ss << "Reg";
+  ss << "_Accumulator";
+  ss << "_";
+  if (type->IsPreciseRefType()) {
+    ss << "R" << mirType.GetTypeIndex().GetIdx();
+  } else {
+    if (type->GetSrcLang() == kSrcLangJava) {
+      ss << GetPrimTypeJavaName(type->GetPrimType());
+    } else {
+      ss << GetPrimTypeName(type->GetPrimType());
+    }
+  }
+  return ss.str();
+}
+
+std::string FEIRVarAccumulator::GetNameRawImpl() const {
+  thread_local static std::stringstream ss("");
+  ss.str("");
+  ss << "Reg_Accumulator";
+  return ss.str();
+}
+
+std::unique_ptr<FEIRVar> FEIRVarAccumulator::CloneImpl() const {
+  std::unique_ptr<FEIRVar> var = std::make_unique<FEIRVarAccumulator>(regNum, type->Clone());
+  return var;
 }
 }  // namespace maple

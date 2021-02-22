@@ -72,7 +72,7 @@ class JBCConstTagName {
 class JBCConstPool;
 class JBCConst {
  public:
-  JBCConst(MapleAllocator &alloc, JBCConstTag t) : tag(t) {}
+  JBCConst(MapleAllocator &allocIn, JBCConstTag t) : alloc(allocIn), tag(t) {}
   virtual ~JBCConst() = default;
   static JBCConst *InConst(MapleAllocator &alloc, BasicIORead &io);
   static std::string InternalNameToFullName(const std::string &name);
@@ -105,8 +105,8 @@ class JBCConst {
     return PreProcessImpl(constPool);
   }
 
-  SimpleXMLElem *GenXMLElem(MapleAllocator &alloc, uint32 id) {
-    return GenXMLElemImpl(alloc, id);
+  SimpleXMLElem *GenXMLElem(MapleAllocator &allocIn, uint32 id) {
+    return GenXMLElemImpl(allocIn, id);
   }
 
  protected:
@@ -117,6 +117,7 @@ class JBCConst {
     return mapleStr.length() == 0 ? "" : std::string(mapleStr.c_str());
   }
 
+  MapleAllocator &alloc;
   JBCConstTag tag;
 };
 

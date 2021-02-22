@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -282,7 +282,7 @@ class SPhiOcc : public SOcc {
 
 class SpreWorkCand {
  public:
-  SpreWorkCand(MapleAllocator &alloc, const OriginalSt &ost)
+  SpreWorkCand(MapleAllocator &alloc, OriginalSt &ost)
       : next(nullptr),
         theOst(&ost),
         theVar(nullptr),
@@ -296,7 +296,7 @@ class SpreWorkCand {
     return next;
   }
 
-  const OriginalSt *GetOst() const {
+  OriginalSt *GetOst() const {
     return theOst;
   }
 
@@ -330,7 +330,7 @@ class SpreWorkCand {
 
  private:
   SpreWorkCand *next;
-  const OriginalSt *theOst;     // the stored symbol of this workcand
+  OriginalSt *theOst;           // the stored symbol of this workcand
   VarMeExpr *theVar;            // any existing node of the lhs var
   MapleVector<SOcc*> realOccs;  // maintained in order of pdt_preorder
   bool hasStoreOcc;             // true if there is any store occurrence

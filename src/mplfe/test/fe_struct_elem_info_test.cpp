@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -33,13 +33,12 @@ class FEStructFieldInfoTest : public testing::Test, public RedirectBuffer {
 };
 
 TEST_F(FEStructFieldInfoTest, FEStructFieldInfo) {
-  std::string fullNameJava = "Ljava/lang/Integer;|MIN_VALUE|I";
-  std::string fullNameMpl = namemangler::EncodeName(fullNameJava);
-  GStrIdx fullNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(fullNameMpl);
-  FEStructFieldInfo info(fullNameIdx, kSrcLangJava, true);
-  std::string structName = GlobalTables::GetStrTable().GetStringFromStrIdx(info.structNameIdx);
-  std::string elemName = GlobalTables::GetStrTable().GetStringFromStrIdx(info.elemNameIdx);
-  std::string signatureName = GlobalTables::GetStrTable().GetStringFromStrIdx(info.signatureNameIdx);
+  StructElemNameIdx *structElemNameIdx = new StructElemNameIdx("Ljava/lang/Integer;", "MIN_VALUE", "I");
+  FEStructFieldInfo info(*structElemNameIdx, kSrcLangJava, true);
+  std::string structName = GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx->klass);
+  std::string elemName = GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx->elem);
+  std::string signatureName = GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx->type);
+  delete structElemNameIdx;
   EXPECT_EQ(structName, namemangler::EncodeName("Ljava/lang/Integer;"));
   EXPECT_EQ(elemName, namemangler::EncodeName("MIN_VALUE"));
   EXPECT_EQ(signatureName, namemangler::EncodeName("I"));
@@ -47,12 +46,11 @@ TEST_F(FEStructFieldInfoTest, FEStructFieldInfo) {
 }
 
 TEST_F(FEStructFieldInfoTest, SearchStructFieldJava) {
-  std::string fullNameJava = "Ljava/lang/Integer;|MIN_VALUE|I";
-  std::string fullNameMpl = namemangler::EncodeName(fullNameJava);
-  GStrIdx fullNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(fullNameMpl);
-  FEStructFieldInfo info(fullNameIdx, kSrcLangJava, true);
+  StructElemNameIdx *structElemNameIdx = new StructElemNameIdx("Ljava/lang/Integer;", "MIN_VALUE", "I");
+  FEStructFieldInfo info(*structElemNameIdx, kSrcLangJava, true);
   MIRStructType *structType =
       FEManager::GetTypeManager().GetStructTypeFromName(namemangler::EncodeName("Ljava/lang/Integer;"));
+  delete structElemNameIdx;
   ASSERT_NE(structType, nullptr);
   EXPECT_EQ(info.SearchStructFieldJava(*structType, mirBuilder, true), true);
   EXPECT_EQ(info.SearchStructFieldJava(*structType, mirBuilder, false), false);

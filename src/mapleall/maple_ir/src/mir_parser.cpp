@@ -2271,7 +2271,7 @@ bool MIRParser::ParseExprAddroflabel(BaseNodePtr &expr) {
   }
   LabelIdx lblIdx = mod.CurFunction()->GetOrCreateLableIdxFromName(lexer.GetName());
   addrOfLabelNode->SetOffset(lblIdx);
-  mod.CurFunction()->GetLabelTab()->GetAddrTakenLabels().insert(lblIdx);
+  (void)mod.CurFunction()->GetLabelTab()->GetAddrTakenLabels().insert(lblIdx);
   lexer.NextToken();
   return true;
 }
@@ -2648,14 +2648,14 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
     MIRPtrType ptrType(ptyIdx, (mod.IsJavaModule() ? PTY_ref : PTY_ptr));
     ptyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&ptrType);
     MIRType *exprTy = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptyIdx);
-    int32 ofst = 0;
+    uint32 ofst = 0;
     if (lexer.GetTokenKind() == TK_lparen) {
       lexer.NextToken();
       if (lexer.GetTokenKind() != TK_intconst) {
         Error("ParseConstAddrLeafExpr: wrong offset specification for addrof");
         return false;
       } else {
-        ofst = lexer.GetTheIntVal();
+        ofst = static_cast<uint32>(lexer.GetTheIntVal());
       }
       lexer.NextToken();
       if (lexer.GetTokenKind() != TK_rparen) {

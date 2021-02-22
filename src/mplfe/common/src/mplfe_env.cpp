@@ -31,7 +31,7 @@ void MPLFEEnv::Finish() {
 }
 
 uint32 MPLFEEnv::NewSrcFileIdx(const GStrIdx &nameIdx) {
-  size_t idx = srcFileIdxNameMap.size();
+  size_t idx = srcFileIdxNameMap.size() + 1; // 1: already occupied by VtableImpl.mpl
   CHECK_FATAL(idx < UINT32_MAX, "idx is out of range");
   srcFileIdxNameMap[idx] = nameIdx;
   return static_cast<uint32>(idx);

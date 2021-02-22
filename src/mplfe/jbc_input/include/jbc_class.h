@@ -108,6 +108,9 @@ class JBCClassMethod : public JBCClassElem {
   ~JBCClassMethod() = default;
   bool PreProcess();
   const JBCAttrCode *GetCode() const;
+  bool IsVirtual() const;
+  bool IsNative() const;
+  bool HasCode() const;
 
  protected:
   SimpleXMLElem *GenXmlElemImpl(MapleAllocator &allocator, const JBCConstPool &constPool, uint32 idx) override;

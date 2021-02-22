@@ -23,6 +23,7 @@
 #include "mir_builder.h"
 #include "feir_type.h"
 #include "fe_struct_elem_info.h"
+#include "fe_utils.h"
 
 namespace maple {
 enum FETypeFlag : uint16 {
@@ -124,6 +125,8 @@ class FETypeManager {
     return GetOrCreateClassOrInterfacePtrType(nameIdx, isInterface, typeFlag, isCreate);
   }
 
+
+  uint32 GetTypeIDFromMplClassName(const std::string &mplClassName) const;
   MIRStructType *GetStructTypeFromName(const std::string &name);
   MIRStructType *GetStructTypeFromName(const GStrIdx &nameIdx);
   MIRType *GetOrCreateTypeFromName(const std::string &name, FETypeFlag typeFlag, bool usePtr);
@@ -134,8 +137,10 @@ class FETypeManager {
 
   // ---------- methods for StructElemInfo ----------
   // structIdx = 0: global field/function without owner structure
-  FEStructElemInfo *RegisterStructFieldInfo(const GStrIdx &fullNameIdx, MIRSrcLang argSrcLang, bool isStatic);
-  FEStructElemInfo *RegisterStructMethodInfo(const GStrIdx &fullNameIdx, MIRSrcLang argSrcLang, bool isStatic);
+  FEStructElemInfo *RegisterStructFieldInfo(
+      const StructElemNameIdx &argStructElemNameIdx, MIRSrcLang argSrcLang, bool isStatic);
+  FEStructElemInfo *RegisterStructMethodInfo(
+      const StructElemNameIdx &argStructElemNameIdx, MIRSrcLang argSrcLang, bool isStatic);
   FEStructElemInfo *GetStructElemInfo(const GStrIdx &fullNameIdx) const;
 
   // ---------- methods for MIRFunction ----------
@@ -195,16 +200,23 @@ class FETypeManager {
     uint32 dim = 0;
     return GetBaseTypeName(name, dim, inMpl);
   }
-
   static void SetComplete(MIRStructType &structType);
   static std::string TypeAttrsToString(const TypeAttrs &attrs);
+  bool IsImportedType(const GStrIdx &typeNameIdx) const {
+    return structNameTypeMap.find(typeNameIdx) != structNameTypeMap.end();
+  }
+  void MarkExternStructType();
+  void SetMirImportedTypes(FETypeFlag flag);
 
  private:
   void UpdateStructNameTypeMapFromTypeTable(const std::string &mpltName, FETypeFlag flag);
   void UpdateNameFuncMapFromTypeTable();
+  void UpdateDupTypes(const GStrIdx &nameIdx, bool isInterface,
+                      const std::unordered_map<GStrIdx, FEStructTypePair, GStrIdxHash>::iterator &importedTypeIt);
 
   // MCC function
   void InitFuncMCCGetOrInsertLiteral();
+  void InitFuncMCCStaticField();
 
   MIRModule &module;
   MemPool *mp;
@@ -219,9 +231,11 @@ class FETypeManager {
   FETypeSameNamePolicy sameNamePolicy;
   MIRSrcLang srcLang;
 
+  // ---------- class name ---> type id map info ----------
+  std::unordered_map<std::string, uint32> classNameTypeIDMap;
+
   // ---------- struct elem info ----------
   std::map<GStrIdx, FEStructElemInfo*> mapStructElemInfo;
-  std::list<UniqueFEStructElemInfo> listStructElemInfo;
 
   // ---------- function list ----------
   std::unordered_map<GStrIdx, MIRFunction*, GStrIdxHash> nameFuncMap;
@@ -237,8 +251,29 @@ class FETypeManager {
   std::unordered_map<GStrIdx, MIRFunction*, GStrIdxHash> nameMCCFuncMap;
   MIRFunction *funcMCCGetOrInsertLiteral;
 
+  MIRFunction *funcMCCStaticFieldGetBool = nullptr;
+  MIRFunction *funcMCCStaticFieldGetByte = nullptr;
+  MIRFunction *funcMCCStaticFieldGetShort = nullptr;
+  MIRFunction *funcMCCStaticFieldGetChar = nullptr;
+  MIRFunction *funcMCCStaticFieldGetInt = nullptr;
+  MIRFunction *funcMCCStaticFieldGetLong = nullptr;
+  MIRFunction *funcMCCStaticFieldGetFloat = nullptr;
+  MIRFunction *funcMCCStaticFieldGetDouble = nullptr;
+  MIRFunction *funcMCCStaticFieldGetObject = nullptr;
+
+  MIRFunction *funcMCCStaticFieldSetBool = nullptr;
+  MIRFunction *funcMCCStaticFieldSetByte = nullptr;
+  MIRFunction *funcMCCStaticFieldSetShort = nullptr;
+  MIRFunction *funcMCCStaticFieldSetChar = nullptr;
+  MIRFunction *funcMCCStaticFieldSetInt = nullptr;
+  MIRFunction *funcMCCStaticFieldSetLong = nullptr;
+  MIRFunction *funcMCCStaticFieldSetFloat = nullptr;
+  MIRFunction *funcMCCStaticFieldSetDouble = nullptr;
+  MIRFunction *funcMCCStaticFieldSetObject = nullptr;
+
   // ---------- antiproguard ----------
   std::set<GStrIdx> setAntiProguardFieldStructIdx;
+  mutable std::mutex feTypeManagerMtx;
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_COMMON_FE_TYPE_MANAGER_H

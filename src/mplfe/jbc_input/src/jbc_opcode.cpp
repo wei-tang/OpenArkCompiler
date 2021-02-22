@@ -35,7 +35,7 @@ JBCOpcodeInfo JBCOp::opcodeInfo;
 std::vector<JBCPrimType> JBCOp::emptyPrimTypes;
 
 JBCOp::JBCOp(MapleAllocator &allocator, JBCOpcode opIn, JBCOpcodeKind kindIn, bool wideIn)
-    : op(opIn), kind(kindIn), wide(wideIn) {}
+    : alloc(allocator), op(opIn), kind(kindIn), wide(wideIn) {}
 
 bool JBCOp::CheckNotWide(const BasicIORead &io) const {
   // wide only can be used with i/f/l/d/aload, i/f/l/d/astore, ret, and iinc
@@ -1357,7 +1357,7 @@ GStrIdx JBCOpNew::GetTypeNameIdx(const JBCConstPool &constPool) const {
       return constClass->GetClassNameIdxMpl();
     }
     case jbc::kOpNewArray:
-      return GStrIdx(0);
+      return GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(GetPrimTypeName());
     default:
       ASSERT(false, "Unexpected opcode %s for New", GetOpcodeName().c_str());
       return GStrIdx(0);

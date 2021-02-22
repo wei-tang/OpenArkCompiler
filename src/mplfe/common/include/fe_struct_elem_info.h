@@ -21,9 +21,28 @@
 #include "feir_type.h"
 
 namespace maple {
+struct StructElemNameIdx {
+  GStrIdx klass;
+  GStrIdx elem;
+  GStrIdx type;
+  GStrIdx full;
+
+  StructElemNameIdx(const GStrIdx &argKlass, const GStrIdx &argElem, const GStrIdx &argType, const GStrIdx &argFull)
+      : klass(argKlass), elem(argElem), type(argType), full(argFull) {}
+  StructElemNameIdx(const std::string &klassStr, const std::string &elemStr, const std::string &typeStr) {
+    const std::string &fullName = klassStr + "|" + elemStr + "|" + typeStr;
+    klass = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(klassStr));
+    elem = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(elemStr));
+    type = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(typeStr));
+    full = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(fullName));
+  }
+  ~StructElemNameIdx() = default;
+};
+
 class FEStructElemInfo {
  public:
-  FEStructElemInfo(const GStrIdx &argFullNameIdx, MIRSrcLang argSrcLang, bool argIsStatic);
+  FEStructElemInfo(const StructElemNameIdx &argStructElemNameIdx,
+                   MIRSrcLang argSrcLang, bool argIsStatic);
   virtual ~FEStructElemInfo() = default;
 
   void Prepare(MIRBuilder &mirBuilder, bool argIsStatic) {
@@ -31,15 +50,15 @@ class FEStructElemInfo {
   }
 
   const std::string &GetStructName() const {
-    return GlobalTables::GetStrTable().GetStringFromStrIdx(structNameIdx);
+    return GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx.klass);
   }
 
   const std::string &GetElemName() const {
-    return GlobalTables::GetStrTable().GetStringFromStrIdx(elemNameIdx);
+    return GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx.elem);
   }
 
   const std::string &GetSignatureName() const {
-    return GlobalTables::GetStrTable().GetStringFromStrIdx(signatureNameIdx);
+    return GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx.type);
   }
 
   bool IsStatic() const {
@@ -78,28 +97,30 @@ class FEStructElemInfo {
     srcLang = lang;
   }
 
+  UniqueFEIRType GetActualContainerType() const;
+  const std::string &GetActualContainerName() const {
+    return actualContainer;
+  }
+
  LLT_PROTECTED:
-  void Init();
-  void InitJava();
   virtual void PrepareImpl(MIRBuilder &mirBuilder, bool argIsStatic) = 0;
 
-  GStrIdx fullNameIdx;  // in maple format
+  StructElemNameIdx structElemNameIdx;
   MIRSrcLang srcLang : 8;
   bool isStatic : 1;
   bool isMethod : 1;
   bool isDefined : 1;
   bool isFromDex : 1;
   bool isPrepared : 1;
-  GStrIdx structNameIdx;  // in maple format
-  GStrIdx elemNameIdx;  // in maple format
-  GStrIdx signatureNameIdx;  // in maple format
+  std::string actualContainer; // in maple format
 };
 
 using UniqueFEStructElemInfo = std::unique_ptr<FEStructElemInfo>;
 
 class FEStructFieldInfo : public FEStructElemInfo {
  public:
-  FEStructFieldInfo(const GStrIdx &argFullNameIdx, MIRSrcLang argSrcLang, bool argIsStatic);
+  FEStructFieldInfo(const StructElemNameIdx &argStructElemNameIdx,
+                    MIRSrcLang argSrcLang, bool argIsStatic);
   ~FEStructFieldInfo() = default;
   GStrIdx GetFieldNameIdx() const {
     return fieldNameIdx;
@@ -107,6 +128,10 @@ class FEStructFieldInfo : public FEStructElemInfo {
 
   FieldID GetFieldID() const {
     return fieldID;
+  }
+
+  void SetFieldID(const FieldID argFieldID) {
+    fieldID = argFieldID;
   }
 
   const UniqueFEIRType &GetType() const {
@@ -120,7 +145,7 @@ class FEStructFieldInfo : public FEStructElemInfo {
   void LoadFieldType();
   void LoadFieldTypeJava();
   void PrepareStaticField(const MIRStructType &structType);
-  void PrepareNonStaticField(MIRStructType &structType, MIRBuilder &mirBuilder);
+  void PrepareNonStaticField(MIRBuilder &mirBuilder);
   bool SearchStructFieldJava(MIRStructType &structType, MIRBuilder &mirBuilder, bool argIsStatic,
                              bool allowPrivate = true);
   bool SearchStructFieldJava(const TyIdx &tyIdx, MIRBuilder &mirBuilder, bool argIsStatic, bool allowPrivate = true);
@@ -133,7 +158,8 @@ class FEStructFieldInfo : public FEStructElemInfo {
 
 class FEStructMethodInfo : public FEStructElemInfo {
  public:
-  FEStructMethodInfo(const GStrIdx &argFullNameIdx, MIRSrcLang argSrcLang, bool argIsStatic);
+  FEStructMethodInfo(const StructElemNameIdx &argStructElemNameIdx,
+                     MIRSrcLang argSrcLang, bool argIsStatic);
   ~FEStructMethodInfo();
   PUIdx GetPuIdx() const;
   bool IsConstructor() const {

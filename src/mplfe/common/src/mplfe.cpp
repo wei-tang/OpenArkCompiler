@@ -12,14 +12,7 @@
  * FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-#include "mpl_logging.h"
-#include "mplfe_options.h"
 #include "mplfe_compiler.h"
-#include "jbc_compiler_component.h"
-#include "fe_errno.h"
-#include "mpl_timer.h"
-#include "mplfe_env.h"
-#include "fe_manager.h"
 using namespace maple;
 
 int main(int argc, char **argv) {
@@ -32,31 +25,10 @@ int main(int argc, char **argv) {
   MPLFEEnv::GetInstance().Init();
   MIRModule module;
   MPLFECompiler compiler(module);
-  bool success = true;
-  compiler.Init();
-  compiler.CheckInput();
-  compiler.SetupOutputPathAndName();
-  success = success && compiler.LoadMplt();
-  if (FEOptions::GetInstance().GetInputClassFiles().size() != 0 ||
-      FEOptions::GetInstance().GetInputJarFiles().size() != 0) {
-    std::unique_ptr<MPLFECompilerComponent> jbcCompilerComp = std::make_unique<JBCCompilerComponent>(module);
-    compiler.RegisterCompilerComponent(std::move(jbcCompilerComp));
-  }
-  compiler.InitFromOptions();
-  compiler.ParseInputs();
-  compiler.PreProcessDecls();
-  compiler.ProcessDecls();
-  FEManager::GetTypeManager().InitMCCFunctions();
-  compiler.PreProcessWithFunctions();
-  compiler.ProcessFunctions();
-  CHECK_FATAL(success, "Compile Error");
-  compiler.ExportMpltFile();
-  compiler.ExportMplFile();
-  MPLFEEnv::GetInstance().Finish();
+  compiler.Run();
   timer.Stop();
   if (FEOptions::GetInstance().IsDumpTime()) {
-    INFO(kLncInfo, "mplfe time: %.2lfs", timer.ElapsedMilliseconds() / 1000.0);
+    INFO(kLncInfo, "mplfe time: %.2lfms", timer.ElapsedMilliseconds() / 1.0);
   }
-  compiler.Release();
   return static_cast<int>(FEErrno::kNoError);
 }

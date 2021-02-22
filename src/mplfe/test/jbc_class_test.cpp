@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -62,11 +62,11 @@ class JBCClassTest : public testing::Test {
   BasicIORead *ioJBC0001;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for JBCClassTest");
+    mp = memPoolCtrler.NewMemPool("MemPool for JBCClassTest", false /* isLocalPool */);
   }
 
   static void TearDownTestCase() {
-    memPoolCtrler.DeleteMemPool(mp);
+    delete mp;
     mp = nullptr;
   }
 };

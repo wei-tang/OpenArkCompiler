@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -49,7 +49,8 @@ static bool CompareBackedge(const std::pair<BB*, BB*> &a, const std::pair<BB*, B
   return (a.first)->GetBBId() < (b.first)->GetBBId();
 }
 
-bool MeDoLoopCanon::NeedConvert(MeFunction *func, BB &bb, BB &pred, MapleAllocator &localAlloc, MapleMap<Key, bool> &swapSuccs) const {
+bool MeDoLoopCanon::NeedConvert(MeFunction *func, BB &bb, BB &pred, MapleAllocator &localAlloc,
+                                MapleMap<Key, bool> &swapSuccs) const {
   bb.SetAttributes(kBBAttrIsInLoop);
   pred.SetAttributes(kBBAttrIsInLoop);
   // do not convert do-while loop

@@ -52,7 +52,7 @@ class FEIRTypeMergeHelper {
 
 class FEIRTypeInfer {
  public:
-  FEIRTypeInfer(MIRSrcLang argSrcLang, const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &argMapDefUse);
+  FEIRTypeInfer(MIRSrcLang argSrcLang, const FEIRDefUseChain &argMapDefUse);
   ~FEIRTypeInfer() = default;
   void LoadTypeDefault();
   void Reset();
@@ -65,10 +65,19 @@ class FEIRTypeInfer {
   MIRSrcLang srcLang;
   UniqueFEIRType typeDefault;
   FEIRTypeMergeHelper mergeHelper;
-  const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapDefUse;
+  const FEIRDefUseChain &mapDefUse;
   std::set<const UniqueFEIRVar*> visitVars;
   bool withCircle = false;
   bool first = false;
+};
+
+class FEIRTypeCvtHelper {
+ public:
+  static Opcode ChooseCvtOpcodeByFromTypeAndToType(const FEIRType &fromType, const FEIRType &toType);
+
+ private:
+  static bool IsRetypeable(const FEIRType &fromType, const FEIRType &toType);
+  static bool IsIntCvt2Ref(const FEIRType &fromType, const FEIRType &toType);
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FEIR_TYPE_INFER_H

@@ -33,6 +33,9 @@ class FEIRVarTypeScatter : public FEIRVar {
   }
 
  protected:
+  MIRSymbol *GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const override;
+  MIRSymbol *GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const override;
+  MIRSymbol *GenerateMIRSymbolImpl(MIRBuilder &builder) const override;
   std::string GetNameImpl(const MIRType &mirType) const override;
   std::string GetNameRawImpl() const override;
   std::unique_ptr<FEIRVar> CloneImpl() const override;

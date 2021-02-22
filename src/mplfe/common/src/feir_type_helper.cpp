@@ -25,7 +25,7 @@ UniqueFEIRType FEIRTypeHelper::CreateTypeByPrimType(PrimType primType, TypeDim d
   }
 }
 
-UniqueFEIRType FEIRTypeHelper::CreateTypeByJavaName(const std::string typeName, bool inMpl, bool usePtr) {
+UniqueFEIRType FEIRTypeHelper::CreateTypeByJavaName(const std::string &typeName, bool inMpl, bool usePtr) {
   uint32 dim = 0;
   std::string baseName = FETypeManager::GetBaseTypeName(typeName, dim, inMpl);
   CHECK_FATAL(dim <= FEConstants::kDimMax, "invalid array type %s (dim is too big)", typeName.c_str());

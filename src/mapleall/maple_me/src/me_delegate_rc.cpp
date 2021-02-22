@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -714,7 +714,7 @@ std::set<OStIdx> DelegateRC::RenameAndGetLiveLocalRefVar() {
         CHECK_FATAL(lhs != nullptr, "null ptr check");
         const OriginalSt *ost = lhs->GetOst();
         if (ost->IsLocal() && !ost->IsFormal() && !ost->IsIgnoreRC() && lhs->GetPrimType() == PTY_ref) {
-          (void)liveLocalrefvars.insert(lhs->GetOst()->GetIndex());
+          (void)liveLocalrefvars.insert(lhs->GetOstIdx());
         }
       } else if (kOpcodeInfo.IsCallAssigned(stmt.GetOp())) {
         MapleVector<MustDefMeNode> *mustdefList = stmt.GetMustDefList();
@@ -727,7 +727,7 @@ std::set<OStIdx> DelegateRC::RenameAndGetLiveLocalRefVar() {
           auto *varLhs = static_cast<VarMeExpr*>(theLhs);
           const OriginalSt *ost = varLhs->GetOst();
           if (ost->IsLocal() && !ost->IsFormal() && !ost->IsIgnoreRC()) {
-            (void)liveLocalrefvars.insert(varLhs->GetOst()->GetIndex());
+            (void)liveLocalrefvars.insert(ost->GetIndex());
           }
         }
       }
@@ -757,7 +757,7 @@ void DelegateRC::CleanUpDeadLocalRefVar(const std::set<OStIdx> &liveLocalrefvars
     IntrinsiccallMeStmt *intrin = static_cast<IntrinsiccallMeStmt*>(stmt);
     for (size_t i = 0; i < intrin->NumMeStmtOpnds(); ++i) {
       auto *varMeExpr = static_cast<VarMeExpr*>(intrin->GetOpnd(i));
-      if (liveLocalrefvars.find(varMeExpr->GetOst()->GetIndex()) == liveLocalrefvars.end()) {
+      if (liveLocalrefvars.find(varMeExpr->GetOstIdx()) == liveLocalrefvars.end()) {
         continue;
       }
       if (nextPos != i) {

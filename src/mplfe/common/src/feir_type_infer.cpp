@@ -144,8 +144,7 @@ bool FEIRTypeMergeHelper::MergeType(UniqueFEIRType &typeDst, const UniqueFEIRTyp
 }
 
 // ---------- FEIRTypeInfer ----------
-FEIRTypeInfer::FEIRTypeInfer(MIRSrcLang argSrcLang,
-                             const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &argMapDefUse)
+FEIRTypeInfer::FEIRTypeInfer(MIRSrcLang argSrcLang, const FEIRDefUseChain &argMapDefUse)
     : srcLang(argSrcLang),
       mapDefUse(argMapDefUse) {
   LoadTypeDefault();
@@ -171,7 +170,7 @@ void FEIRTypeInfer::Reset() {
 
 UniqueFEIRType FEIRTypeInfer::GetTypeForVarUse(const UniqueFEIRVar &varUse) {
   CHECK_NULL_FATAL(varUse);
-  if (varUse->GetType()->IsPreciseRefType()) {
+  if (varUse->GetType()->IsPrecise()) {
     return varUse->GetType()->Clone();
   }
   if (varUse->GetTrans().get() == nullptr) {
@@ -257,7 +256,7 @@ void FEIRTypeInfer::ProcessVarDef(UniqueFEIRVar &varDef) {
     std::unique_ptr<FEIRVarTypeScatter> varNew =
         std::make_unique<FEIRVarTypeScatter>(static_cast<UniqueFEIRVar>(varDef->Clone()));
     FEIRVarTypeScatter *ptrVarNew = varNew.get();
-    varDef->SetType(varDef->GetType()->Clone());
+    ptrVarNew->SetType(varDef->GetType()->Clone());
     for (const FEIRTypeKey &typeKey : useTypes) {
       ptrVarNew->AddScatterType(typeKey.GetType());
     }
@@ -277,5 +276,23 @@ UniqueFEIRType FEIRTypeInfer::GetTypeByTransForVarUse(const UniqueFEIRVar &varUs
   } else {
     return defType;
   }
+}
+
+Opcode FEIRTypeCvtHelper::ChooseCvtOpcodeByFromTypeAndToType(const FEIRType &fromType, const FEIRType &toType) {
+  if (IsRetypeable(fromType, toType)) {
+    return OP_retype;
+  } else if (IsIntCvt2Ref(fromType, toType)) {
+    return OP_cvt;
+  } else {
+    return OP_undef;
+  }
+}
+
+bool FEIRTypeCvtHelper::IsRetypeable(const FEIRType &fromType, const FEIRType &toType) {
+  return (fromType.GetPrimType() == toType.GetPrimType());
+}
+
+bool FEIRTypeCvtHelper::IsIntCvt2Ref(const FEIRType &fromType, const FEIRType &toType) {
+  return (IsPrimitiveInteger(fromType.GetPrimType()) && toType.IsPreciseRefType());
 }
 }  // namespace maple

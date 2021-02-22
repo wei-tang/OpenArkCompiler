@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -531,7 +531,7 @@ TEST_F(JBCStack2FEHelperTest, GenerateSwapStmts_Test1) {
   ASSERT_EQ(mirStmts0.size(), 1);
   mirStmts0.front()->Dump();
   std::string dumpStr = GetBufferString();
-  std::string pattern = std::string("dassign %Reg5_f64 0 \\(dread f64 %Reg3_f64\\)") + MPLFEUTRegx::Any();
+  std::string pattern = std::string("dassign %Reg5_D 0 \\(dread f64 %Reg3_D\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
 
   // stmt 1: dassign %Reg7_i64 0 (dread i64 %Reg1_i64)
@@ -539,7 +539,7 @@ TEST_F(JBCStack2FEHelperTest, GenerateSwapStmts_Test1) {
   ASSERT_EQ(mirStmts1.size(), 1);
   mirStmts1.front()->Dump();
   dumpStr = GetBufferString();
-  pattern = std::string("dassign %Reg7_i64 0 \\(dread i64 %Reg1_i64\\)") + MPLFEUTRegx::Any();
+  pattern = std::string("dassign %Reg7_J 0 \\(dread i64 %Reg1_J\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
 
   // stmt 2: dassign %Reg9_i32 0 (dread i32 %Reg0_i32)
@@ -547,7 +547,7 @@ TEST_F(JBCStack2FEHelperTest, GenerateSwapStmts_Test1) {
   ASSERT_EQ(mirStmts2.size(), 1);
   mirStmts2.front()->Dump();
   dumpStr = GetBufferString();
-  pattern = std::string("dassign %Reg9_i32 0 \\(dread i32 %Reg0_i32\\)") + MPLFEUTRegx::Any();
+  pattern = std::string("dassign %Reg9_I 0 \\(dread i32 %Reg0_I\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
   RestoreCout();
 }
@@ -592,7 +592,7 @@ TEST_F(JBCStack2FEHelperTest, LoadSwapStack_Test1) {
   ASSERT_EQ(mirStmts0.size(), 1);
   mirStmts0.front()->Dump();
   std::string dumpStr = GetBufferString();
-  std::string pattern = std::string("dassign %Reg0_i32 0 \\(dread i32 %Reg9_i32\\)") + MPLFEUTRegx::Any();
+  std::string pattern = std::string("dassign %Reg0_I 0 \\(dread i32 %Reg9_I\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
 
   // stmt 1: dassign %Reg1_i64 0 (dread i64 %Reg7_i64)
@@ -600,7 +600,7 @@ TEST_F(JBCStack2FEHelperTest, LoadSwapStack_Test1) {
   ASSERT_EQ(mirStmts1.size(), 1);
   mirStmts1.front()->Dump();
   dumpStr = GetBufferString();
-  pattern = std::string("dassign %Reg1_i64 0 \\(dread i64 %Reg7_i64\\)") + MPLFEUTRegx::Any();
+  pattern = std::string("dassign %Reg1_J 0 \\(dread i64 %Reg7_J\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
 
   // stmt 2: dassign %Reg3_f64 0 (dread f64 %Reg5_f64)
@@ -608,7 +608,7 @@ TEST_F(JBCStack2FEHelperTest, LoadSwapStack_Test1) {
   ASSERT_EQ(mirStmts2.size(), 1);
   mirStmts2.front()->Dump();
   dumpStr = GetBufferString();
-  pattern = std::string("dassign %Reg3_f64 0 \\(dread f64 %Reg5_f64\\)") + MPLFEUTRegx::Any();
+  pattern = std::string("dassign %Reg3_D 0 \\(dread f64 %Reg5_D\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
   RestoreCout();
 }

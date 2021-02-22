@@ -36,7 +36,7 @@ MeExpr *IRMap::CreateAddrofMeExpr(OStIdx ostIdx) {
 MeExpr *IRMap::CreateAddrofMeExpr(MeExpr &expr) {
   if (expr.GetMeOp() == kMeOpVar) {
     auto &varMeExpr = static_cast<VarMeExpr&>(expr);
-    return CreateAddrofMeExpr(varMeExpr.GetOst()->GetIndex());
+    return CreateAddrofMeExpr(varMeExpr.GetOstIdx());
   } else {
     ASSERT(expr.GetMeOp() == kMeOpIvar, "expecting IVarMeExpr");
     auto &ivarExpr = static_cast<IvarMeExpr&>(expr);
@@ -198,7 +198,7 @@ VarMeExpr *IRMap::GetOrCreateZeroVersionVarMeExpr(OriginalSt &ost) {
   }
   if (vst2MeExprTable[ost.GetZeroVersionIndex()] == nullptr) {
     auto *varMeExpr = New<VarMeExpr>(exprID++, &ost, ost.GetZeroVersionIndex(),
-                                     GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost.GetTyIdx())->GetPrimType());
+        GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost.GetTyIdx())->GetPrimType());
     ASSERT(!GlobalTables::GetTypeTable().GetTypeTable().empty(), "container check");
     vst2MeExprTable[ost.GetZeroVersionIndex()] = varMeExpr;
     return varMeExpr;
@@ -253,17 +253,21 @@ MeExpr *IRMap::HashMeExpr(MeExpr &meExpr) {
         resultExpr = New<ConstMeExpr>(exprID, static_cast<ConstMeExpr&>(meExpr).GetConstVal(), meExpr.GetPrimType());
         break;
       case kMeOpConststr:
-        resultExpr = New<ConststrMeExpr>(exprID, static_cast<ConststrMeExpr&>(meExpr).GetStrIdx(), meExpr.GetPrimType());
+        resultExpr =
+            New<ConststrMeExpr>(exprID, static_cast<ConststrMeExpr&>(meExpr).GetStrIdx(), meExpr.GetPrimType());
         break;
       case kMeOpConststr16:
-        resultExpr = New<Conststr16MeExpr>(exprID, static_cast<Conststr16MeExpr&>(meExpr).GetStrIdx(), meExpr.GetPrimType());
+        resultExpr =
+            New<Conststr16MeExpr>(exprID, static_cast<Conststr16MeExpr&>(meExpr).GetStrIdx(), meExpr.GetPrimType());
         break;
       case kMeOpSizeoftype:
-        resultExpr = New<SizeoftypeMeExpr>(exprID, meExpr.GetPrimType(), static_cast<SizeoftypeMeExpr&>(meExpr).GetTyIdx());
+        resultExpr =
+            New<SizeoftypeMeExpr>(exprID, meExpr.GetPrimType(), static_cast<SizeoftypeMeExpr&>(meExpr).GetTyIdx());
         break;
       case kMeOpFieldsDist: {
         auto &expr = static_cast<FieldsDistMeExpr&>(meExpr);
-        resultExpr = New<FieldsDistMeExpr>(exprID, meExpr.GetPrimType(), expr.GetTyIdx(), expr.GetFieldID1(), expr.GetFieldID2());
+        resultExpr = New<FieldsDistMeExpr>(exprID, meExpr.GetPrimType(), expr.GetTyIdx(),
+                                           expr.GetFieldID1(), expr.GetFieldID2());
         break;
       }
       case kMeOpAddrof:
@@ -280,12 +284,13 @@ MeExpr *IRMap::HashMeExpr(MeExpr &meExpr) {
         resultExpr = New<AddroflabelMeExpr>(exprID, static_cast<AddroflabelMeExpr&>(meExpr).labelIdx);
         break;
       case kMeOpGcmalloc:
-        resultExpr = New<GcmallocMeExpr>(exprID, meExpr.GetOp(), meExpr.GetPrimType(), static_cast<GcmallocMeExpr&>(meExpr).GetTyIdx());
+        resultExpr = New<GcmallocMeExpr>(exprID, meExpr.GetOp(), meExpr.GetPrimType(),
+                                         static_cast<GcmallocMeExpr&>(meExpr).GetTyIdx());
         break;
       default:
         CHECK_FATAL(false, "not yet implement");
     }
-    exprID++;
+    ++exprID;
     if (meExpr.GetMeOp() == kMeOpOp || meExpr.GetMeOp() == kMeOpNary) {
       resultExpr->UpdateDepth();
     }

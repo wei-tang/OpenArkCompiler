@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -31,11 +31,11 @@ class JBCClass2FEHelperTest : public testing::Test, public RedirectBuffer {
   ~JBCClass2FEHelperTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for JBCClass2FEHelperTest");
+    mp = memPoolCtrler.NewMemPool("MemPool for JBCClass2FEHelperTest", false /* isLcalPool */);
   }
 
   static void TearDownTestCase() {
-    memPoolCtrler.DeleteMemPool(mp);
+    delete mp;
     mp = nullptr;
   }
 
@@ -52,11 +52,11 @@ class JBCClassField2FEHelperTest : public testing::Test, public RedirectBuffer {
   ~JBCClassField2FEHelperTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for JBCClassField2FEHelperTest");
+    mp = memPoolCtrler.NewMemPool("MemPool for JBCClassField2FEHelperTest", false /* isLocalPool */);
   }
 
   static void TearDownTestCase() {
-    memPoolCtrler.DeleteMemPool(mp);
+    delete mp;
     mp = nullptr;
   }
 
@@ -83,8 +83,8 @@ class MockJBCClassField : public jbc::JBCClassField {
   ~MockJBCClassField() = default;
   MOCK_CONST_METHOD0(GetAccessFlag, uint16());
   MOCK_CONST_METHOD0(IsStatic, bool());
-  MOCK_CONST_METHOD1(GetName, std::string(const jbc::JBCConstPool&));
-  MOCK_CONST_METHOD1(GetDescription, std::string(const jbc::JBCConstPool&));
+  MOCK_CONST_METHOD0(GetName, std::string());
+  MOCK_CONST_METHOD0(GetDescription, std::string());
 };
 
 class MockJBCClass2FEHelper : public JBCClass2FEHelper {
@@ -96,57 +96,48 @@ class MockJBCClass2FEHelper : public JBCClass2FEHelper {
 };
 
 TEST_F(JBCClass2FEHelperTest, PreProcessDecl_SameName) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("Ljava_2Flang_2FObject_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("Ljava/lang/Object;"));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("Ljava_2Flang_2FObject_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("Ljava/lang/Object;"));
   helper.PreProcessDecl();
   EXPECT_EQ(helper.IsSkipped(), true);
 }
 
 TEST_F(JBCClass2FEHelperTest, PreProcessDecl_NotSameName_Class) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass1InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass1InJBCClass2FEHelperTest;"));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewClass1InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewClass1InJBCClass2FEHelperTest;"));
   helper.PreProcessDecl();
   EXPECT_EQ(helper.IsSkipped(), false);
 }
 
 TEST_F(JBCClass2FEHelperTest, PreProcessDecl_NotSameName_Interface) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface1InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface1InJBCClass2FEHelperTest;"));
-  klass->header.accessFlag = jbc::kAccClassInterface;
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewInterface1InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewInterface1InJBCClass2FEHelperTest;"));
+  klass.header.accessFlag = jbc::kAccClassInterface;
   helper.PreProcessDecl();
   EXPECT_EQ(helper.IsSkipped(), false);
 }
 
 TEST_F(JBCClass2FEHelperTest, ProcessDeclSuperClassForClass) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass2InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass2InJBCClass2FEHelperTest;"));
-  EXPECT_CALL(*klass, GetSuperClassName())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("Ljava/lang/Object;"));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewClass2InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewClass2InJBCClass2FEHelperTest;"));
+  ON_CALL(klass, GetSuperClassName())
+      .WillByDefault(::testing::Return("Ljava/lang/Object;"));
   helper.PreProcessDecl();
   helper.ProcessDeclSuperClass();
   MIRStructType *structType = helper.GetContainer();
@@ -159,17 +150,14 @@ TEST_F(JBCClass2FEHelperTest, ProcessDeclSuperClassForClass) {
 }
 
 TEST_F(JBCClass2FEHelperTest, ProcessDeclImplementsForClass) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass3InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass3InJBCClass2FEHelperTest;"));
-  EXPECT_CALL(*klass, GetInterfaceNames())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return(std::vector<std::string>({ "LTestInterface1;", "LTestInterface2;" })));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewClass3InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewClass3InJBCClass2FEHelperTest;"));
+  ON_CALL(klass, GetInterfaceNames())
+      .WillByDefault(::testing::Return(std::vector<std::string>({ "LTestInterface1;", "LTestInterface2;" })));
   helper.PreProcessDecl();
   helper.ProcessDeclImplements();
   MIRStructType *structType = helper.GetContainer();
@@ -187,18 +175,15 @@ TEST_F(JBCClass2FEHelperTest, ProcessDeclImplementsForClass) {
 }
 
 TEST_F(JBCClass2FEHelperTest, ProcessDeclSuperClassForInterface) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  klass->header.accessFlag = jbc::kAccClassInterface;
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface2InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface2InJBCClass2FEHelperTest;"));
-  EXPECT_CALL(*klass, GetSuperClassName())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("Ljava/io/Serializable;"));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  klass.header.accessFlag = jbc::kAccClassInterface;
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewInterface2InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewInterface2InJBCClass2FEHelperTest;"));
+  ON_CALL(klass, GetSuperClassName())
+      .WillByDefault(::testing::Return("Ljava/io/Serializable;"));
   helper.PreProcessDecl();
   helper.ProcessDeclSuperClass();
   MIRStructType *structType = helper.GetContainer();
@@ -213,18 +198,15 @@ TEST_F(JBCClass2FEHelperTest, ProcessDeclSuperClassForInterface) {
 }
 
 TEST_F(JBCClass2FEHelperTest, ProcessDeclImplementsForInterface) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  klass->header.accessFlag = jbc::kAccClassInterface;
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface3InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface3InJBCClass2FEHelperTest;"));
-  EXPECT_CALL(*klass, GetInterfaceNames())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return(std::vector<std::string>({ "LTestInterface3;", "LTestInterface4;" })));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  klass.header.accessFlag = jbc::kAccClassInterface;
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewInterface3InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewInterface3InJBCClass2FEHelperTest;"));
+  ON_CALL(klass, GetInterfaceNames())
+      .WillByDefault(::testing::Return(std::vector<std::string>({ "LTestInterface3;", "LTestInterface4;" })));
   helper.PreProcessDecl();
   helper.ProcessDeclImplements();
   MIRStructType *structType = helper.GetContainer();
@@ -242,14 +224,12 @@ TEST_F(JBCClass2FEHelperTest, ProcessDeclImplementsForInterface) {
 }
 
 TEST_F(JBCClass2FEHelperTest, CreateSymbol_Class) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass4InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass4InJBCClass2FEHelperTest;"));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewClass4InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewClass4InJBCClass2FEHelperTest;"));
   helper.PreProcessDecl();
   helper.CreateSymbol();
   EXPECT_NE(helper.mirSymbol, nullptr);
@@ -261,15 +241,13 @@ TEST_F(JBCClass2FEHelperTest, CreateSymbol_Class) {
 }
 
 TEST_F(JBCClass2FEHelperTest, CreateSymbol_Interface) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface4InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface4InJBCClass2FEHelperTest;"));
-  klass->header.accessFlag = jbc::kAccClassInterface;
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewInterface4InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewInterface4InJBCClass2FEHelperTest;"));
+  klass.header.accessFlag = jbc::kAccClassInterface;
   helper.PreProcessDecl();
   helper.CreateSymbol();
   EXPECT_NE(helper.mirSymbol, nullptr);
@@ -281,21 +259,17 @@ TEST_F(JBCClass2FEHelperTest, CreateSymbol_Interface) {
 }
 
 TEST_F(JBCClass2FEHelperTest, ProcessDecl_Class) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  klass->header.accessFlag = jbc::kAccClassAbstract;
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass5InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewClass5InJBCClass2FEHelperTest;"));
-  EXPECT_CALL(*klass, GetSuperClassName())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("Ljava/lang/Object;"));
-  EXPECT_CALL(*klass, GetInterfaceNames())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return(std::vector<std::string>()));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  klass.header.accessFlag = jbc::kAccClassAbstract;
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewClass5InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewClass5InJBCClass2FEHelperTest;"));
+  ON_CALL(klass, GetSuperClassName())
+      .WillByDefault(::testing::Return("Ljava/lang/Object;"));
+  ON_CALL(klass, GetInterfaceNames())
+      .WillByDefault(::testing::Return(std::vector<std::string>()));
   helper.PreProcessDecl();
   helper.ProcessDecl();
   EXPECT_NE(helper.mirSymbol, nullptr);
@@ -307,21 +281,17 @@ TEST_F(JBCClass2FEHelperTest, ProcessDecl_Class) {
 }
 
 TEST_F(JBCClass2FEHelperTest, ProcessDecl_Interface) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  klass->header.accessFlag = jbc::kAccClassInterface | jbc::kAccClassPublic;
-  JBCClass2FEHelper helper(allocator, *klass);
-  EXPECT_CALL(*klass, GetClassNameMpl())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface5InJBCClass2FEHelperTest_3B"));
-  EXPECT_CALL(*klass, GetClassNameOrin())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("LNewInterface5InJBCClass2FEHelperTest;"));
-  EXPECT_CALL(*klass, GetSuperClassName())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return("Ljava/lang/Object;"));
-  EXPECT_CALL(*klass, GetInterfaceNames())
-      .Times(1000)
-      .WillRepeatedly(::testing::Return(std::vector<std::string>()));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  klass.header.accessFlag = jbc::kAccClassInterface | jbc::kAccClassPublic;
+  JBCClass2FEHelper helper(allocator, klass);
+  ON_CALL(klass, GetClassNameMpl())
+      .WillByDefault(::testing::Return("LNewInterface5InJBCClass2FEHelperTest_3B"));
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LNewInterface5InJBCClass2FEHelperTest;"));
+  ON_CALL(klass, GetSuperClassName())
+      .WillByDefault(::testing::Return("Ljava/lang/Object;"));
+  ON_CALL(klass, GetInterfaceNames())
+      .WillByDefault(::testing::Return(std::vector<std::string>()));
   helper.PreProcessDecl();
   helper.ProcessDecl();
   EXPECT_NE(helper.mirSymbol, nullptr);
@@ -333,17 +303,17 @@ TEST_F(JBCClass2FEHelperTest, ProcessDecl_Interface) {
 }
 
 TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Instance) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  EXPECT_CALL(*klass, GetClassNameOrin()).Times(1000)
-      .WillRepeatedly(::testing::Return("LTestPack/TestClass;"));
-  MockJBCClassField *field = mp->New<MockJBCClassField>(allocator, *klass);
-  EXPECT_CALL(*field, GetAccessFlag()).Times(1).WillOnce(::testing::Return(jbc::kAccFieldPublic));
-  EXPECT_CALL(*field, IsStatic()).Times(100).WillRepeatedly(::testing::Return(false));
-  EXPECT_CALL(*field, GetName(::testing::_)).Times(1).WillOnce(::testing::Return("field"));
-  EXPECT_CALL(*field, GetDescription(::testing::_)).Times(1).WillOnce(::testing::Return("Ljava/lang/Object;"));
-  JBCClass2FEHelper klassHelper(allocator, *klass);
-  JBCClassField2FEHelper fieldHelper(allocator, *field);
-  ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator, klassHelper), true);
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LTestPack/TestClass;"));
+  ::testing::NiceMock<MockJBCClassField> field(allocator, klass);
+  ON_CALL(field, GetAccessFlag()).WillByDefault(::testing::Return(jbc::kAccFieldPublic));
+  ON_CALL(field, IsStatic()).WillByDefault(::testing::Return(false));
+  ON_CALL(field, GetName()).WillByDefault(::testing::Return("field"));
+  ON_CALL(field, GetDescription()).WillByDefault(::testing::Return("Ljava/lang/Object;"));
+  JBCClassField2FEHelper fieldHelper(allocator, field);
+  std::cout << "field name : " << field.jbc::JBCClassElem::GetName() << std::endl;
+  ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator), true);
   // check field name
   std::string fieldName = GlobalTables::GetStrTable().GetStringFromStrIdx(fieldHelper.mirFieldPair.first);
   EXPECT_EQ(fieldName, "field");
@@ -356,17 +326,16 @@ TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Instance) {
 }
 
 TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Static) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  EXPECT_CALL(*klass, GetClassNameOrin()).Times(1000)
-      .WillRepeatedly(::testing::Return("LTestPack/TestClass;"));
-  MockJBCClassField *field = mp->New<MockJBCClassField>(allocator, *klass);
-  EXPECT_CALL(*field, GetAccessFlag()).Times(1).WillOnce(::testing::Return(jbc::kAccFieldProtected));
-  EXPECT_CALL(*field, IsStatic()).Times(100).WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*field, GetName(::testing::_)).Times(1).WillOnce(::testing::Return("field_static"));
-  EXPECT_CALL(*field, GetDescription(::testing::_)).Times(1).WillOnce(::testing::Return("Ljava/lang/Object;"));
-  JBCClass2FEHelper klassHelper(allocator, *klass);
-  JBCClassField2FEHelper fieldHelper(allocator, *field);
-  ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator, klassHelper), true);
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LTestPack/TestClass;"));
+  ::testing::NiceMock<MockJBCClassField> field(allocator, klass);
+  ON_CALL(field, GetAccessFlag()).WillByDefault(::testing::Return(jbc::kAccFieldProtected));
+  ON_CALL(field, IsStatic()).WillByDefault(::testing::Return(true));
+  ON_CALL(field, GetName()).WillByDefault(::testing::Return("field_static"));
+  ON_CALL(field, GetDescription()).WillByDefault(::testing::Return("Ljava/lang/Object;"));
+  JBCClassField2FEHelper fieldHelper(allocator, field);
+  ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator), true);
   // check field name
   std::string fieldName = GlobalTables::GetStrTable().GetStringFromStrIdx(fieldHelper.mirFieldPair.first);
   EXPECT_EQ(fieldName, "LTestPack_2FTestClass_3B_7Cfield__static");
@@ -379,18 +348,17 @@ TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Static) {
 }
 
 TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Static_AllType) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  EXPECT_CALL(*klass, GetClassNameOrin()).Times(1000)
-      .WillRepeatedly(::testing::Return("LTestPack/TestClass;"));
-  MockJBCClassField *field = mp->New<MockJBCClassField>(allocator, *klass);
-  EXPECT_CALL(*field, GetAccessFlag()).Times(1).WillOnce(::testing::Return(jbc::kAccFieldPrivate));
-  EXPECT_CALL(*field, IsStatic()).Times(100).WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*field, GetName(::testing::_)).Times(1).WillOnce(::testing::Return("field_static"));
-  EXPECT_CALL(*field, GetDescription(::testing::_)).Times(1).WillOnce(::testing::Return("Ljava/lang/Object;"));
-  JBCClass2FEHelper klassHelper(allocator, *klass);
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LTestPack/TestClass;"));
+  ::testing::NiceMock<MockJBCClassField> field(allocator, klass);
+  ON_CALL(field, GetAccessFlag()).WillByDefault(::testing::Return(jbc::kAccFieldPrivate));
+  ON_CALL(field, IsStatic()).WillByDefault(::testing::Return(true));
+  ON_CALL(field, GetName()).WillByDefault(::testing::Return("field_static"));
+  ON_CALL(field, GetDescription()).WillByDefault(::testing::Return("Ljava/lang/Object;"));
   FEOptions::GetInstance().SetModeJavaStaticFieldName(FEOptions::kAllType);
-  JBCClassField2FEHelper fieldHelper(allocator, *field);
-  ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator, klassHelper), true);
+  JBCClassField2FEHelper fieldHelper(allocator, field);
+  ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator), true);
   // check field name
   std::string fieldName = GlobalTables::GetStrTable().GetStringFromStrIdx(fieldHelper.mirFieldPair.first);
   EXPECT_EQ(fieldName, "LTestPack_2FTestClass_3B_7Cfield__static_7CLjava_2Flang_2FObject_3B");
@@ -403,19 +371,19 @@ TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Static_AllType) {
 }
 
 TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Static_Smart) {
-  MockJBCClass *klass = mp->New<MockJBCClass>(allocator);
-  EXPECT_CALL(*klass, GetClassNameOrin()).Times(1000)
-      .WillRepeatedly(::testing::Return("LTestPack/TestClass;"));
-  MockJBCClassField *field = mp->New<MockJBCClassField>(allocator, *klass);
-  EXPECT_CALL(*field, GetAccessFlag()).Times(1).WillOnce(::testing::Return(jbc::kAccFieldPrivate));
-  EXPECT_CALL(*field, IsStatic()).Times(100).WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*field, GetName(::testing::_)).Times(1).WillOnce(::testing::Return("field_static"));
-  EXPECT_CALL(*field, GetDescription(::testing::_)).Times(1).WillOnce(::testing::Return("Ljava/lang/Object;"));
-  MockJBCClass2FEHelper klassHelper(allocator, *klass);
-  EXPECT_CALL(klassHelper, IsStaticFieldProguard()).Times(1).WillOnce(::testing::Return(true));
+  ::testing::NiceMock<MockJBCClass> klass(allocator);
+  ON_CALL(klass, GetClassNameOrin())
+      .WillByDefault(::testing::Return("LTestPack/TestClass;"));
+  ::testing::NiceMock<MockJBCClassField> field(allocator, klass);
+  ON_CALL(field, GetAccessFlag()).WillByDefault(::testing::Return(jbc::kAccFieldPrivate));
+  ON_CALL(field, IsStatic()).WillByDefault(::testing::Return(true));
+  ON_CALL(field, GetName()).WillByDefault(::testing::Return("field_static"));
+  ON_CALL(field, GetDescription()).WillByDefault(::testing::Return("Ljava/lang/Object;"));
+  ::testing::NiceMock<MockJBCClass2FEHelper> klassHelper(allocator, klass);
+  ON_CALL(klassHelper, IsStaticFieldProguard()).WillByDefault(::testing::Return(true));
   FEOptions::GetInstance().SetModeJavaStaticFieldName(FEOptions::kSmart);
-  JBCClassField2FEHelper fieldHelper(allocator, *field);
-  ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator, klassHelper), true);
+  JBCClassField2FEHelper fieldHelper(allocator, field);
+  ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator), true);
   // check field name
   std::string fieldName = GlobalTables::GetStrTable().GetStringFromStrIdx(fieldHelper.mirFieldPair.first);
   EXPECT_EQ(fieldName, "LTestPack_2FTestClass_3B_7Cfield__static_7CLjava_2Flang_2FObject_3B");
@@ -425,5 +393,6 @@ TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Static_Smart) {
   EXPECT_EQ(type->GetCompactMplTypeName(), "Ljava_2Flang_2FObject_3B");
   // check field attr
   EXPECT_EQ(fieldHelper.mirFieldPair.second.second.GetAttr(FLDATTR_private), true);
+  FEOptions::GetInstance().SetModeJavaStaticFieldName(FEOptions::kNoType);
 }
 }  // namespace maple

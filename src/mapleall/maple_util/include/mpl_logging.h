@@ -203,6 +203,9 @@ class LogInfo {
     }                                                                                           \
   } while (0)
 
+#ifdef LOG
+#undef LOG
+#endif
 #define LOG(tag, fmt, ...)                                                                      \
   do {                                                                                          \
     if (PRINT_LEVEL_DEV <= kLlLog) {                                                            \
@@ -210,6 +213,9 @@ class LogInfo {
     }                                                                                                \
   } while (0)
 
+#ifdef CHECK
+#undef CHECK
+#endif
 #define CHECK(cond, fmt, ...)                                                       \
   do {                                                                              \
     if (!(cond)) {                                                                  \
@@ -217,6 +223,9 @@ class LogInfo {
     }                                                                                  \
   } while (0)
 
+#ifdef DCHECK
+#undef DCHECK
+#endif
 #define DCHECK(cond, fmt, ...)                   \
   do {                                           \
     DEBUG_STMT(CHECK(cond, fmt, ##__VA_ARGS__)); \
