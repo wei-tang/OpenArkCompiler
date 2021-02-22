@@ -23,11 +23,16 @@ namespace maple {
 class MeProp : public Prop {
  public:
   MeProp(MeIRMap &irMap, Dominance &dom, MemPool &memPool, const PropConfig &config)
-      : Prop(irMap, dom, memPool, std::vector<BB*>(irMap.GetFunc().GetAllBBs().begin(),
-                                                   irMap.GetFunc().GetAllBBs().end()),
-        *irMap.GetFunc().GetCommonEntryBB(), config) {}
+      : Prop(irMap, dom, memPool, irMap.GetFunc().GetAllBBs().size(), config),
+        func(&irMap.GetFunc()) {}
 
   virtual ~MeProp() = default;
+ private:
+  MeFunction *func;
+
+  BB *GetBB(BBId id) {
+    return func->GetAllBBs()[id];
+  }
 };
 
 class MeDoMeProp : public MeFuncPhase {
