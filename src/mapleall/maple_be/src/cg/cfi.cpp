@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -108,7 +108,13 @@ void StrOperand::Dump() const {
 
 void LabelOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const {
   (void)opndProp;
-  emitter.Emit(".label.").Emit(parentFunc).Emit(labelIndex);
+  if (emitter.GetCG()->GetMIRModule()->IsCModule()) {
+    PUIdx pIdx = emitter.GetCG()->GetMIRModule()->CurFunction()->GetPuidx();
+    const char *idx = strdup(std::to_string(pIdx).c_str());
+    emitter.Emit(".label.").Emit(idx).Emit("__").Emit(labelIndex);
+  } else {
+    emitter.Emit(".label.").Emit(parentFunc).Emit(labelIndex);
+  }
 }
 
 void LabelOperand::Dump() const {
