@@ -635,6 +635,15 @@ MIRType *BECommon::BeGetOrCreateFunctionType(TyIdx tyIdx, const std::vector<TyId
   return newType;
 }
 
+void BECommon::FinalizeTypeTable() {
+  if (mirModule.GetSrcLang() == kSrcLangC && (GlobalTables::GetTypeTable().GetTypeTableSize() > GetSizeOfTypeSizeTable())) {
+    for (uint32 i = GetSizeOfTypeSizeTable(); i < GlobalTables::GetTypeTable().GetTypeTableSize(); ++i) {
+      MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(i);
+      AddAndComputeSizeAlign(*ty);
+    }
+  }
+}
+
 BaseNode *BECommon::GetAddressOfNode(const BaseNode &node) {
   switch (node.GetOpCode()) {
     case OP_dread: {

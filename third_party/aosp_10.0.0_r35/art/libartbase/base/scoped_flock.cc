@@ -24,6 +24,7 @@
 
 #include "file_utils.h"
 #include "unix_file/fd_file.h"
+#include <string.h>
 
 namespace art {
 

@@ -18,10 +18,15 @@
 #define ART_LIBARTBASE_BASE_HIDDENAPI_STUBS_H_
 
 #include <set>
-#include <string_view>
+#include "string_view_format.h"
 
 namespace art {
 namespace hiddenapi {
+
+const std::string kPublicApiStr = "public-api";
+const std::string kSystemApiStr = "system-api";
+const std::string kTestApiStr = "test-api";
+const std::string kCorePlatformApiStr = "core-platform-api";
 
 class ApiStubs {
  public:
@@ -32,7 +37,7 @@ class ApiStubs {
     kCorePlatformApi,
   };
 
-  static const std::string_view ToString(Kind api) {
+  static std::string ToString(Kind api) {
     switch (api) {
       case Kind::kPublicApi:
         return kPublicApiStr;
@@ -45,16 +50,10 @@ class ApiStubs {
     }
   }
 
-  static bool IsStubsFlag(const std::string_view& api_flag_name) {
+  static bool IsStubsFlag(const std::string& api_flag_name) {
     return api_flag_name == kPublicApiStr || api_flag_name == kSystemApiStr ||
         api_flag_name == kTestApiStr || api_flag_name == kCorePlatformApiStr;
   }
-
- private:
-  static constexpr std::string_view kPublicApiStr{"public-api"};
-  static constexpr std::string_view kSystemApiStr{"system-api"};
-  static constexpr std::string_view kTestApiStr{"test-api"};
-  static constexpr std::string_view kCorePlatformApiStr{"core-platform-api"};
 };
 
 }  // namespace hiddenapi

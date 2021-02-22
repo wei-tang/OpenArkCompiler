@@ -400,7 +400,7 @@ const ProtoId* DexFile::FindProtoId(dex::TypeIndex return_type_idx,
 }
 
 // Given a signature place the type ids into the given vector
-bool DexFile::CreateTypeList(std::string_view signature,
+bool DexFile::CreateTypeList(StringView signature,
                              dex::TypeIndex* return_type_idx,
                              std::vector<dex::TypeIndex>* param_type_idxs) const {
   if (signature[0] != '(') {

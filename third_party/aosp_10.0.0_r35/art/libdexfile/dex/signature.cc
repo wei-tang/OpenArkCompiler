@@ -57,11 +57,11 @@ bool Signature::IsVoid() const {
   return strcmp(return_type, "V") == 0;
 }
 
-bool Signature::operator==(std::string_view rhs) const {
+bool Signature::operator==(StringView rhs) const {
   if (dex_file_ == nullptr) {
     return false;
   }
-  std::string_view tail(rhs);
+  StringView tail(rhs);
   if (!StartsWith(tail, "(")) {
     return false;  // Invalid signature
   }
@@ -69,7 +69,7 @@ bool Signature::operator==(std::string_view rhs) const {
   const TypeList* params = dex_file_->GetProtoParameters(*proto_id_);
   if (params != nullptr) {
     for (uint32_t i = 0; i < params->Size(); ++i) {
-      std::string_view param(dex_file_->StringByTypeIdx(params->GetTypeItem(i).type_idx_));
+      StringView param(dex_file_->StringByTypeIdx(params->GetTypeItem(i).type_idx_));
       if (!StartsWith(tail, param)) {
         return false;
       }
