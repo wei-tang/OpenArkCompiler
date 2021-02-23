@@ -532,6 +532,21 @@ class Insn {
     return doNotRemove;
   }
 
+  void SetIsCallReturnUnsigned(bool unSigned) {
+    ASSERT(IsCall(), "Insn should be a call.");
+    this->isCallReturnUnsigned = unSigned;
+  }
+
+  bool GetIsCallReturnUnsigned() const {
+    ASSERT(IsCall(), "Insn should be a call.");
+    return isCallReturnUnsigned;
+  }
+
+  bool GetIsCallReturnSigned() const {
+    ASSERT(IsCall(), "Insn should be a call.");
+    return (isCallReturnUnsigned == false);
+  }
+
   void SetRetType(RetType retType) {
     this->retType = retType;
   }
@@ -599,6 +614,7 @@ class Insn {
   uint32 id = 0;
   bool isThrow = false;
   bool doNotRemove = false;  /* caller reg cross call */
+  bool isCallReturnUnsigned = false;   /* for call insn only. false: signed, true: unsigned */
   RetType retType = kRegNull;    /* if this insn is call, it represent the return register type R0/V0 */
   uint32 retSize = 0;  /* Byte size of the return value if insn is a call. */
   /* record the stack cleared by MCC_ClearLocalStackRef or MCC_DecRefResetPair */
