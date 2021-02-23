@@ -61,6 +61,9 @@ const std::string &MIRFunction::GetBaseFuncNameWithType() const {
   return GlobalTables::GetStrTable().GetStringFromStrIdx(baseFuncWithTypeStrIdx);
 }
 
+const std::string &MIRFunction::GetBaseFuncSig() const {
+  return GlobalTables::GetStrTable().GetStringFromStrIdx(baseFuncSigStrIdx);
+}
 
 const std::string &MIRFunction::GetSignature() const {
   return GlobalTables::GetStrTable().GetStringFromStrIdx(signatureStrIdx);
@@ -598,6 +601,7 @@ void MIRFunction::NewBody() {
   }
 }
 
+#ifdef DEBUGME
 void MIRFunction::SetUpGDBEnv() {
   if (codeMemPool != nullptr) {
     memPoolCtrler.DeleteMemPool(codeMemPool);
@@ -610,4 +614,5 @@ void MIRFunction::ResetGDBEnv() {
   memPoolCtrler.DeleteMemPool(codeMemPool);
   codeMemPool = nullptr;
 }
+#endif
 }  // namespace maple

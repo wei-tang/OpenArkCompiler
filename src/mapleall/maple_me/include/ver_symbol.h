@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -84,7 +84,7 @@ class VersionSt {
   const OriginalSt *GetOrigSt() const {
     return ost;
   }
-  OriginalSt *GetOrigSt() {
+  OriginalSt *GetOst() {
     return ost;
   }
   void SetOrigSt(OriginalSt *ost) {
@@ -188,7 +188,7 @@ class VersionStTable {
   }
 
   VersionSt *CreateVSymbol(VersionSt *vst, size_t version) {
-    OriginalSt *ost = vst->GetOrigSt();
+    OriginalSt *ost = vst->GetOst();
     return CreateVersionSt(ost, version);
   }
 

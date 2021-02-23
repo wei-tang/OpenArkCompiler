@@ -16,9 +16,37 @@
 #include <sstream>
 #include "mpl_logging.h"
 #include "mir_type.h"
-
 namespace maple {
-  // ---------- FEUtils ----------
+// ---------- FEUtils ----------
+const std::string FEUtils::kBoolean = "Z";
+const std::string FEUtils::kByte = "B";
+const std::string FEUtils::kShort = "S";
+const std::string FEUtils::kChar = "C";
+const std::string FEUtils::kInt = "I";
+const std::string FEUtils::kLong = "J";
+const std::string FEUtils::kFloat = "F";
+const std::string FEUtils::kDouble = "D";
+const std::string FEUtils::kVoid = "V";
+const std::string FEUtils::kMCCStaticFieldGetBool   = "MCC_StaticFieldGetBool";
+const std::string FEUtils::kMCCStaticFieldGetByte   = "MCC_StaticFieldGetByte";
+const std::string FEUtils::kMCCStaticFieldGetShort  = "MCC_StaticFieldGetShort";
+const std::string FEUtils::kMCCStaticFieldGetChar   = "MCC_StaticFieldGetChar";
+const std::string FEUtils::kMCCStaticFieldGetInt    = "MCC_StaticFieldGetInt";
+const std::string FEUtils::kMCCStaticFieldGetLong   = "MCC_StaticFieldGetLong";
+const std::string FEUtils::kMCCStaticFieldGetFloat  = "MCC_StaticFieldGetFloat";
+const std::string FEUtils::kMCCStaticFieldGetDouble = "MCC_StaticFieldGetDouble";
+const std::string FEUtils::kMCCStaticFieldGetObject = "MCC_StaticFieldGetObject";
+
+const std::string FEUtils::kMCCStaticFieldSetBool   = "MCC_StaticFieldSetBool";
+const std::string FEUtils::kMCCStaticFieldSetByte   = "MCC_StaticFieldSetByte";
+const std::string FEUtils::kMCCStaticFieldSetShort  = "MCC_StaticFieldSetShort";
+const std::string FEUtils::kMCCStaticFieldSetChar   = "MCC_StaticFieldSetChar";
+const std::string FEUtils::kMCCStaticFieldSetInt    = "MCC_StaticFieldSetInt";
+const std::string FEUtils::kMCCStaticFieldSetLong   = "MCC_StaticFieldSetLong";
+const std::string FEUtils::kMCCStaticFieldSetFloat  = "MCC_StaticFieldSetFloat";
+const std::string FEUtils::kMCCStaticFieldSetDouble = "MCC_StaticFieldSetDouble";
+const std::string FEUtils::kMCCStaticFieldSetObject = "MCC_StaticFieldSetObject";
+
 std::vector<std::string> FEUtils::Split(const std::string &str, char delim) {
   std::vector<std::string> ans;
   std::stringstream ss;
@@ -102,6 +130,53 @@ PrimType FEUtils::MergePrimType(PrimType primType1, PrimType primType2) {
 
   CHECK_FATAL(false, "can not merge type %s and %s", GetPrimTypeName(primType1), GetPrimTypeName(primType2));
   return PTY_unknown;
+}
+
+uint8 FEUtils::GetDim(const std::string &typeName) {
+  uint8 dim = 0;
+  for (size_t i = 0; i < typeName.length(); ++i) {
+    if (typeName.at(i) == 'A') {
+      dim++;
+    } else {
+      break;
+    }
+  }
+  return dim;
+}
+
+std::string FEUtils::GetBaseTypeName(const std::string &typeName) {
+  return typeName.substr(GetDim(typeName));
+}
+
+PrimType FEUtils::GetPrimType(const GStrIdx &typeNameIdx) {
+  if (typeNameIdx == GetBooleanIdx()) {
+    return PTY_u1;
+  }
+  if (typeNameIdx == GetByteIdx()) {
+    return PTY_i8;
+  }
+  if (typeNameIdx == GetShortIdx()) {
+    return PTY_i16;
+  }
+  if (typeNameIdx == GetCharIdx()) {
+    return PTY_u16;
+  }
+  if (typeNameIdx == GetIntIdx()) {
+    return PTY_i32;
+  }
+  if (typeNameIdx == GetLongIdx()) {
+    return PTY_i64;
+  }
+  if (typeNameIdx == GetFloatIdx()) {
+    return PTY_f32;
+  }
+  if (typeNameIdx == GetDoubleIdx()) {
+    return PTY_f64;
+  }
+  if (typeNameIdx == GetVoidIdx()) {
+    return PTY_void;
+  }
+  return PTY_ref;
 }
 
 // ---------- FELinkListNode ----------

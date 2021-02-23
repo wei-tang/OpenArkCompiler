@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -55,8 +55,15 @@ const std::set<maple::MIRIntrinsicID> canThrowIntrinsicsList {
     maple::INTRN_MPL_CLINIT_CHECK,
     maple::INTRN_MPL_BOUNDARY_CHECK,
     maple::INTRN_JAVA_CLINIT_CHECK,
+    maple::INTRN_JAVA_CLINIT_CHECK_SGET,
+    maple::INTRN_JAVA_CLINIT_CHECK_SPUT,
+    maple::INTRN_JAVA_CLINIT_CHECK_NEW,
     maple::INTRN_JAVA_CHECK_CAST,
     maple::INTRN_JAVA_THROW_ARITHMETIC,
+    maple::INTRN_JAVA_THROW_CLASSCAST,
+};
+const std::set<std::string> whitelistFunc {
+#include "rcwhitelist.def"
 };
 }
 
@@ -296,8 +303,12 @@ RegMeExpr *DelegateRC::RHSTempDelegated(MeExpr &rhs, const MeStmt &useStmt) {
   if (refVar2RegMap.find(&rhsVar) != refVar2RegMap.end()) {
     return nullptr;  // already delegated by another assignment
   }
-  const OriginalSt *ost = ssaTab.GetOriginalStFromID(rhsVar.GetOStIdx());
+  const OriginalSt *ost = rhsVar.GetOst();
   if (ost->IsFormal() || ost->GetMIRSymbol()->IsGlobal()) {
+    return nullptr;
+  }
+  // The index number in originalStVector is bigger than two.
+  if ((func.GetHints() & kPlacementRCed) && ssaTab.GetVersionsIndexSize(ost->GetIndex()) > 2) {
     return nullptr;
   }
   if (rhsVar.GetDefBy() == kDefByMustDef) {
@@ -408,6 +419,10 @@ void DelegateRC::DelegateRCTemp(MeStmt &stmt) {
       }
       VarMeExpr *lhsVar = stmt.GetVarLHS();
       CHECK_FATAL(lhsVar != nullptr, "null lhs check");
+      const OriginalSt *ost = lhsVar->GetOst();
+      if (Options::lazyBinding != 0 || !ost->GetMIRSymbol()->IsGlobal()) {
+        break;
+      }
       MeExpr *rhs = stmt.GetRHS();
       CHECK_FATAL(rhs != nullptr, "null rhs check");
       RegMeExpr *curReg = RHSTempDelegated(*rhs, stmt);
@@ -418,6 +433,10 @@ void DelegateRC::DelegateRCTemp(MeStmt &stmt) {
       break;
     }
     case OP_return: {
+      std::string funcName = func.GetMirFunc()->GetName();
+      if (whitelistFunc.find(funcName) != whitelistFunc.end()) {
+        break;
+      }
       auto &retStmt = static_cast<RetMeStmt&>(stmt);
       if (!retStmt.NumMeStmtOpnds()) {
         break;
@@ -443,7 +462,7 @@ void DelegateRC::DelegateRCTemp(MeStmt &stmt) {
           const OriginalSt *ost = nullptr;
           if (rhs->GetMeOp() == kMeOpVar) {
             auto *theVar = static_cast<VarMeExpr*>(rhs);
-            ost = ssaTab.GetSymbolOriginalStFromID(theVar->GetOStIdx());
+            ost = theVar->GetOst();
           }
           if (rhs->IsGcmalloc() || (rhs->GetMeOp() == kMeOpIvar && !static_cast<IvarMeExpr*>(rhs)->IsFinal()) ||
               (rhs->GetMeOp() == kMeOpVar && !ost->IsFinal() && ost->GetMIRSymbol()->IsGlobal()) ||
@@ -478,7 +497,7 @@ void DelegateRC::DelegateRCTemp(MeStmt &stmt) {
 bool DelegateRC::FinalRefNoRC(const MeExpr &expr) const {
   if (expr.GetMeOp() == kMeOpVar) {
     const auto &theVar = static_cast<const VarMeExpr&>(expr);
-    const OriginalSt *ost = ssaTab.GetSymbolOriginalStFromID(theVar.GetOStIdx());
+    const OriginalSt *ost = theVar.GetOst();
     return ost->IsFinal() && ost->GetMIRSymbol()->IsGlobal();
   } else if (expr.GetMeOp() == kMeOpIvar) {
     if (func.GetMirFunc()->IsConstructor() || func.GetMirFunc()->IsStatic() ||
@@ -497,7 +516,7 @@ bool DelegateRC::FinalRefNoRC(const MeExpr &expr) const {
           return false;
         }
         const auto *varMeExpr = static_cast<const VarMeExpr*>(ivar.GetBase());
-        const OriginalSt *ost = ssaTab.GetOriginalStFromID(varMeExpr->GetOStIdx());
+        const OriginalSt *ost = varMeExpr->GetOst();
         if (ost->IsSymbolOst()) {
           const MIRSymbol *mirst = ost->GetMIRSymbol();
           return mirst == func.GetMirFunc()->GetFormal(0);
@@ -522,7 +541,7 @@ bool DelegateRC::CanOmitRC4LHSVar(const MeStmt &stmt, bool &onlyWithDecref) cons
       if (theLhs->GetPrimType() != PTY_ref || theLhs->GetNoDelegateRC()) {
         return false;
       }
-      const OriginalSt *ost = ssaTab.GetOriginalStFromID(theLhs->GetOStIdx());
+      const OriginalSt *ost = theLhs->GetOst();
       if (!ost->IsLocal() || ost->IsFormal()) {
         return false;
       }
@@ -568,7 +587,7 @@ bool DelegateRC::CanOmitRC4LHSVar(const MeStmt &stmt, bool &onlyWithDecref) cons
         if (theLhs->GetPrimType() != PTY_ref) {
           return false;
         }
-        const OriginalSt *ost = ssaTab.GetOriginalStFromID(theLhs->GetOStIdx());
+        const OriginalSt *ost = theLhs->GetOst();
         if (!ost->IsLocal() || ost->IsFormal()) {
           return false;
         }
@@ -712,9 +731,9 @@ std::set<OStIdx> DelegateRC::RenameAndGetLiveLocalRefVar() {
       if (CheckOp(stmt, OP_dassign) || CheckOp(stmt, OP_maydassign)) {
         VarMeExpr *lhs = stmt.GetVarLHS();
         CHECK_FATAL(lhs != nullptr, "null ptr check");
-        const OriginalSt *ost = ssaTab.GetOriginalStFromID(lhs->GetOStIdx());
+        const OriginalSt *ost = lhs->GetOst();
         if (ost->IsLocal() && !ost->IsFormal() && !ost->IsIgnoreRC() && lhs->GetPrimType() == PTY_ref) {
-          (void)liveLocalrefvars.insert(lhs->GetOStIdx());
+          (void)liveLocalrefvars.insert(lhs->GetOstIdx());
         }
       } else if (kOpcodeInfo.IsCallAssigned(stmt.GetOp())) {
         MapleVector<MustDefMeNode> *mustdefList = stmt.GetMustDefList();
@@ -725,9 +744,9 @@ std::set<OStIdx> DelegateRC::RenameAndGetLiveLocalRefVar() {
         MeExpr *theLhs = mustdefList->front().GetLHS();
         if (theLhs->GetMeOp() == kMeOpVar && theLhs->GetPrimType() == PTY_ref) {
           auto *varLhs = static_cast<VarMeExpr*>(theLhs);
-          const OriginalSt *ost = ssaTab.GetOriginalStFromID(varLhs->GetOStIdx());
+          const OriginalSt *ost = varLhs->GetOst();
           if (ost->IsLocal() && !ost->IsFormal() && !ost->IsIgnoreRC()) {
-            (void)liveLocalrefvars.insert(varLhs->GetOStIdx());
+            (void)liveLocalrefvars.insert(ost->GetIndex());
           }
         }
       }
@@ -757,7 +776,7 @@ void DelegateRC::CleanUpDeadLocalRefVar(const std::set<OStIdx> &liveLocalrefvars
     IntrinsiccallMeStmt *intrin = static_cast<IntrinsiccallMeStmt*>(stmt);
     for (size_t i = 0; i < intrin->NumMeStmtOpnds(); ++i) {
       auto *varMeExpr = static_cast<VarMeExpr*>(intrin->GetOpnd(i));
-      if (liveLocalrefvars.find(varMeExpr->GetOStIdx()) == liveLocalrefvars.end()) {
+      if (liveLocalrefvars.find(varMeExpr->GetOstIdx()) == liveLocalrefvars.end()) {
         continue;
       }
       if (nextPos != i) {

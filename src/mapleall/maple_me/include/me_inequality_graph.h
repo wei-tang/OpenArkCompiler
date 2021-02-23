@@ -320,7 +320,7 @@ class InequalityGraph {
   void AddPhiEdge(ESSABaseNode &from, ESSABaseNode &to, EdgeType type);
   void AddEdge(ESSABaseNode &from, ESSABaseNode &to, MeExpr &value, bool positive, EdgeType type);
   void ConnectTrivalEdge();
-  void DumpDotFile(IRMap &irMap, DumpType dumpType) const;
+  void DumpDotFile(DumpType dumpType) const;
   ESSABaseNode &GetNode(const MeExpr &meExpr);
   ESSABaseNode &GetNode(int64 value);
   bool HasNode(const MeExpr &meExpr) const;
@@ -333,11 +333,11 @@ class InequalityGraph {
   std::string GetColor(EdgeType type) const;
   bool HasNode(int64 value) const;
   InequalEdge *HasEdge(ESSABaseNode &from, ESSABaseNode &to, InequalEdge &type) const;
-  std::string GetName(ESSABaseNode &node, IRMap &irMap) const;
-  std::string GetName(const MeExpr &meExpr, IRMap &irMap) const;
-  void DumpDotNodes(IRMap &irMap, std::ostream &out, DumpType dumpType,
+  std::string GetName(ESSABaseNode &node) const;
+  std::string GetName(const MeExpr &meExpr) const;
+  void DumpDotNodes(std::ostream &out, DumpType dumpType,
                     const std::map<int64, std::unique_ptr<ESSABaseNode>> &nodes) const;
-  void DumpDotEdges(IRMap &irMap, const std::pair<ESSABaseNode*, InequalEdge*> &map,
+  void DumpDotEdges(const std::pair<ESSABaseNode*, InequalEdge*> &map,
                     std::ostream &out, std::string &from) const;
 
   MeFunction *meFunction;

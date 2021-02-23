@@ -722,6 +722,10 @@ CGFunc::CGFunc(MIRModule &mod, CG &cg, MIRFunction &mirFunc, BECommon &beCommon,
     new (&GetVirtualRegNodeFromPseudoRegIdx(i)) VirtualRegNode(GetRegTyFromPrimTy(primType), byteLen);
   }
   firstCGGenLabelIdx = func.GetLabelTab()->GetLabelTableSize();
+  lSymSize = 0;
+  if (func.GetSymTab()) {
+    lSymSize = func.GetSymTab()->GetSymbolTableSize();
+  }
 }
 
 CGFunc::~CGFunc() {
@@ -1096,7 +1100,9 @@ void CGFunc::HandleFunction() {
   if (!func.GetModule()->IsCModule()) {
     MergeReturn();
   }
-  ASSERT(exitBBVec.size() <= 1, "there are more than one BB_return in func");
+  if (func.IsJava()) {
+    ASSERT(exitBBVec.size() <= 1, "there are more than one BB_return in func");
+  }
   ProcessExitBBVec();
 
   if (func.IsJava()) {

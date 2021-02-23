@@ -46,6 +46,14 @@ class GeneralStmt : public FELinkListNode {
     isFallThru = arg;
   }
 
+  bool IsThrowable() const {
+    return isThrowable;
+  }
+
+  void SetThrowable(bool argIsThrowable) {
+    isThrowable = argIsThrowable;
+  }
+
   bool IsAuxPre() const {
     return isAuxPre;
   }
@@ -56,6 +64,10 @@ class GeneralStmt : public FELinkListNode {
 
   bool IsAux() const {
     return isAuxPre || isAuxPost;
+  }
+
+  bool IsBranch() const {
+    return IsBranchImpl();
   }
 
   uint32 GetID() const {
@@ -70,9 +82,8 @@ class GeneralStmt : public FELinkListNode {
     return predsOrSuccs;
   }
 
-  void AddPredOrSucc(GeneralStmt *stmt) {
-    ASSERT(stmt != nullptr, "null ptr check");
-    predsOrSuccs.push_back(stmt);
+  void AddPredOrSucc(GeneralStmt &stmt) {
+    predsOrSuccs.push_back(&stmt);
   }
 
   const std::vector<GeneralStmt*> &GetPreds() const {
@@ -85,16 +96,14 @@ class GeneralStmt : public FELinkListNode {
     return predsOrSuccs;
   }
 
-  void AddPred(GeneralStmt *stmt) {
+  void AddPred(GeneralStmt &stmt) {
     ASSERT(genKind == GeneralStmtKind::kStmtMultiIn, "invalid general kind");
-    ASSERT(stmt != nullptr, "null ptr check");
-    predsOrSuccs.push_back(stmt);
+    predsOrSuccs.push_back(&stmt);
   }
 
-  void AddSucc(GeneralStmt *stmt) {
+  void AddSucc(GeneralStmt &stmt) {
     ASSERT(genKind == GeneralStmtKind::kStmtMultiOut, "invalid general kind");
-    ASSERT(stmt != nullptr, "null ptr check");
-    predsOrSuccs.push_back(stmt);
+    predsOrSuccs.push_back(&stmt);
   }
 
   void Dump(const std::string &prefix = "") const {
@@ -118,11 +127,12 @@ class GeneralStmt : public FELinkListNode {
   virtual std::string DumpDotStringImpl() const;
   virtual std::string GetStmtKindNameImpl() const;
   virtual bool IsStmtInstImpl() const;
-
+  virtual bool IsBranchImpl() const;
   GeneralStmtKind genKind : 4;
   bool isFallThru : 1;
   bool isAuxPre : 1;
   bool isAuxPost : 1;
+  bool isThrowable : 1;
   uint32 id;
   std::vector<GeneralStmt*> predsOrSuccs;
 };

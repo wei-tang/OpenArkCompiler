@@ -23,9 +23,10 @@ namespace maple {
 class FEFileType {
  public:
   enum FileType {
-    kUnknown,
+    kUnknownType,
     kClass,
     kJar,
+    kDex,
   };
 
   inline static FEFileType &GetInstance() {
@@ -49,6 +50,7 @@ class FEFileType {
   static FEFileType fileType;
   static const uint32 kMagicClass = 0xBEBAFECA;
   static const uint32 kMagicZip = 0x04034B50;
+  static const uint32 kMagicDex = 0x0A786564;
   std::map<std::string, FileType> mapExtNameType;
   std::map<FileType, uint32> mapTypeMagic;
   std::map<uint32, FileType> mapMagicType;

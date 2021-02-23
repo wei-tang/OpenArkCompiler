@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -63,7 +63,7 @@ class FEIRDFGTest : public FEIRTestBase {
         std::string strDst = item.substr(npos2 + 2);
         uint32 src = std::atoi(strSrc.c_str());
         uint32 dst = std::atoi(strDst.c_str());
-        TransformCheckPoint(checkPoints[dst])->AddPredCheckPoint(checkPoints[src]);
+        TransformCheckPoint(checkPoints[dst])->AddPredCheckPoint(*(TransformCheckPoint(checkPoints[src])));
       }
       if (npos != std::string::npos) {
         remainStr = remainStr.substr(npos + 1);

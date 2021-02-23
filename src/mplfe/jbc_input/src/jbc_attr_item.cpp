@@ -175,7 +175,6 @@ StackMapFrameItemTag StackMapFrameItem::FrameType2Tag(uint8 frameType) {
   } else if (frameType < 255) {
     return kStackAppend;
   } else {
-    // frameType == 255
     return kStackFullFrame;
   }
 }

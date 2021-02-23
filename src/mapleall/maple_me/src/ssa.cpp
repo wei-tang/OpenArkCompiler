@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -36,7 +36,7 @@ void SSA::InitRenameStack(OriginalStTable &oTable, size_t bbSize, VersionStTable
 VersionSt *SSA::CreateNewVersion(VersionSt &vSym, BB &defBB) {
   CHECK_FATAL(vSym.GetVersion() == 0, "rename before?");
   // volatile variables will keep zero version.
-  OriginalSt *oSt = vSym.GetOrigSt();
+  OriginalSt *oSt = vSym.GetOst();
   if (oSt->IsVolatile() || oSt->IsSpecialPreg()) {
     return &vSym;
   }

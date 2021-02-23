@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -81,6 +81,56 @@ TEST_F(FETypeManagerTest, GetOrCreateClassOrInterfaceType) {
   ASSERT_NE(structType2, nullptr);
   std::string mplName2 = structType2->GetCompactMplTypeName();
   EXPECT_EQ(mplName2, "LNewClass2");
+  EXPECT_EQ(structType2->GetKind(), kTypeClassIncomplete);
+}
+
+TEST_F(FETypeManagerTest, GetOrCreateSameType_LoadInputType) {
+  // bacause flag kSrcInput > kSrcMplt in same name type, type is overridden
+  bool isCreate = false;
+  MIRStructType *structType1 = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType("LSameType1",
+                                                                                           false,
+                                                                                           FETypeFlag::kSrcMplt,
+                                                                                           isCreate);
+  EXPECT_EQ(isCreate, true);
+  ASSERT_NE(structType1, nullptr);
+  std::string mplName1 = structType1->GetCompactMplTypeName();
+  EXPECT_EQ(mplName1, "LSameType1");
+  EXPECT_EQ(structType1->GetKind(), kTypeClassIncomplete);
+
+  isCreate = false;
+  MIRStructType *structType2 = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType("LSameType1",
+                                                                                           true,
+                                                                                           FETypeFlag::kSrcInput,
+                                                                                           isCreate);
+  EXPECT_EQ(isCreate, true);
+  ASSERT_NE(structType2, nullptr);
+  std::string mplName2 = structType2->GetCompactMplTypeName();
+  EXPECT_EQ(mplName2, "LSameType1");
+  EXPECT_EQ(structType2->GetKind(), kTypeInterfaceIncomplete);
+}
+
+TEST_F(FETypeManagerTest, GetOrCreateSameType_LoadSysType) {
+  // bacause flag kSrcMpltSys > kSrcInput in same name type, type is not overridden
+  bool isCreate = false;
+  MIRStructType *structType1 = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType("LSameType2",
+                                                                                           false,
+                                                                                           FETypeFlag::kSrcMpltSys,
+                                                                                           isCreate);
+  EXPECT_EQ(isCreate, true);
+  ASSERT_NE(structType1, nullptr);
+  std::string mplName1 = structType1->GetCompactMplTypeName();
+  EXPECT_EQ(mplName1, "LSameType2");
+  EXPECT_EQ(structType1->GetKind(), kTypeClassIncomplete);
+
+  isCreate = false;
+  MIRStructType *structType2 = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType("LSameType2",
+                                                                                           true,
+                                                                                           FETypeFlag::kSrcInput,
+                                                                                           isCreate);
+  EXPECT_EQ(isCreate, false);
+  ASSERT_NE(structType2, nullptr);
+  std::string mplName2 = structType2->GetCompactMplTypeName();
+  EXPECT_EQ(mplName2, "LSameType2");
   EXPECT_EQ(structType2->GetKind(), kTypeClassIncomplete);
 }
 

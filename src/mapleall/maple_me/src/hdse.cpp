@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -43,7 +43,8 @@ void HDSE::RemoveNotRequiredStmtsInBB(BB &bb) {
         mirModule.GetOut() << "========== HSSA DSE is deleting this stmt: ";
         meStmt.Dump(&irMap);
       }
-      if (meStmt.GetOp() != OP_dassign && (meStmt.IsCondBr() || meStmt.GetOp() == OP_switch)) {
+      if (meStmt.GetOp() != OP_dassign &&
+          (meStmt.IsCondBr() || meStmt.GetOp() == OP_switch || meStmt.GetOp() == OP_igoto)) {
         // update CFG
         while (bb.GetSucc().size() != 1) {
           BB *succ = bb.GetSucc().back();
@@ -302,8 +303,8 @@ bool HDSE::ExprNonDeletable(const MeExpr &meExpr) const {
     }
     case kMeOpVar: {
       auto &varMeExpr = static_cast<const VarMeExpr&>(meExpr);
-      return varMeExpr.IsVolatile(ssaTab) ||
-             (decoupleStatic && ssaTab.GetSymbolOriginalStFromID(varMeExpr.GetOStIdx())->GetMIRSymbol()->IsGlobal());
+      return varMeExpr.IsVolatile() ||
+             (decoupleStatic && varMeExpr.GetOst()->GetMIRSymbol()->IsGlobal());
     }
     case kMeOpIvar: {
       auto &opIvar = static_cast<const IvarMeExpr&>(meExpr);
@@ -334,9 +335,9 @@ bool HDSE::HasNonDeletableExpr(const MeStmt &meStmt) const {
     case OP_dassign: {
       auto &dasgn = static_cast<const DassignMeStmt&>(meStmt);
       VarMeExpr *varMeExpr = dasgn.GetVarLHS();
-      return (varMeExpr != nullptr && varMeExpr->IsVolatile(ssaTab)) || ExprNonDeletable(*dasgn.GetRHS()) ||
+      return (varMeExpr != nullptr && varMeExpr->IsVolatile()) || ExprNonDeletable(*dasgn.GetRHS()) ||
              (hdseKeepRef && dasgn.Propagated()) || dasgn.GetWasMayDassign() ||
-             (decoupleStatic && ssaTab.GetSymbolOriginalStFromID(varMeExpr->GetOStIdx())->GetMIRSymbol()->IsGlobal());
+             (decoupleStatic && varMeExpr->GetOst()->GetMIRSymbol()->IsGlobal());
     }
     case OP_regassign: {
       auto &rasgn = static_cast<const RegassignMeStmt&>(meStmt);
@@ -378,7 +379,7 @@ void HDSE::MarkLastStmtInPDomBBRequired(const BB &bb) {
     }
     auto &lastStmt = cdBB->GetMeStmts().back();
     Opcode op = lastStmt.GetOp();
-    CHECK_FATAL((lastStmt.IsCondBr() || op == OP_switch || op == OP_retsub || op == OP_throw ||
+    CHECK_FATAL((lastStmt.IsCondBr() || op == OP_switch || op == OP_igoto || op == OP_retsub || op == OP_throw ||
                  cdBB->GetAttributes(kBBAttrIsTry) || cdBB->GetAttributes(kBBAttrWontExit)),
                 "HDSE::MarkLastStmtInPDomBBRequired: control dependent on unexpected statement");
     if ((IsBranch(op) || op == OP_retsub || op == OP_throw)) {

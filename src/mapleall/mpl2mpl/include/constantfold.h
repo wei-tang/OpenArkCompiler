@@ -50,6 +50,8 @@ class ConstantFold : public FuncOptimizeImpl {
   MIRConst *FoldRoundMIRConst(const MIRConst&, PrimType, PrimType) const;
   MIRConst *FoldTypeCvtMIRConst(const MIRConst&, PrimType, PrimType) const;
   MIRConst *FoldSignExtendMIRConst(Opcode, PrimType, uint8, const MIRConst&) const;
+  MIRConst *FoldIntConstBinaryMIRConst(Opcode opcode, PrimType resultType,
+                                       const MIRIntConst *intConst0, const MIRIntConst *intConst1) const;
   MIRConst *FoldConstComparisonMIRConst(Opcode, PrimType, PrimType, const MIRConst&, const MIRConst&);
 
  private:

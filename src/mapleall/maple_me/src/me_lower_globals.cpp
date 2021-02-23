@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -54,7 +54,7 @@ void MeLowerGlobals::LowerGlobalDreads(MeStmt &stmt, MeExpr &expr) {
     }
     case kMeOpVar: {
       auto &varExpr = static_cast<VarMeExpr&>(expr);
-      OriginalSt *ost = ssaTable->GetSymbolOriginalStFromID(varExpr.GetOStIdx());
+      OriginalSt *ost = varExpr.GetOst();
       if (ost->IsLocal()) {
         break;
       }
@@ -112,7 +112,7 @@ void MeLowerGlobals::Run() {
       }
       if (stmt.GetOp() == OP_dassign) {
         auto &dass = static_cast<DassignMeStmt&>(stmt);
-        OriginalSt *ost = ssaTable->GetSymbolOriginalStFromID(dass.GetVarLHS()->GetOStIdx());
+        OriginalSt *ost = dass.GetVarLHS()->GetOst();
         if (ost->IsLocal()) {
           continue;
         }

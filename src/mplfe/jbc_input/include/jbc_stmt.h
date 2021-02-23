@@ -59,7 +59,11 @@ class JBCStmt : public GeneralStmt {
 
   virtual ~JBCStmt() = default;
   std::list<UniqueFEIRStmt> EmitToFEIR(JBCFunctionContext &context, bool &success) const {
-    return EmitToFEIRImpl(context, success);
+    std::list<UniqueFEIRStmt> feirStmts = EmitToFEIRImpl(context, success);
+    for (UniqueFEIRStmt &stmt : feirStmts) {
+      stmt->SetThrowable(IsThrowable());
+    }
+    return feirStmts;
   }
 
   JBCStmtKind GetKind() const {
@@ -68,10 +72,6 @@ class JBCStmt : public GeneralStmt {
 
   void SetKind(JBCStmtKind argKind) {
     kind = argKind;
-  }
-
-  bool IsBranch() const {
-    return kind == JBCStmtKind::kJBCStmtInstBranch || kind == JBCStmtKind::kJBCStmtInstBranchRet;
   }
 
   void SetPC(uint32 argPC) {
@@ -84,6 +84,9 @@ class JBCStmt : public GeneralStmt {
 
  protected:
   virtual std::list<UniqueFEIRStmt> EmitToFEIRImpl(JBCFunctionContext &context, bool &success) const = 0;
+  bool IsBranchImpl() const override {
+    return kind == JBCStmtKind::kJBCStmtInstBranch || kind == JBCStmtKind::kJBCStmtInstBranchRet;
+  }
 
   JBCStmtKind kind;
   uint32 pc;
@@ -266,9 +269,8 @@ class JBCStmtPesudoTry : public JBCStmt {
       : JBCStmt(kJBCStmtPesudoTry) {}
 
   ~JBCStmtPesudoTry() = default;
-  void AddCatchStmt(JBCStmtPesudoCatch *stmt) {
-    ASSERT(stmt != nullptr, "stmt is nullptr");
-    catchStmts.push_back(stmt);
+  void AddCatchStmt(JBCStmtPesudoCatch &stmt) {
+    catchStmts.push_back(&stmt);
   }
 
   size_t GetCatchCount() const {
@@ -291,8 +293,7 @@ class JBCStmtPesudoTry : public JBCStmt {
 
 class JBCStmtPesudoEndTry : public JBCStmt {
  public:
-  JBCStmtPesudoEndTry()
-      : JBCStmt(kJBCStmtPesudoEndTry) {
+  JBCStmtPesudoEndTry() : JBCStmt(kJBCStmtPesudoEndTry) {
     isAuxPost = true;
   }
 

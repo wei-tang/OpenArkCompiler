@@ -20,22 +20,21 @@
 
 namespace maple {
 bool VarMeExpr::IsValidVerIdx(const SSATab &ssaTab) const {
-  const OriginalSt *ost = ssaTab.GetOriginalStFromID(GetOStIdx());
-  if (ost == nullptr || !ost->IsSymbolOst()) {
+  if (!GetOst()->IsSymbolOst()) {
     return false;
   }
-  StIdx stIdx = ost->GetMIRSymbol()->GetStIdx();
+  StIdx stIdx = GetOst()->GetMIRSymbol()->GetStIdx();
   return stIdx.Islocal() ? ssaTab.GetModule().CurFunction()->GetSymTab()->IsValidIdx(stIdx.Idx())
                          : GlobalTables::GetGsymTable().IsValidIdx(stIdx.Idx());
 }
 
 BaseNode &VarMeExpr::EmitExpr(SSATab &ssaTab) {
-  MIRSymbol *symbol = ssaTab.GetMIRSymbolFromID(GetOStIdx());
+  MIRSymbol *symbol = GetOst()->GetMIRSymbol();
   if (symbol->IsLocal()) {
     symbol->ResetIsDeleted();
   }
   auto *addrofNode = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AddrofNode>(
-      OP_dread, PrimType(GetPrimType()), symbol->GetStIdx(), GetFieldID());
+      OP_dread, PrimType(GetPrimType()), symbol->GetStIdx(), GetOst()->GetFieldID());
   ASSERT(addrofNode->GetPrimType() != kPtyInvalid, "runtime check error");
   ASSERT(IsValidVerIdx(ssaTab), "runtime check error");
   return *addrofNode;
@@ -44,9 +43,9 @@ BaseNode &VarMeExpr::EmitExpr(SSATab &ssaTab) {
 BaseNode &RegMeExpr::EmitExpr(SSATab &ssaTab) {
   auto *regRead = ssaTab.GetModule().CurFunction()->GetCodeMemPool()->New<RegreadNode>();
   regRead->SetPrimType(GetPrimType());
-  regRead->SetRegIdx(regIdx);
-  ASSERT(regIdx < 0 ||
-         static_cast<uint32>(static_cast<int32>(regIdx)) < ssaTab.GetModule().CurFunction()->GetPregTab()->Size(),
+  regRead->SetRegIdx(GetRegIdx());
+  ASSERT(GetRegIdx() < 0 ||
+         static_cast<uint32>(static_cast<int32>(GetRegIdx())) < ssaTab.GetModule().CurFunction()->GetPregTab()->Size(),
          "RegMeExpr::EmitExpr: pregIdx exceeds preg table size");
   return *regRead;
 }
@@ -102,6 +101,13 @@ BaseNode &AddroffuncMeExpr::EmitExpr(SSATab &ssaTab) {
   auto *addroffuncNode =
       ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AddroffuncNode>(PrimType(GetPrimType()), puIdx);
   return *addroffuncNode;
+}
+
+BaseNode &AddroflabelMeExpr::EmitExpr(SSATab &ssaTab) {
+  auto *addroflabelNode =
+      ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AddroflabelNode>(labelIdx);
+  addroflabelNode->SetPrimType(PTY_ptr);
+  return *addroflabelNode;
 }
 
 BaseNode &GcmallocMeExpr::EmitExpr(SSATab &ssaTab) {
@@ -276,12 +282,12 @@ StmtNode &MeStmt::EmitStmt(SSATab &ssaTab) {
 
 StmtNode &DassignMeStmt::EmitStmt(SSATab &ssaTab) {
   auto *dassignStmt = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<DassignNode>();
-  MIRSymbol *symbol = ssaTab.GetMIRSymbolFromID(GetVarLHS()->GetOStIdx());
+  MIRSymbol *symbol = GetVarLHS()->GetOst()->GetMIRSymbol();
   if (symbol->IsLocal()) {
     symbol->ResetIsDeleted();
   }
   dassignStmt->SetStIdx(symbol->GetStIdx());
-  dassignStmt->SetFieldID(GetVarLHS()->GetFieldID());
+  dassignStmt->SetFieldID(GetVarLHS()->GetOst()->GetFieldID());
   dassignStmt->SetRHS(&GetRHS()->EmitExpr(ssaTab));
   dassignStmt->SetSrcPos(GetSrcPosition());
   return *dassignStmt;
@@ -310,14 +316,14 @@ StmtNode &MaydassignMeStmt::EmitStmt(SSATab &ssaTab) {
   return *dassignStmt;
 }
 
-void MeStmt::EmitCallReturnVector(SSATab &ssaTab, CallReturnVector &nRets) {
+void MeStmt::EmitCallReturnVector(CallReturnVector &nRets) {
   MapleVector<MustDefMeNode> *mustDefs = GetMustDefList();
   if (mustDefs == nullptr || mustDefs->empty()) {
     return;
   }
   MeExpr *meExpr = mustDefs->front().GetLHS();
   if (meExpr->GetMeOp() == kMeOpVar) {
-    OriginalSt *ost = ssaTab.GetOriginalStFromID(static_cast<VarMeExpr*>(meExpr)->GetOStIdx());
+    OriginalSt *ost = static_cast<VarMeExpr*>(meExpr)->GetOst();
     MIRSymbol *symbol = ost->GetMIRSymbol();
     nRets.push_back(CallReturnPair(symbol->GetStIdx(), RegFieldPair(0, 0)));
   } else if (meExpr->GetMeOp() == kMeOpReg) {
@@ -358,7 +364,7 @@ StmtNode &CallMeStmt::EmitStmt(SSATab &ssaTab) {
     callNode->SetNumOpnds(callNode->GetNopndSize());
     callNode->SetSrcPos(GetSrcPosition());
     if (kOpcodeInfo.IsCallAssigned(GetOp())) {
-      EmitCallReturnVector(ssaTab, callNode->GetReturnVec());
+      EmitCallReturnVector(callNode->GetReturnVec());
       for (size_t j = 0; j < callNode->GetReturnVec().size(); ++j) {
         CallReturnPair retPair = callNode->GetReturnVec()[j];
         if (!retPair.second.IsReg()) {
@@ -382,7 +388,7 @@ StmtNode &CallMeStmt::EmitStmt(SSATab &ssaTab) {
   icallNode->SetNumOpnds(icallNode->GetNopndSize());
   icallNode->SetSrcPos(GetSrcPosition());
   if (kOpcodeInfo.IsCallAssigned(GetOp())) {
-    EmitCallReturnVector(ssaTab, icallNode->GetReturnVec());
+    EmitCallReturnVector(icallNode->GetReturnVec());
     icallNode->SetRetTyIdx(TyIdx(PTY_void));
     for (size_t j = 0; j < icallNode->GetReturnVec().size(); ++j) {
       CallReturnPair retPair = icallNode->GetReturnVec()[j];
@@ -414,7 +420,7 @@ StmtNode &IcallMeStmt::EmitStmt(SSATab &ssaTab) {
   icallNode->SetNumOpnds(icallNode->GetNopndSize());
   icallNode->SetSrcPos(GetSrcPosition());
   if (kOpcodeInfo.IsCallAssigned(GetOp())) {
-    EmitCallReturnVector(ssaTab, icallNode->GetReturnVec());
+    EmitCallReturnVector(icallNode->GetReturnVec());
     icallNode->SetRetTyIdx(TyIdx(PTY_void));
     for (size_t j = 0; j < icallNode->GetReturnVec().size(); ++j) {
       CallReturnPair retPair = icallNode->GetReturnVec()[j];
@@ -449,7 +455,7 @@ StmtNode &IntrinsiccallMeStmt::EmitStmt(SSATab &ssaTab) {
   callNode->SetNumOpnds(callNode->GetNopndSize());
   callNode->SetSrcPos(GetSrcPosition());
   if (kOpcodeInfo.IsCallAssigned(GetOp())) {
-    EmitCallReturnVector(ssaTab, callNode->GetReturnVec());
+    EmitCallReturnVector(callNode->GetReturnVec());
     for (size_t j = 0; j < callNode->GetReturnVec().size(); ++j) {
       CallReturnPair retPair = callNode->GetReturnVec()[j];
       if (!retPair.second.IsReg()) {

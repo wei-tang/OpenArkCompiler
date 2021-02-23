@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -290,15 +290,12 @@ class OriginalStTable {
     ASSERT(ost.IsRealSymbol(), "runtime check error");
     return ost.GetMIRSymbol();
   }
-  MIRSymbol *GetMIRSymbolFromOriginalSt(OriginalSt &ost) {
-    return const_cast<MIRSymbol *>(const_cast<const OriginalStTable*>(this)->GetMIRSymbolFromOriginalSt(ost));
-  }
 
   const MIRSymbol *GetMIRSymbolFromID(OStIdx id) const {
-    return GetMIRSymbolFromOriginalSt(*GetOriginalStFromID(id, false));
+    return GetOriginalStFromID(id, false)->GetMIRSymbol();
   }
   MIRSymbol *GetMIRSymbolFromID(OStIdx id) {
-    return GetMIRSymbolFromOriginalSt(*GetOriginalStFromID(id, false));
+    return GetOriginalStFromID(id, false)->GetMIRSymbol();
   }
 
   MapleAllocator &GetAlloc() {

@@ -24,18 +24,19 @@ class JBCCompilerComponent : public MPLFECompilerComponent {
  public:
   JBCCompilerComponent(MIRModule &module);
   ~JBCCompilerComponent();
-  void ReleaseMemPool();
 
  protected:
-  bool InitFromOptionsImpl() override;
   bool ParseInputImpl() override;
+  bool LoadOnDemandTypeImpl() override;
   bool PreProcessDeclImpl() override;
   bool ProcessDeclImpl() override;
+  void ProcessPragmaImpl() override;
   bool PreProcessWithoutFunctionImpl() override;
   bool PreProcessWithFunctionImpl() override;
   std::string GetComponentNameImpl() const override;
   bool ParallelableImpl() const override;
   void DumpPhaseTimeTotalImpl() const override;
+  void ReleaseMemPoolImpl() override;
 
  private:
   MemPool *mp;

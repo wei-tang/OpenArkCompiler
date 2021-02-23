@@ -117,7 +117,7 @@ class SimpleZip : public BasicIORead {
  public:
   SimpleZip(BasicIOMapFile &file);
   ~SimpleZip();
-  bool ParseFile();
+  void ParseFile();
 
   const std::list<std::unique_ptr<ZipLocalFile>> &GetFiles() const {
     return files;

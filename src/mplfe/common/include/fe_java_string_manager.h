@@ -23,8 +23,9 @@
 namespace maple {
 class FEJavaStringManager {
  public:
-  explicit FEJavaStringManager(MIRModule &argModule);
+  FEJavaStringManager(MIRModule &argModule, MIRBuilder &mirBuilderIn);
   ~FEJavaStringManager();
+  void ClearStringMetaClassSymbolExternFlag();
   // profiling
   void LoadProfilingData(const std::string &profileFileName);
   MIRSymbol *GetLiteralPtrVar(const MIRSymbol *var) const;
@@ -37,6 +38,7 @@ class FEJavaStringManager {
   MIRSymbol *GetLiteralVar(const std::u16string &strU16) const;
   static std::string GetLiteralGlobalName(const std::u16string &strU16);
   static bool IsAllASCII(const std::u16string &strU16);
+  void GenStringMetaClassVar();
 
  private:
   using DWBuffer = struct {
@@ -53,12 +55,14 @@ class FEJavaStringManager {
   static void FinishByteArray(MIRAggConst &newConst, MemPool &mp, DWBuffer &buf, MIRType &uInt64);
 
   MIRModule &module;
+  MIRBuilder &mirBuilder;
   bool useCompressedJavaString = true;
   std::unordered_set<std::string> preloadSet;
   std::unordered_set<MIRSymbol*> literalSet;
   std::unordered_set<MIRSymbol*> fieldValueSet;
   std::map<const MIRSymbol*, MIRSymbol*> literalMap;
   MIRType *typeString = nullptr;
+  MIRSymbol *stringMetaClassSymbol = nullptr;
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_COMMON_FE_JAVA_STRING_MANAGER_H

@@ -20,24 +20,28 @@
 
 namespace maple {
 // ---------- FEFunctionProcessTask ----------
-FEFunctionProcessTask::FEFunctionProcessTask(FEFunction &argFunction)
+FEFunctionProcessTask::FEFunctionProcessTask(std::unique_ptr<FEFunction> &argFunction)
     : function(argFunction) {}
 
 int FEFunctionProcessTask::RunImpl(MplTaskParam *param) {
-  function.Process();
-  return 0;
+  bool success = function->Process();
+  if (success) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 int FEFunctionProcessTask::FinishImpl(MplTaskParam *param) {
-  function.Finish();
+  function->Finish();
+  FEFunction *funPtr = function.release();
+  delete funPtr;
   return 0;
 }
 
 // ---------- FEFunctionProcessSchedular ----------
-void FEFunctionProcessSchedular::AddFunctionProcessTask(const std::unique_ptr<FEFunction> &function) {
-  FEFunction *ptrFunc = function.get();
-  CHECK_NULL_FATAL(ptrFunc);
-  std::unique_ptr<FEFunctionProcessTask> task = std::make_unique<FEFunctionProcessTask>(*ptrFunc);
+void FEFunctionProcessSchedular::AddFunctionProcessTask(std::unique_ptr<FEFunction> &function) {
+  std::unique_ptr<FEFunctionProcessTask> task = std::make_unique<FEFunctionProcessTask>(function);
   AddTask(task.get());
   tasks.push_back(std::move(task));
 }
@@ -61,14 +65,19 @@ bool MPLFECompilerComponent::ProcessFunctionSerialImpl() {
   ss << GetComponentName() << "::ProcessFunctionSerial()";
   FETimer timer;
   timer.StartAndDump(ss.str());
+  bool success = true;
   FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process %s =====", ss.str().c_str());
-  for (const std::unique_ptr<FEFunction> &function : functions) {
-    ASSERT(function != nullptr, "nullptr check");
-    function->Process();
-    function->Finish();
+  for (auto it = functions.begin(); it != functions.end();) {
+    bool processResult = (*it)->Process();
+    if (!processResult) {
+      (void)compileFailedFEFunctions.insert((*it).get());
+    }
+    success = success && processResult;
+    (*it)->Finish();
+    it = functions.erase(it);
   }
   timer.StopAndDumpTimeMS(ss.str());
-  return true;
+  return success;
 }
 
 bool MPLFECompilerComponent::ProcessFunctionParallelImpl(uint32 nthreads) {
@@ -79,7 +88,7 @@ bool MPLFECompilerComponent::ProcessFunctionParallelImpl(uint32 nthreads) {
   FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process %s =====", ss.str().c_str());
   FEFunctionProcessSchedular schedular(ss.str());
   schedular.Init();
-  for (const std::unique_ptr<FEFunction> &function : functions) {
+  for (std::unique_ptr<FEFunction> &function : functions) {
     schedular.AddFunctionProcessTask(function);
   }
   schedular.SetDumpTime(FEOptions::GetInstance().IsDumpThreadTime());

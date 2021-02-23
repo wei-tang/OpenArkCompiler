@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -19,9 +19,14 @@
 #include <stack>
 #include <map>
 #include <string>
+#include <mutex>
 #include "mir_config.h"
 #include "mpl_logging.h"
 
+// Local debug control
+#ifdef MP_DEBUG
+#include <iostream>
+#endif  // MP_DEBUG
 
 namespace maple {
 #ifdef _WIN32
@@ -65,6 +70,8 @@ class MemPoolCtrler {
     }
   };
 
+  inline bool HaveRace() const;
+  std::mutex mtx; // this mutex is used to protect memPools, freeMemBlocks and largeFreeMemBlocks
   // Free small/large size memory block list
   std::list<MemBlock*> freeMemBlocks;
   std::map<size_t, std::set<MemBlock*, MemBlockCmp>> largeFreeMemBlocks;
@@ -76,6 +83,10 @@ class MemPool {
 
  public:  // Methods
   MemPool(MemPoolCtrler &ctl, const std::string &name) : ctrler(ctl), name(name) {
+#ifdef MP_DEBUG
+    frozen = false;
+    LogInfo::MapleLogger() << "MEMPOOL: New " << name << '\n';
+#endif
   }
 
   ~MemPool();
@@ -131,11 +142,16 @@ class MemPool {
   static constexpr size_t kMemBlockOverhead = (BITS_ALIGN(sizeof(MemPoolCtrler::MemBlock)));
   MemPoolCtrler::MemBlock *GetLargeMemBlock(size_t size);  // Raw allocate large memory block
   MemPoolCtrler::MemBlock *GetMemBlock();
+  inline bool HaveRace() const;
   MemPoolCtrler &ctrler;  // Hookup controller object
   std::string name;       // Name of the memory pool
   // Save the memory block stack
   std::stack<MemPoolCtrler::MemBlock*> memBlockStack;
   std::stack<MemPoolCtrler::MemBlock*> largeMemBlockStack;
+#ifdef MP_DEBUG
+  bool IsValid(void);
+  bool frozen;
+#endif
 };
 
 extern MemPoolCtrler memPoolCtrler;

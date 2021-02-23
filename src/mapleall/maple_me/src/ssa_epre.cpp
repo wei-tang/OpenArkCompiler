@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -65,7 +65,7 @@ void SSAEPre::GenerateSaveLHSRealocc(MeRealOcc &realOcc, MeExpr &regOrVar) {
     rass = irMap->CreateRegassignMeStmt(regOrVar, *localRefVar, *savedBB);
     regOrVar.SetDefByStmt(*rass);
     savedBB->InsertMeStmtAfter(dass, rass);
-    EnterCandsForSSAUpdate(localRefVar->GetOStIdx(), *savedBB);
+    EnterCandsForSSAUpdate(localRefVar->GetOstIdx(), *savedBB);
   }
   // create new iassign for original lhs
   IassignMeStmt *newIass = irMap->NewInPool<IassignMeStmt>(savedTyIdx, theLHS, &regOrVar, &savedChiList);
@@ -115,7 +115,7 @@ void SSAEPre::GenerateSaveRealOcc(MeRealOcc &realOcc) {
     newMeStmt = irMap->CreateRegassignMeStmt(*regOrVar, *localRefVar, *realOcc.GetMeStmt()->GetBB());
     regOrVar->SetDefByStmt(*newMeStmt);
     realOcc.GetMeStmt()->GetBB()->InsertMeStmtBefore(realOcc.GetMeStmt(), newMeStmt);
-    EnterCandsForSSAUpdate(localRefVar->GetOStIdx(), *realOcc.GetMeStmt()->GetBB());
+    EnterCandsForSSAUpdate(localRefVar->GetOstIdx(), *realOcc.GetMeStmt()->GetBB());
   }
   // replace realOcc->GetMeStmt()'s occ with regOrVar
   bool isReplaced = irMap->ReplaceMeExprStmt(*realOcc.GetMeStmt(), *realOcc.GetMeExpr(), *regOrVar);
@@ -341,7 +341,7 @@ void SSAEPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, b
           if (CfgHasDoWhile() && naryMeExpr->GetIntrinsic() == INTRN_JAVA_ARRAY_LENGTH) {
             auto *varOpnd = safe_cast<VarMeExpr>(naryMeExpr->GetOpnd(0));
             if (varOpnd != nullptr) {
-              const OriginalSt *ost = ssaTab->GetOriginalStFromID(varOpnd->GetOStIdx());
+              const OriginalSt *ost = varOpnd->GetOst();
               if (ost->IsFormal()) {
                 break;
               }
@@ -377,6 +377,7 @@ void SSAEPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, b
     case kMeOpReg:
     case kMeOpAddrof:
     case kMeOpAddroffunc:
+    case kMeOpAddroflabel:
     case kMeOpGcmalloc:
     case kMeOpConst:
     case kMeOpConststr:

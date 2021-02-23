@@ -25,7 +25,8 @@
 namespace maple {
 class MPLFEOptions : public maple::MapleDriverOptionBase {
  public:
-  static MPLFEOptions &GetInstance() {
+  static inline MPLFEOptions &GetInstance() {
+    static MPLFEOptions options;
     return options;
   }
   void Init();
@@ -38,9 +39,11 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   static void Split(const std::string &s, char delim, Out result);
   static std::list<std::string> SplitByComma(const std::string &s);
 
+  // non-option process
+  void ProcessInputFiles(const std::vector<std::string> &inputs);
+
  private:
   using OptionProcessFactory = FunctionFactory<uint32, bool, MPLFEOptions*, const mapleOption::Option&>;
-  static MPLFEOptions options;
 
   MPLFEOptions();
   ~MPLFEOptions() = default;
@@ -52,6 +55,7 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   // input control options
   bool ProcessInClass(const mapleOption::Option &opt);
   bool ProcessInJar(const mapleOption::Option &opt);
+  bool ProcessInDex(const mapleOption::Option &opt);
   bool ProcessInputMplt(const mapleOption::Option &opt);
   bool ProcessInputMpltFromSys(const mapleOption::Option &opt);
   bool ProcessInputMpltFromApk(const mapleOption::Option &opt);
@@ -62,10 +66,13 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   bool ProcessGenMpltOnly(const mapleOption::Option &opt);
   bool ProcessGenAsciiMplt(const mapleOption::Option &opt);
   bool ProcessDumpInstComment(const mapleOption::Option &opt);
+  bool ProcessNoMplFile(const mapleOption::Option &opt);
 
   // debug info control options
   bool ProcessDumpLevel(const mapleOption::Option &opt);
   bool ProcessDumpTime(const mapleOption::Option &opt);
+  bool ProcessDumpComment(const mapleOption::Option &opt);
+  bool ProcessDumpLOC(const mapleOption::Option &opt);
   bool ProcessDumpPhaseTime(const mapleOption::Option &opt);
   bool ProcessDumpPhaseTimeDetail(const mapleOption::Option &opt);
 
@@ -87,8 +94,15 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   bool ProcessDumpThreadTime(const mapleOption::Option &opt);
   bool ProcessReleaseAfterEmit(const mapleOption::Option &opt);
 
-  // non-option process
-  void ProcessInputFiles(const std::vector<std::string> &inputs);
+  // On Demand Type Creation
+  bool ProcessXbootclasspath(const mapleOption::Option &opt);
+  bool ProcessClassLoaderContext(const mapleOption::Option &opt);
+  bool ProcessCompilefile(const mapleOption::Option &opt);
+  bool ProcessCollectDepTypes(const mapleOption::Option &opt);
+  bool ProcessDepSameNamePolicy(const mapleOption::Option &opt);
+
+  // symbol resolve
+  bool ProcessAOT(const mapleOption::Option &opt);
 };  // class MPLFEOptions
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_COMMON_MPLFE_OPTIONS_H

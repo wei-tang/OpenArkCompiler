@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -85,20 +85,21 @@ void AArch64AsmEmitter::EmitFastLSDA(FuncEmitInfo &funcEmitInfo) {
   CG *currCG = cgFunc.GetCG();
 
   Emitter *emitter = currCG->GetEmitter();
-  const std::string &funcName = std::string(cgFunc.GetShortFuncName().c_str());
+  PUIdx pIdx = currCG->GetMIRModule()->CurFunction()->GetPuidx();
+  const std::string &idx = strdup(std::to_string(pIdx).c_str());
   /*
    * .word 0xFFFFFFFF
    * .word .Label.LTest_3B_7C_3Cinit_3E_7C_28_29V3-func_start_label
    */
   (void)emitter->Emit("\t.word 0xFFFFFFFF\n");
-  (void)emitter->Emit("\t.word .L." + funcName + ".");
+  (void)emitter->Emit("\t.word .L." + idx + "__");
   if (aarchCGFunc.NeedCleanup()) {
     emitter->Emit(cgFunc.GetCleanupLabel()->GetLabelIdx());
   } else {
     ASSERT(!cgFunc.GetExitBBsVec().empty(), "exitbbsvec is empty in AArch64AsmEmitter::EmitFastLSDA");
     emitter->Emit(cgFunc.GetExitBB(0)->GetLabIdx());
   }
-  emitter->Emit("-.L." + funcName + ".")
+  emitter->Emit("-.L." + idx + "__")
       .Emit(cgFunc.GetStartLabel()->GetLabelIdx())
       .Emit("\n");
   emitter->IncreaseJavaInsnCount();
@@ -117,20 +118,19 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
   emitter->Emit("\t.align 2\n");
   /* emit LSDA header */
   LSDAHeader *lsdaHeader = ehFunc->GetLSDAHeader();
-  const std::string &funcName = std::string(cgFunc.GetShortFuncName().c_str());
-  emitter->EmitStmtLabel(funcName, lsdaHeader->GetLSDALabel()->GetLabelIdx());
+  emitter->EmitStmtLabel(lsdaHeader->GetLSDALabel()->GetLabelIdx());
   emitter->Emit("\t.byte ").Emit(lsdaHeader->GetLPStartEncoding()).Emit("\n");
   emitter->Emit("\t.byte ").Emit(lsdaHeader->GetTTypeEncoding()).Emit("\n");
   emitter->Emit("\t.uleb128 ");
-  emitter->EmitLabelPair(funcName, lsdaHeader->GetTTypeOffset());
-  emitter->EmitStmtLabel(funcName, lsdaHeader->GetTTypeOffset().GetStartOffset()->GetLabelIdx());
+  emitter->EmitLabelPair(lsdaHeader->GetTTypeOffset());
+  emitter->EmitStmtLabel(lsdaHeader->GetTTypeOffset().GetStartOffset()->GetLabelIdx());
   /* emit call site table */
   emitter->Emit("\t.byte ").Emit(lsdaHeader->GetCallSiteEncoding()).Emit("\n");
   /* callsite table size */
   emitter->Emit("\t.uleb128 ");
-  emitter->EmitLabelPair(funcName, ehFunc->GetLSDACallSiteTable()->GetCSTable());
+  emitter->EmitLabelPair(ehFunc->GetLSDACallSiteTable()->GetCSTable());
   /* callsite start */
-  emitter->EmitStmtLabel(funcName, ehFunc->GetLSDACallSiteTable()->GetCSTable().GetStartOffset()->GetLabelIdx());
+  emitter->EmitStmtLabel(ehFunc->GetLSDACallSiteTable()->GetCSTable().GetStartOffset()->GetLabelIdx());
   ehFunc->GetLSDACallSiteTable()->SortCallSiteTable([&aarchCGFunc](LSDACallSite *a, LSDACallSite *b) {
     CHECK_FATAL(a != nullptr, "nullptr check");
     CHECK_FATAL(b != nullptr, "nullptr check");
@@ -145,14 +145,14 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
   for (size_t i = 0; i < callSiteTable.size(); ++i) {
     LSDACallSite *lsdaCallSite = callSiteTable[i];
     emitter->Emit("\t.uleb128 ");
-    emitter->EmitLabelPair(funcName, lsdaCallSite->csStart);
+    emitter->EmitLabelPair(lsdaCallSite->csStart);
 
     emitter->Emit("\t.uleb128 ");
-    emitter->EmitLabelPair(funcName, lsdaCallSite->csLength);
+    emitter->EmitLabelPair(lsdaCallSite->csLength);
 
     if (lsdaCallSite->csLandingPad.GetStartOffset()) {
       emitter->Emit("\t.uleb128 ");
-      emitter->EmitLabelPair(funcName, lsdaCallSite->csLandingPad);
+      emitter->EmitLabelPair(lsdaCallSite->csLandingPad);
     } else {
       ASSERT(lsdaCallSite->csAction == 0, "csAction error!");
       emitter->Emit("\t.uleb128 ");
@@ -161,11 +161,13 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
         LabelPair cleaupCode;
         cleaupCode.SetStartOffset(cgFunc.GetStartLabel());
         cleaupCode.SetEndOffset(cgFunc.GetCleanupLabel());
-        emitter->EmitLabelPair(funcName, cleaupCode);
+        emitter->EmitLabelPair(cleaupCode);
       } else if (cgFunc.GetFunction().IsJava()) {
         ASSERT(!cgFunc.GetExitBBsVec().empty(), "exitbbsvec is empty in AArch64Emitter::EmitFullLSDA");
-        (void)emitter->Emit(".L." + funcName).Emit(".").Emit(cgFunc.GetExitBB(0)->GetLabIdx());
-        (void)emitter->Emit(" - .L." + funcName).Emit(".").Emit(cgFunc.GetStartLabel()->GetLabelIdx()).Emit("\n");
+        PUIdx pIdx = cgFunc.GetMirModule().CurFunction()->GetPuidx();
+        const std::string &idx = strdup(std::to_string(pIdx).c_str());
+        (void)emitter->Emit(".L." + idx).Emit("__").Emit(cgFunc.GetExitBB(0)->GetLabIdx());
+        (void)emitter->Emit(" - .L." + idx).Emit("__").Emit(cgFunc.GetStartLabel()->GetLabelIdx()).Emit("\n");
       } else {
         emitter->Emit("0\n");
       }
@@ -187,22 +189,24 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
     funcStart.SetStartOffset(cgFunc.GetStartLabel());
     funcStart.SetEndOffset(cgFunc.GetStartLabel());
     emitter->Emit("\t.uleb128 ");
-    emitter->EmitLabelPair(funcName, funcStart);
+    emitter->EmitLabelPair(funcStart);
     LabelPair funcLength;
     funcLength.SetStartOffset(cgFunc.GetStartLabel());
     funcLength.SetEndOffset(cgFunc.GetCleanupLabel());
     emitter->Emit("\t.uleb128 ");
-    emitter->EmitLabelPair(funcName, funcLength);
+    emitter->EmitLabelPair(funcLength);
     LabelPair cleaupCode;
     cleaupCode.SetStartOffset(cgFunc.GetStartLabel());
     cleaupCode.SetEndOffset(cgFunc.GetCleanupLabel());
     emitter->Emit("\t.uleb128 ");
     if (aarchCGFunc.NeedCleanup()) {
-      emitter->EmitLabelPair(funcName, cleaupCode);
+      emitter->EmitLabelPair(cleaupCode);
     } else {
       ASSERT(!cgFunc.GetExitBBsVec().empty(), "exitbbsvec is empty in AArch64AsmEmitter::EmitFullLSDA");
-      (void)emitter->Emit(".L." + funcName).Emit(".").Emit(cgFunc.GetExitBB(0)->GetLabIdx());
-      (void)emitter->Emit(" - .L." + funcName).Emit(".").Emit(cgFunc.GetStartLabel()->GetLabelIdx()).Emit("\n");
+      PUIdx pIdx = cgFunc.GetMirModule().CurFunction()->GetPuidx();
+      const std::string &idx = strdup(std::to_string(pIdx).c_str());
+      (void)emitter->Emit(".L." + idx).Emit("__").Emit(cgFunc.GetExitBB(0)->GetLabIdx());
+      (void)emitter->Emit(" - .L." + idx).Emit("__").Emit(cgFunc.GetStartLabel()->GetLabelIdx()).Emit("\n");
     }
     emitter->Emit("\t.uleb128 0\n");
     if (!cgFunc.GetFunction().IsJava()) {
@@ -211,18 +215,18 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
       unwindStart.SetStartOffset(cgFunc.GetStartLabel());
       unwindStart.SetEndOffset(cgFunc.GetCleanupLabel());
       emitter->Emit("\t.uleb128 ");
-      emitter->EmitLabelPair(funcName, unwindStart);
+      emitter->EmitLabelPair(unwindStart);
       LabelPair unwindLength;
       unwindLength.SetStartOffset(cgFunc.GetCleanupLabel());
       unwindLength.SetEndOffset(cgFunc.GetEndLabel());
       emitter->Emit("\t.uleb128 ");
-      emitter->EmitLabelPair(funcName, unwindLength);
+      emitter->EmitLabelPair(unwindLength);
       emitter->Emit("\t.uleb128 0\n");
       emitter->Emit("\t.uleb128 0\n");
     }
   }
   /* callsite end label */
-  emitter->EmitStmtLabel(funcName, ehFunc->GetLSDACallSiteTable()->GetCSTable().GetEndOffset()->GetLabelIdx());
+  emitter->EmitStmtLabel(ehFunc->GetLSDACallSiteTable()->GetCSTable().GetEndOffset()->GetLabelIdx());
   /* tt */
   const LSDAActionTable *lsdaActionTable = ehFunc->GetLSDAActionTable();
   for (size_t i = 0; i < lsdaActionTable->Size(); ++i) {
@@ -247,10 +251,11 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
     emitter->Emit("\t.4byte " + dwRefString + "\n");
   }
   /* end of lsda */
-  emitter->EmitStmtLabel(funcName, lsdaHeader->GetTTypeOffset().GetEndOffset()->GetLabelIdx());
+  emitter->EmitStmtLabel(lsdaHeader->GetTTypeOffset().GetEndOffset()->GetLabelIdx());
 }
 
 void AArch64AsmEmitter::EmitBBHeaderLabel(FuncEmitInfo &funcEmitInfo, const std::string &name, LabelIdx labIdx) {
+  (void)name;
   CGFunc &cgFunc = funcEmitInfo.GetCGFunc();
   AArch64CGFunc &aarchCGFunc = static_cast<AArch64CGFunc&>(cgFunc);
   CG *currCG = cgFunc.GetCG();
@@ -261,11 +266,19 @@ void AArch64AsmEmitter::EmitBBHeaderLabel(FuncEmitInfo &funcEmitInfo, const std:
     label.SetLabelOrder(currCG->GetLabelOrderCnt());
     currCG->IncreaseLabelOrderCnt();
   }
+  PUIdx pIdx = currCG->GetMIRModule()->CurFunction()->GetPuidx();
+  const char *puIdx = strdup(std::to_string(pIdx).c_str());
+  const std::string &labelName = cgFunc.GetFunction().GetLabelTab()->GetName(labIdx);
   if (currCG->GenerateVerboseCG()) {
-    (void)emitter.Emit(".L.").Emit(name).Emit(".").Emit(labIdx).Emit(":\t//label order ").Emit(label.GetLabelOrder());
-    emitter.Emit("\n");
+    emitter.Emit(".L.").Emit(puIdx).Emit("__").Emit(labIdx).Emit(":\t//label order ").Emit(label.GetLabelOrder());
+    if (!labelName.empty() && labelName.at(0) != '@') {
+      /* If label name has @ as its first char, it is not from MIR */
+      emitter.Emit(", MIR: @").Emit(labelName).Emit("\n");
+    } else {
+      emitter.Emit("\n");
+    }
   } else {
-    (void)emitter.Emit(".L.").Emit(name).Emit(".").Emit(labIdx).Emit(":\n");
+    emitter.Emit(".L.").Emit(puIdx).Emit("__").Emit(labIdx).Emit(":\n");
   }
 }
 
@@ -303,7 +316,6 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
   (void)emitter.Emit("\t.align 2\n");
   MIRSymbol *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStidx(cgFunc.GetFunction().GetStIdx().Idx());
   const std::string &funcName = std::string(cgFunc.GetShortFuncName().c_str());
-
 
   std::string funcStName = funcSt->GetName();
   if (funcSt->GetFunction()->GetAttr(FUNCATTR_weak)) {
@@ -367,9 +379,11 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
       emitter.IncreaseJavaInsnCount();
     } else if (ehFunc->NeedFullLSDA()) {
       LSDAHeader *lsdaHeader = ehFunc->GetLSDAHeader();
+      PUIdx pIdx = emitter.GetCG()->GetMIRModule()->CurFunction()->GetPuidx();
+      const std::string &idx = strdup(std::to_string(pIdx).c_str());
       /*  .word .Label.lsda_label-func_start_label */
-      (void)emitter.Emit("\t.word .L." + funcName).Emit(".").Emit(lsdaHeader->GetLSDALabel()->GetLabelIdx());
-      (void)emitter.Emit("-.L." + funcName).Emit(".").Emit(cgFunc.GetStartLabel()->GetLabelIdx()).Emit("\n");
+      (void)emitter.Emit("\t.word .L." + idx).Emit("__").Emit(lsdaHeader->GetLSDALabel()->GetLabelIdx());
+      (void)emitter.Emit("-.L." + idx).Emit("__").Emit(cgFunc.GetStartLabel()->GetLabelIdx()).Emit("\n");
       emitter.IncreaseJavaInsnCount();
     } else if (ehFunc->NeedFastLSDA()) {
       EmitFastLSDA(funcEmitInfo);
@@ -435,10 +449,12 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
     emitter.Emit(st->GetName() + ":\n");
     MIRAggConst *arrayConst = safe_cast<MIRAggConst>(st->GetKonst());
     CHECK_FATAL(arrayConst != nullptr, "null ptr check");
+    PUIdx pIdx = cgFunc.GetMirModule().CurFunction()->GetPuidx();
+    const std::string &idx = strdup(std::to_string(pIdx).c_str());
     for (size_t i = 0; i < arrayConst->GetConstVec().size(); i++) {
       MIRLblConst *lblConst = safe_cast<MIRLblConst>(arrayConst->GetConstVecItem(i));
       CHECK_FATAL(lblConst != nullptr, "null ptr check");
-      (void)emitter.Emit("\t.quad\t.L." + funcName).Emit(".").Emit(lblConst->GetValue());
+      (void)emitter.Emit("\t.quad\t.L." + idx).Emit("__").Emit(lblConst->GetValue());
       (void)emitter.Emit(" - " + st->GetName() + "\n");
       emitter.IncreaseJavaInsnCount(kQuadInsnCount);
     }

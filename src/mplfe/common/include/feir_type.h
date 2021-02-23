@@ -57,6 +57,10 @@ class FEIRType {
     SetPrimTypeImpl(pt);
   }
 
+  MIRSrcLang GetSrcLang() const {
+    return srcLang;
+  }
+
   bool IsZero() const {
     return isZero;
   }
@@ -145,7 +149,10 @@ class FEIRType {
   virtual bool IsEqualToImpl(const std::unique_ptr<FEIRType> &argType) const;
   virtual bool IsEqualToImpl(const FEIRType &argType) const;
   virtual size_t HashImpl() const = 0;
-  virtual PrimType GetPrimTypeImpl() const = 0;
+  virtual PrimType GetPrimTypeImpl() const {
+    return PTY_begin;  // Means no valid primtype
+  }
+
   virtual void SetPrimTypeImpl(PrimType pt) = 0;
   virtual bool IsRefImpl() const = 0;
   virtual bool IsArrayImpl() const = 0;
@@ -296,7 +303,7 @@ class FEIRTypePointer : public FEIRType {
   virtual PrimType GetPrimTypeImpl() const override;
   virtual void SetPrimTypeImpl(PrimType pt) override;
   virtual bool IsRefImpl() const override {
-    return baseType->IsRef();
+    return true;  // pointer type is ref
   }
 
   virtual bool IsArrayImpl() const override {

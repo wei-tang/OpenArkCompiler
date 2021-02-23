@@ -725,8 +725,9 @@ void AArch64Insn::EmitAdrpLdr(const CG &cg, Emitter &emitter) const {
 }
 
 void AArch64Insn::EmitAdrpLabel(Emitter &emitter) const {
-  // adrp    xd, label
-  // add     xd, xd, #lo12:label
+  /* adrp    xd, label
+   * add     xd, xd, #lo12:label
+   */
   const AArch64MD *md = &AArch64CG::kMd[MOP_adrp_label];
 
   Operand *opnd0 = opnds[0];
@@ -734,7 +735,7 @@ void AArch64Insn::EmitAdrpLabel(Emitter &emitter) const {
   OpndProp *prop0 = static_cast<AArch64OpndProp*>(md->operand[0]);
   LabelIdx lidx = static_cast<ImmOperand *>(opnd1)->GetValue();
 
-  // adrp    xd, label
+  /* adrp    xd, label */
   emitter.Emit("\t").Emit("adrp").Emit("\t");
   opnd0->Emit(emitter, prop0);
   emitter.Emit(", ");
@@ -742,7 +743,7 @@ void AArch64Insn::EmitAdrpLabel(Emitter &emitter) const {
   idx = strdup(std::to_string(Globals::GetInstance()->GetBECommon()->GetMIRModule().CurFunction()->GetPuidx()).c_str());
   emitter.Emit(".label.").Emit(idx).Emit("__").Emit(lidx).Emit("\n");
 
-  // add     xd, xd, #lo12:label
+  /* add     xd, xd, #lo12:label */
   emitter.Emit("\tadd\t");
   opnd0->Emit(emitter, prop0);
   emitter.Emit(", ");

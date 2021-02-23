@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -35,6 +35,8 @@ std::string BB::StrAttribute() const {
       return "aftergosub";
     case kBBSwitch:
       return "switch";
+    case kBBIgoto:
+      return "igoto";
     case kBBInvalid:
       return "invalid";
     default:
@@ -331,7 +333,7 @@ void BB::InsertMeStmtLastBr(MeStmt *inStmt) {
   MeStmt *brStmt = meStmtList.rbegin().base().d();
   Opcode op = brStmt->GetOp();
   if (brStmt->IsCondBr() || op == OP_goto || op == OP_switch || op == OP_throw || op == OP_return || op == OP_gosub ||
-      op == OP_retsub) {
+      op == OP_retsub || op == OP_igoto) {
     InsertMeStmtBefore(brStmt, inStmt);
   } else {
     AddMeStmtLast(inStmt);

@@ -35,7 +35,7 @@ class JBCClass2FEHelper : public FEInputStructHelper {
  protected:
   std::string GetStructNameOrinImpl() const override;
   std::string GetStructNameMplImpl() const override;
-  std::vector<std::string> GetSuperClassNamesImpl() const override;
+  std::list<std::string> GetSuperClassNamesImpl() const override;
   std::vector<std::string> GetInterfaceNamesImpl() const override;
   std::string GetSourceFileNameImpl() const override;
   MIRStructType *CreateMIRStructTypeImpl(bool &error) const override;
@@ -60,7 +60,7 @@ class JBCClassField2FEHelper : public FEInputFieldHelper {
 
  protected:
   bool ProcessDeclImpl(MapleAllocator &allocator) override;
-  bool ProcessDeclWithContainerImpl(MapleAllocator &allocator, const FEInputStructHelper &structHelper) override;
+  bool ProcessDeclWithContainerImpl(MapleAllocator &allocator) override;
 
  private:
   const jbc::JBCClassField &field;
@@ -83,6 +83,9 @@ class JBCClassMethod2FEHelper : public FEInputMethodHelper {
   bool IsVargImpl() const override;
   bool HasThisImpl() const override;
   MIRType *GetTypeForThisImpl() const override;
+  bool IsVirtualImpl() const override;
+  bool IsNativeImpl() const override;
+  bool HasCodeImpl() const override;
 
  private:
   bool IsClinit() const;

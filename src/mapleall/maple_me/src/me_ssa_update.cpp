@@ -74,7 +74,8 @@ void MeSSAUpdate::RenamePhi(const BB &bb) {
     phi->SetIsLive(true);  // always make it live, for correctness
     if (phi->GetLHS() == nullptr) {
       // create a new VarMeExpr defined by this phi
-      VarMeExpr *newVar = irMap.CreateNewVarMeExpr(it2->first, ssaTab.GetPrimType(it2->first), 0);
+      VarMeExpr *newVar =
+          irMap.CreateNewVarMeExpr(ssaTab.GetOriginalStFromID(it2->first), ssaTab.GetPrimType(it2->first));
       phi->UpdateLHS(*newVar);
       it1->second->push(newVar);  // push the stack
     } else {
@@ -89,7 +90,7 @@ MeExpr *MeSSAUpdate::RenameExpr(MeExpr &meExpr, bool &changed) {
   switch (meExpr.GetMeOp()) {
     case kMeOpVar: {
       auto &varExpr = static_cast<VarMeExpr&>(meExpr);
-      auto it = renameStacks.find(varExpr.GetOStIdx());
+      auto it = renameStacks.find(varExpr.GetOstIdx());
       if (it == renameStacks.end()) {
         return &meExpr;
       }
@@ -200,7 +201,7 @@ void MeSSAUpdate::RenameStmts(BB &bb) {
       continue;
     }
     CHECK_FATAL(lhsVar != nullptr, "stmt doesn't have lhs?");
-    auto it = renameStacks.find(lhsVar->GetOStIdx());
+    auto it = renameStacks.find(lhsVar->GetOstIdx());
     if (it == renameStacks.end()) {
       continue;
     }
@@ -261,7 +262,7 @@ void MeSSAUpdate::Run() {
   InsertPhis();
   // push zero-version varmeexpr nodes to rename stacks
   for (auto it = renameStacks.begin(); it != renameStacks.end(); ++it) {
-    const OriginalSt *ost = ssaTab.GetSymbolOriginalStFromID(it->first);
+    OriginalSt *ost = ssaTab.GetSymbolOriginalStFromID(it->first);
     VarMeExpr *zeroVersVar = irMap.GetOrCreateZeroVersionVarMeExpr(*ost);
     MapleStack<ScalarMeExpr*> *renameStack = it->second;
     renameStack->push(zeroVersVar);

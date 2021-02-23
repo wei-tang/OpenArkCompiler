@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -22,14 +22,13 @@ namespace maple {
 class MeIRMap;
 class HDSE {
  public:
-  HDSE(MIRModule &mod, const MapleVector<BB*> &bbVec, BB &commonEntryBB, BB &commonExitBB, SSATab &ssaTab,
+  HDSE(MIRModule &mod, const MapleVector<BB*> &bbVec, BB &commonEntryBB, BB &commonExitBB,
        Dominance &pDom, IRMap &map, bool enabledDebug = false, bool decouple = false)
       : hdseDebug(enabledDebug),
         mirModule(mod),
         bbVec(bbVec),
         commonEntryBB(commonEntryBB),
         commonExitBB(commonExitBB),
-        ssaTab(ssaTab),
         postDom(pDom),
         irMap(map),
         bbRequired(bbVec.size(), false),
@@ -100,7 +99,6 @@ class HDSE {
   MapleVector<BB*> bbVec;
   BB &commonEntryBB;
   BB &commonExitBB;
-  SSATab &ssaTab;
   Dominance &postDom;
   IRMap &irMap;
   std::vector<bool> bbRequired;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -88,11 +88,11 @@ class DefPoint {
     }
   }
 
-  const OStIdx &GetOStIdx() const {
+  const OStIdx GetOStIdx() const {
     if (defKind == kDefByPi) {
-      return value.pi->GetRHS()->GetOStIdx();
+      return value.pi->GetRHS()->GetOstIdx();
     } else {
-      return value.phi->GetOpnd(0)->GetOStIdx();
+      return value.phi->GetOpnd(0)->GetOstIdx();
     }
   }
 

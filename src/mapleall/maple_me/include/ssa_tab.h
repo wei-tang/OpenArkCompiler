@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -64,13 +64,6 @@ class SSATab : public AnalysisResult {
     OriginalSt *ost = originalStTable.GetOriginalStFromID(id);
     ASSERT(ost->IsSymbolOst(), "GetSymbolOriginalStFromid: id has wrong ost type");
     return ost;
-  }
-
-  const MIRSymbol *GetMIRSymbolFromOriginalSt(const OriginalSt &ost) const {
-    return originalStTable.GetMIRSymbolFromOriginalSt(ost);
-  }
-  MIRSymbol *GetMIRSymbolFromOriginalSt(OriginalSt &ost) {
-    return originalStTable.GetMIRSymbolFromOriginalSt(ost);
   }
 
   PrimType GetPrimType(OStIdx idx) const {

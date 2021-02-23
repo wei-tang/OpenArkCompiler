@@ -26,12 +26,12 @@ FEFileType::FEFileType() {
 FEFileType::FileType FEFileType::GetFileTypeByExtName(const std::string &extName) const {
   if (extName.empty()) {
     WARN(kLncWarn, "Empty input for GetFileTypeByExtName()...skipped");
-    return kUnknown;
+    return kUnknownType;
   }
   auto itExtNameType = mapExtNameType.find(extName);
   if (itExtNameType == mapExtNameType.end()) {
     WARN(kLncWarn, "Unknown file extension name %s...skipped", extName.c_str());
-    return kUnknown;
+    return kUnknownType;
   }
   return itExtNameType->second;
 }
@@ -45,10 +45,11 @@ FEFileType::FileType FEFileType::GetFileTypeByMagicNumber(const std::string &pat
   std::ifstream file(pathName);
   if (!file.is_open()) {
     ERR(kLncErr, "unable to open file %s", pathName.c_str());
-    return kUnknown;
+    return kUnknownType;
   }
   uint32 magic = 0;
-  (void)file.read(reinterpret_cast<char*>(&magic), sizeof(uint32));
+  int lenght = static_cast<int>(sizeof(uint32));
+  (void)file.read(reinterpret_cast<char*>(&magic), lenght);
   file.close();
   return GetFileTypeByMagicNumber(magic);
 }
@@ -59,7 +60,7 @@ FEFileType::FileType FEFileType::GetFileTypeByMagicNumber(BasicIOMapFile &file) 
   uint32 magic = fileReader.ReadUInt32(success);
   if (!success) {
     ERR(kLncErr, "unable to open file %s", file.GetFileName().c_str());
-    return kUnknown;
+    return kUnknownType;
   }
   return GetFileTypeByMagicNumber(magic);
 }
@@ -69,7 +70,7 @@ FEFileType::FileType FEFileType::GetFileTypeByMagicNumber(uint32 magic) const {
   if (it != mapMagicType.end()) {
     return it->second;
   } else {
-    return kUnknown;
+    return kUnknownType;
   }
 }
 
@@ -85,10 +86,12 @@ void FEFileType::LoadDefault() {
   RegisterMagicNumber(kClass, kMagicClass);
   RegisterExtName(kJar, "jar");
   RegisterMagicNumber(kJar, kMagicZip);
+  RegisterExtName(kDex, "dex");
+  RegisterMagicNumber(kDex, kMagicDex);
 }
 
 void FEFileType::RegisterExtName(FileType argFileType, const std::string &extName) {
-  if (extName.empty() || argFileType == kUnknown) {
+  if (extName.empty() || argFileType == kUnknownType) {
     WARN(kLncWarn, "Invalid input for RegisterMagicNumber()...skipped");
     return;
   }
@@ -97,7 +100,7 @@ void FEFileType::RegisterExtName(FileType argFileType, const std::string &extNam
 }
 
 void FEFileType::RegisterMagicNumber(FileType argFileType, uint32 magicNumber) {
-  if (magicNumber == 0 || argFileType == kUnknown) {
+  if (magicNumber == 0 || argFileType == kUnknownType) {
     WARN(kLncWarn, "Invalid input for RegisterMagicNumber()...skipped");
     return;
   }
@@ -127,7 +130,7 @@ std::string FEFileType::GetName(const std::string &pathName, bool withExt) {
   }
   size_t posDot = name.find_last_of('.');
   if (posDot != std::string::npos) {
-    return name.substr(0, pos);
+    return name.substr(0, posDot);
   } else {
     return name;
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -180,17 +180,17 @@ InequalEdge *InequalityGraph::HasEdge(ESSABaseNode &from, ESSABaseNode &to, Ineq
   return nullptr;
 }
 
-std::string InequalityGraph::GetName(const MeExpr &meExpr, IRMap &irMap) const {
+std::string InequalityGraph::GetName(const MeExpr &meExpr) const {
   std::string name;
   MeExprOp meOp = meExpr.GetMeOp();
   CHECK_FATAL(meOp == kMeOpVar, "must be VarMeExpr");
   const auto *varMeExpr = static_cast<const VarMeExpr*>(&meExpr);
-  MIRSymbol *sym = irMap.GetSSATab().GetMIRSymbolFromID(varMeExpr->GetOStIdx());
+  MIRSymbol *sym = varMeExpr->GetOst()->GetMIRSymbol();
   name = sym->GetName() + "\\nmx" + std::to_string(meExpr.GetExprID());
   return name;
 }
 
-std::string InequalityGraph::GetName(ESSABaseNode &node, IRMap &irMap) const {
+std::string InequalityGraph::GetName(ESSABaseNode &node) const {
   std::string name;
   if (node.GetKind() == kConstNode) {
     return std::to_string((*static_cast<ESSAConstNode*>(&node)).GetValue());
@@ -210,7 +210,7 @@ std::string InequalityGraph::GetName(ESSABaseNode &node, IRMap &irMap) const {
       return name;
     }
   }
-  MIRSymbol *sym = irMap.GetSSATab().GetMIRSymbolFromID(varMeExpr->GetOStIdx());
+  MIRSymbol *sym = varMeExpr->GetOst()->GetMIRSymbol();
   name = sym->GetName() + "\\nmx" + std::to_string(meExpr->GetExprID());
   if (node.GetKind() == kArrayNode) {
     name += ".length";
@@ -243,40 +243,40 @@ std::string InequalityGraph::GetColor(EdgeType type) const {
   }
 }
 
-void InequalityGraph::DumpDotEdges(IRMap &irMap, const std::pair<ESSABaseNode*, InequalEdge*> &map,
+void InequalityGraph::DumpDotEdges(const std::pair<ESSABaseNode*, InequalEdge*> &map,
                                    std::ostream &out, std::string &from) const {
   ASSERT_NOT_NULL(map.second);
   if (map.second->IsVarValue()) {
-    std::string to = GetName(*(map.first), irMap);
+    std::string to = GetName(*(map.first));
     std::string positive = map.second->GetVarValue().IsPositive() ? "" : "-";
     std::string color = GetColor(map.second->GetEdgeType());
     out << "\"" << from << "\" -> \"" << to << "\" ";
-    out << "[label=\"" << positive << GetName(map.second->GetVarValue().GetVarMeExpr(), irMap)
+    out << "[label=\"" << positive << GetName(map.second->GetVarValue().GetVarMeExpr())
         << "\" " << color << "];\n";
   } else {
-    std::string to = GetName(*(map.first), irMap);
+    std::string to = GetName(*(map.first));
     std::string color = GetColor(map.second->GetEdgeType());
     out << "\"" << from << "\" -> \"" << to << "\" ";
     out << "[label=\"" << map.second->GetConstValue() << "\" " << color << "];\n";
   }
 }
 
-void InequalityGraph::DumpDotNodes(IRMap &irMap, std::ostream &out, DumpType dumpType,
+void InequalityGraph::DumpDotNodes(std::ostream &out, DumpType dumpType,
                                    const std::map<int64, std::unique_ptr<ESSABaseNode>> &nodes) const {
   for (auto iter = nodes.begin(); iter != nodes.end(); ++iter) {
-    std::string from = GetName(*(iter->second), irMap);
+    std::string from = GetName(*(iter->second));
     out << "\"" << from << "\";\n";
     for (auto iterConstEdges = iter->second.get()->GetOutWithConstEdgeMap().begin();
          iterConstEdges != iter->second.get()->GetOutWithConstEdgeMap().end(); ++iterConstEdges) {
       EdgeType edgeType = iterConstEdges->second->GetEdgeType();
       if (dumpType == kDumpNone) {
-        DumpDotEdges(irMap, *iterConstEdges, out, from);
+        DumpDotEdges(*iterConstEdges, out, from);
       } else if ((dumpType == kDumpUpperAndNone) &&
                  (edgeType == kUpper || edgeType == kNone || edgeType == kUpperInvalid || edgeType == kNoneInvalid)) {
-        DumpDotEdges(irMap, *iterConstEdges, out, from);
+        DumpDotEdges(*iterConstEdges, out, from);
       } else if ((dumpType == kDumpLowerAndNone) &&
                  (edgeType == kLower || edgeType == kNone || edgeType == kLowerInvalid || edgeType == kNoneInvalid)) {
-        DumpDotEdges(irMap, *iterConstEdges, out, from);
+        DumpDotEdges(*iterConstEdges, out, from);
       }
     }
     if (iter->second.get()->GetKind() == kPhiNode) {
@@ -285,15 +285,15 @@ void InequalityGraph::DumpDotNodes(IRMap &irMap, std::ostream &out, DumpType dum
            iterConstEdges != phiNode->GetOutPhiEdgeMap().end(); ++iterConstEdges) {
         EdgeType edgeType = iterConstEdges->second->GetEdgeType();
         if (dumpType == kDumpNone) {
-          DumpDotEdges(irMap, *iterConstEdges, out, from);
+          DumpDotEdges(*iterConstEdges, out, from);
         } else if ((dumpType == kDumpUpperAndNone) &&
                    (edgeType == kUpper || edgeType == kNone ||
                     edgeType == kUpperInvalid || edgeType == kNoneInvalid)) {
-          DumpDotEdges(irMap, *iterConstEdges, out, from);
+          DumpDotEdges(*iterConstEdges, out, from);
         } else if ((dumpType == kDumpLowerAndNone) &&
                    (edgeType == kLower || edgeType == kNone ||
                     edgeType == kLowerInvalid || edgeType == kNoneInvalid)) {
-          DumpDotEdges(irMap, *iterConstEdges, out, from);
+          DumpDotEdges(*iterConstEdges, out, from);
         }
       }
     }
@@ -301,27 +301,27 @@ void InequalityGraph::DumpDotNodes(IRMap &irMap, std::ostream &out, DumpType dum
          iterVarEdges != iter->second.get()->GetOutWithVarEdgeMap().end(); ++iterVarEdges) {
       EdgeType edgeType = iterVarEdges->second->GetEdgeType();
       if (dumpType == kDumpNone) {
-        DumpDotEdges(irMap, *iterVarEdges, out, from);
+        DumpDotEdges(*iterVarEdges, out, from);
       } else if ((dumpType == kDumpUpperAndNone) &&
                  (edgeType == kUpper || edgeType == kNone || edgeType == kUpperInvalid || edgeType == kNoneInvalid)) {
-        DumpDotEdges(irMap, *iterVarEdges, out, from);
+        DumpDotEdges(*iterVarEdges, out, from);
       } else if ((dumpType == kDumpLowerAndNone) &&
                  (edgeType == kLower || edgeType == kNone || edgeType == kLowerInvalid || edgeType == kNoneInvalid)) {
-        DumpDotEdges(irMap, *iterVarEdges, out, from);
+        DumpDotEdges(*iterVarEdges, out, from);
       }
     }
   }
 }
 
-void InequalityGraph::DumpDotFile(IRMap &irMap, DumpType dumpType) const {
+void InequalityGraph::DumpDotFile(DumpType dumpType) const {
   std::filebuf fileBuf;
   std::string dumpT = dumpType == kDumpUpperAndNone ? "Upper_" : "Lower_";
   std::string outFile =  dumpT + meFunction->GetName() + "-inequalityGraph.dot";
   fileBuf.open(outFile, std::ios::trunc | std::ios::out);
   std::ostream essaDotFile(&fileBuf);
   essaDotFile << "digraph InequalityGraph {\n";
-  DumpDotNodes(irMap, essaDotFile, dumpType, constNodes);
-  DumpDotNodes(irMap, essaDotFile, dumpType, varNodes);
+  DumpDotNodes(essaDotFile, dumpType, constNodes);
+  DumpDotNodes(essaDotFile, dumpType, varNodes);
   essaDotFile << "}\n";
   fileBuf.close();
 }

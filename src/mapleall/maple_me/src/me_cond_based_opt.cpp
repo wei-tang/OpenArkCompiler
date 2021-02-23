@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -197,7 +197,7 @@ bool MeCondBased::PointerWasDereferencedRightAfter(const VarMeExpr &var, const U
 }
 
 bool MeCondBased::IsNotNullValue(const VarMeExpr &varMeExpr, const UnaryMeStmt &assertMeStmt, const BB &bb) const {
-  const OriginalSt *varOst = func->GetMeSSATab()->GetSymbolOriginalStFromID(varMeExpr.GetOStIdx());
+  const OriginalSt *varOst = varMeExpr.GetOst();
   if (varOst->IsFormal() && varOst->GetMIRSymbol()->GetName() == kStrThisPointer) {
     return true;
   }
@@ -208,7 +208,7 @@ bool MeCondBased::IsNotNullValue(const VarMeExpr &varMeExpr, const UnaryMeStmt &
     }
     if (rhs->GetMeOp() == kMeOpVar) {
       auto *rhsVar = static_cast<VarMeExpr*>(rhs);
-      const OriginalSt *ost = func->GetMeSSATab()->GetSymbolOriginalStFromID(rhsVar->GetOStIdx());
+      const OriginalSt *ost = rhsVar->GetOst();
       if (ost->IsFormal() && ost->GetMIRSymbol()->GetName() == kStrThisPointer) {
         return true;
       }
@@ -256,7 +256,7 @@ AnalysisResult *MeDoCondBasedRC::Run(MeFunction *func, MeFuncResultMgr *m, Modul
         continue;
       }
       auto *varMeExpr = static_cast<VarMeExpr*>(decref.GetOpnd());
-      const OriginalSt *ost = func->GetMeSSATab()->GetSymbolOriginalStFromID(varMeExpr->GetOStIdx());
+      const OriginalSt *ost = varMeExpr->GetOst();
       if (!ost->IsLocal() && ost->IsVolatile()) {
         // global volatile cannot be optimized
         continue;

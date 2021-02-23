@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -60,6 +60,10 @@ class FEFunctionDemo : public FEFunction {
     return false;
   }
 
+  bool IsNative() override {
+    return false;
+  }
+
   bool VerifyGeneral() override {
     return false;
   }
@@ -113,11 +117,11 @@ class FEFunctionTest : public testing::Test, public RedirectBuffer {
   ~FEFunctionTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for FEFunctionTest");
+    mp = memPoolCtrler.NewMemPool("MemPool for FEFunctionTest", false /* isLocalPool */);
   }
 
   static void TearDownTestCase() {
-    memPoolCtrler.DeleteMemPool(mp);
+    delete mp;
     mp = nullptr;
   }
 };
@@ -232,8 +236,8 @@ void FEFunctionDemo::LoadGenStmtDemo3() {
   stmt9->SetFallThru(false);
   (void)NewGenStmt<GeneralStmtAuxPost>(10);
   // Link
-  stmt2->AddSucc(stmt8);
-  stmt8->AddPred(stmt2);
+  stmt2->AddSucc(*stmt8);
+  stmt8->AddPred(*stmt2);
 }
 
 TEST_F(FEFunctionTest, GeneralBBBuildForCFG) {

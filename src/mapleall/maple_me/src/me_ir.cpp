@@ -56,22 +56,6 @@ bool MeExpr::IsTheSameWorkcand(const MeExpr &expr) const {
   return IsUseSameSymbol(expr);
 }
 
-void MeExpr::UpdateDepth() {
-  uint8 maxDepth = 0;
-  for (int32 i = 0; i < GetNumOpnds(); ++i) {
-    MeExpr *opnd = GetOpnd(i);
-    if (opnd == nullptr) {
-      continue;
-    }
-    uint8 curDepth = opnd->GetDepth();
-    if (curDepth > maxDepth) {
-      maxDepth = curDepth;
-    }
-  }
-  ASSERT(maxDepth < UINT8_MAX, "runtime check error");
-  depth = static_cast<uint8>(maxDepth + 1);
-}
-
 // get the definition of this
 // for example:
 // v2 = x + b
@@ -132,10 +116,10 @@ bool RegMeExpr::IsSameVariableValue(const VarMeExpr &expr) const {
 // this = v1
 // this->ResolveVarMeValue() returns v3;
 // if no resolved VarMeExpr, return this
-VarMeExpr &VarMeExpr::ResolveVarMeValue(SSATab &ssaTab) {
+VarMeExpr &VarMeExpr::ResolveVarMeValue() {
   VarMeExpr *cmpop0 = this;
   while (true) {
-    if (cmpop0->GetDefBy() != kDefByStmt || cmpop0->IsVolatile(ssaTab)) {
+    if (cmpop0->GetDefBy() != kDefByStmt || cmpop0->IsVolatile()) {
       break;
     }
 
@@ -364,6 +348,9 @@ bool IvarMeExpr::IsUseSameSymbol(const MeExpr &expr) const {
 }
 
 bool IvarMeExpr::IsVolatile() const {
+  if (volatileFromBaseSymbol) {
+    return true;
+  }
   auto *type = static_cast<MIRPtrType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx));
   MIRType *pointedType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(type->GetPointedTyIdx());
   if (fieldID == 0) {
@@ -459,7 +446,7 @@ bool ScalarMeExpr::IsUseSameSymbol(const MeExpr &expr) const {
     return false;
   }
   auto &scalarMeExpr = static_cast<const ScalarMeExpr&>(expr);
-  return ostIdx == scalarMeExpr.ostIdx;
+  return ost == scalarMeExpr.ost;
 }
 
 BB *ScalarMeExpr::DefByBB() const{
@@ -517,14 +504,14 @@ BB *ScalarMeExpr::GetDefByBBMeStmt(const Dominance &dominance, MeStmtPtr &defMeS
   }
 }
 
-bool VarMeExpr::IsPureLocal(const SSATab &ssaTab, const MIRFunction &irFunc) const {
-  const MIRSymbol *st = ssaTab.GetMIRSymbolFromID(GetOStIdx());
+bool VarMeExpr::IsPureLocal(const MIRFunction &irFunc) const {
+  const MIRSymbol *st = GetOst()->GetMIRSymbol();
   return st->IsLocal() && !irFunc.IsAFormal(st);
 }
 
-bool VarMeExpr::IsZeroVersion(const SSATab &ssaTab) const {
+bool VarMeExpr::IsZeroVersion() const {
   ASSERT(GetVstIdx() != 0, "VarMeExpr::IsZeroVersion: cannot determine because vstIdx is 0");
-  return ssaTab.IsInitVersion(GetVstIdx(), GetOstIdx());
+  return GetOst()->GetZeroVersionIndex() == GetVstIdx();
 }
 
 bool AddrofMeExpr::IsUseSameSymbol(const MeExpr &expr) const {
@@ -725,7 +712,7 @@ MeExpr *AddroffuncMeExpr::GetIdenticalExpr(MeExpr &expr, bool isConstructor) con
 }
 
 void MePhiNode::Dump(const IRMap *irMap) const {
-  const OriginalSt *ost =  irMap->GetSSATab().GetOriginalStFromID(lhs->GetOStIdx());
+  const OriginalSt *ost =  lhs->GetOst();
   bool isSym = ost->IsSymbolOst();
   CHECK_FATAL(lhs != nullptr, "lsh is null");
   if (isSym) {
@@ -733,14 +720,14 @@ void MePhiNode::Dump(const IRMap *irMap) const {
       LogInfo::MapleLogger() << "PI_ADD VAR:";
     }
     LogInfo::MapleLogger() << "VAR:";
-    irMap->GetSSATab().GetOriginalStFromID(lhs->GetOStIdx())->Dump();
+    ost->Dump();
   } else {
-    PregIdx16 regId = static_cast<RegMeExpr*>(lhs)->GetRegIdx();
+    PregIdx regId = static_cast<RegMeExpr*>(lhs)->GetRegIdx();
     LogInfo::MapleLogger() << "REGVAR: " << regId;
     LogInfo::MapleLogger() << "(%"
                            << irMap->GetMIRModule().CurFunction()
                                                    ->GetPregTab()
-                                                   ->PregFromPregIdx(static_cast<PregIdx>(regId))
+                                                   ->PregFromPregIdx(regId)
                                                    ->GetPregNo()
                            << ")";
   }
@@ -762,26 +749,32 @@ void MePhiNode::Dump(const IRMap *irMap) const {
 void VarMeExpr::Dump(const IRMap *irMap, int32) const {
   CHECK_NULL_FATAL(irMap);
   LogInfo::MapleLogger() << "VAR ";
-  irMap->GetSSATab().GetOriginalStFromID(GetOstIdx())->Dump();
-  LogInfo::MapleLogger() << " (field)" << fieldID;
+  GetOst()->Dump();
+  LogInfo::MapleLogger() << " (field)" << GetOst()->GetFieldID();
   LogInfo::MapleLogger() << " mx" << GetExprID();
-  if (IsZeroVersion(irMap->GetSSATab())) {
+  if (IsZeroVersion()) {
     LogInfo::MapleLogger() << "<Z>";
   }
 }
 
 void RegMeExpr::Dump(const IRMap *irMap, int32) const {
   CHECK_NULL_FATAL(irMap);
-  LogInfo::MapleLogger() << "REGINDX:" << regIdx;
+  LogInfo::MapleLogger() << "REGINDX:" << GetRegIdx();
   LogInfo::MapleLogger()
       << " %"
-      << irMap->GetMIRModule().CurFunction()->GetPregTab()->PregFromPregIdx(static_cast<PregIdx>(regIdx))->GetPregNo();
+      << irMap->GetMIRModule().CurFunction()->GetPregTab()->PregFromPregIdx(GetRegIdx())->GetPregNo();
   LogInfo::MapleLogger() << " mx" << GetExprID();
 }
 
 void AddroffuncMeExpr::Dump(const IRMap*, int32) const {
   LogInfo::MapleLogger() << "ADDROFFUNC:";
   LogInfo::MapleLogger() << GlobalTables::GetFunctionTable().GetFunctionFromPuidx(puIdx)->GetName();
+  LogInfo::MapleLogger() << " mx" << GetExprID();
+}
+
+void AddroflabelMeExpr::Dump(const IRMap *irMap, int32) const {
+  LogInfo::MapleLogger() << "ADDROFLABEL:";
+  LogInfo::MapleLogger() << " @" << irMap->GetMIRModule().CurFunction()->GetLabelName(labelIdx);
   LogInfo::MapleLogger() << " mx" << GetExprID();
 }
 
@@ -908,12 +901,12 @@ void NaryMeExpr::Dump(const IRMap *irMap, int32 indent) const {
   }
 }
 
-MeExpr *DassignMeStmt::GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
+MeExpr *DassignMeStmt::GetLHSRef(bool excludeLocalRefVar) {
   VarMeExpr *lhsOpnd = GetVarLHS();
   if (lhsOpnd->GetPrimType() != PTY_ref) {
     return nullptr;
   }
-  const OriginalSt *ost = ssaTab.GetOriginalStFromID(lhsOpnd->GetOStIdx());
+  const OriginalSt *ost = lhsOpnd->GetOst();
   if (ost->IsIgnoreRC()) {
     return nullptr;
   }
@@ -923,12 +916,12 @@ MeExpr *DassignMeStmt::GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
   return lhsOpnd;
 }
 
-MeExpr *MaydassignMeStmt::GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
+MeExpr *MaydassignMeStmt::GetLHSRef(bool excludeLocalRefVar) {
   VarMeExpr *lhs = GetVarLHS();
   if (lhs->GetPrimType() != PTY_ref) {
     return nullptr;
   }
-  const OriginalSt *ost = ssaTab.GetOriginalStFromID(lhs->GetOStIdx());
+  const OriginalSt *ost = lhs->GetOst();
   if (ost->IsIgnoreRC()) {
     return nullptr;
   }
@@ -938,7 +931,7 @@ MeExpr *MaydassignMeStmt::GetLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
   return lhs;
 }
 
-MeExpr *IassignMeStmt::GetLHSRef(SSATab&, bool) {
+MeExpr *IassignMeStmt::GetLHSRef(bool) {
   CHECK_FATAL(lhsVar != nullptr, "lhsVar is null");
   MIRType *baseType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(lhsVar->GetTyIdx());
   ASSERT(baseType != nullptr, "null ptr check");
@@ -976,7 +969,7 @@ MeExpr *IassignMeStmt::GetLHSRef(SSATab&, bool) {
   return lhsVar;
 }
 
-VarMeExpr *AssignedPart::GetAssignedPartLHSRef(SSATab &ssaTab, bool excludeLocalRefVar) {
+VarMeExpr *AssignedPart::GetAssignedPartLHSRef(bool excludeLocalRefVar) {
   if (mustDefList.empty()) {
     return nullptr;
   }
@@ -988,7 +981,7 @@ VarMeExpr *AssignedPart::GetAssignedPartLHSRef(SSATab &ssaTab, bool excludeLocal
   if (theLHS->GetPrimType() != PTY_ref) {
     return nullptr;
   }
-  const OriginalSt *ost = ssaTab.GetOriginalStFromID(theLHS->GetOStIdx());
+  const OriginalSt *ost = theLHS->GetOst();
   if (ost->IsIgnoreRC()) {
     return nullptr;
   }
@@ -1085,7 +1078,7 @@ void ChiMeNode::Dump(const IRMap *irMap) const {
   CHECK_FATAL(meRHS != nullptr, "Node doesn't have rhs?");
   if (!DumpOptions::GetSimpleDump()) {
     LogInfo::MapleLogger() << "VAR:";
-    irMap->GetSSATab().GetOriginalStFromID(meLHS->GetOStIdx())->Dump();
+    meLHS->GetOst()->Dump();
   }
   LogInfo::MapleLogger() << " mx" << meLHS->GetExprID() << " = CHI{";
   LogInfo::MapleLogger() << "mx" << meRHS->GetExprID() << "}";
@@ -1293,7 +1286,7 @@ bool MeStmt::IsTheSameWorkcand(const MeStmt &mestmt) const {
     return false;
   }
   if (op == OP_dassign) {
-    if (this->GetVarLHS()->GetOStIdx() != mestmt.GetVarLHS()->GetOStIdx()) {
+    if (this->GetVarLHS()->GetOst() != mestmt.GetVarLHS()->GetOst()) {
       return false;
     }
   } else if (op == OP_intrinsiccallwithtype) {
@@ -1317,7 +1310,7 @@ bool MeStmt::IsTheSameWorkcand(const MeStmt &mestmt) const {
     if (thisCass->MustDefListSize() > 0) {
       auto *thisVarMeExpr = static_cast<const VarMeExpr*>(thisCass->GetAssignedLHS());
       auto *varMeExpr = static_cast<const VarMeExpr*>(cass.GetAssignedLHS());
-      if (thisVarMeExpr->GetOStIdx() != varMeExpr->GetOStIdx()) {
+      if (thisVarMeExpr->GetOst() != varMeExpr->GetOst()) {
         return false;
       }
     }
@@ -1344,8 +1337,8 @@ void AssertMeStmt::Dump(const IRMap *irMap) const {
   LogInfo::MapleLogger() << '\n';
 }
 
-bool VarMeExpr::IsVolatile(const SSATab &ssatab) const {
-  const OriginalSt *ost = ssatab.GetOriginalStFromID(GetOstIdx());
+bool VarMeExpr::IsVolatile() const {
+  const OriginalSt *ost = GetOst();
   if (!ost->IsSymbolOst()) {
     return false;
   }
@@ -1354,15 +1347,15 @@ bool VarMeExpr::IsVolatile(const SSATab &ssatab) const {
     return true;
   }
   MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(sym->GetTyIdx());
-  if (fieldID == 0) {
+  if (ost->GetFieldID() == 0) {
     return (type->HasVolatileField());
   }
   auto *structType = static_cast<MIRStructType*>(type);
-  return structType->IsFieldVolatile(fieldID);
+  return structType->IsFieldVolatile(ost->GetFieldID());
 }
 
-bool VarMeExpr::PointsToStringLiteral(SSATab &ssaTab) {
-  VarMeExpr &var = ResolveVarMeValue(ssaTab);
+bool VarMeExpr::PointsToStringLiteral() {
+  VarMeExpr &var = ResolveVarMeValue();
   if (var.GetDefBy() == kDefByMustDef) {
     MeStmt *baseStmt = var.GetDefMustDef().GetBase();
     if (baseStmt->GetOp() == OP_callassigned) {
@@ -1373,7 +1366,7 @@ bool VarMeExpr::PointsToStringLiteral(SSATab &ssaTab) {
       }
     }
   }
-  const OriginalSt *ost = ssaTab.GetOriginalStFromID(var.GetOstIdx());
+  const OriginalSt *ost = var.GetOst();
   if (!ost->IsSymbolOst()) {
     return false;
   }
@@ -1386,7 +1379,7 @@ bool VarMeExpr::PointsToStringLiteral(SSATab &ssaTab) {
 
 MeExpr *MeExpr::FindSymAppearance(OStIdx oidx) {
   if (meOp == kMeOpVar) {
-    if (static_cast<VarMeExpr*>(this)->GetOStIdx() == oidx) {
+    if (static_cast<VarMeExpr*>(this)->GetOstIdx() == oidx) {
       return this;
     }
     return nullptr;
@@ -1440,7 +1433,7 @@ bool MeExpr::IsDexMerge() const {
 
 // check if MeExpr can be a pointer to something that requires incref for its
 // assigned target
-bool MeExpr::PointsToSomethingThatNeedsIncRef(SSATab &ssaTab) {
+bool MeExpr::PointsToSomethingThatNeedsIncRef() {
   if (op == OP_retype) {
     return true;
   }
@@ -1452,7 +1445,7 @@ bool MeExpr::PointsToSomethingThatNeedsIncRef(SSATab &ssaTab) {
   }
   if (meOp == kMeOpVar) {
     auto *var = static_cast<VarMeExpr*>(this);
-    if (var->PointsToStringLiteral(ssaTab)) {
+    if (var->PointsToStringLiteral()) {
       return false;
     }
     return true;

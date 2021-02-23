@@ -36,7 +36,7 @@ class JBCOpcodeHelper {
 
  LLT_PRIVATE:
   using FuncPtrGetBaseTypeName = std::vector<std::string> (JBCOpcodeHelper::*)(const jbc::JBCOp &op, bool &success);
-  std::vector<std::string> GetBaseTypeNamesForOPDefault(const jbc::JBCOp &op, bool &success) const;
+  std::vector<std::string> GetBaseTypeNamesForOPDefault(bool &success) const;
   std::vector<std::string> GetBaseTypeNamesForOPConst(const jbc::JBCOp &op, bool &success);
   std::vector<std::string> GetBaseTypeNamesForOPFieldOpr(const jbc::JBCOp &op, bool &success);
   std::vector<std::string> GetBaseTypeNamesForOPInvoke(const jbc::JBCOp &op, bool &success);

@@ -21,7 +21,7 @@
 namespace maple {
 class FEUtilJava {
  public:
-  static std::vector<std::string> SolveMethodSignature(std::string signature, bool inMpl = true);
+  static std::vector<std::string> SolveMethodSignature(const std::string &signature);
   static std::string SolveParamNameInJavaFormat(const std::string &signature);
 
  private:

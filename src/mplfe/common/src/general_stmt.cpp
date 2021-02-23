@@ -19,11 +19,11 @@
 namespace maple {
 // ---------- GeneralStmt ----------
 GeneralStmt::GeneralStmt()
-    : genKind(kStmtDefault), isFallThru(true), isAuxPre(false), isAuxPost(false), id(0) {
+    : genKind(kStmtDefault), isFallThru(true), isAuxPre(false), isAuxPost(false), isThrowable(false), id(0) {
 }
 
 GeneralStmt::GeneralStmt(GeneralStmtKind argGenKind)
-    : genKind(argGenKind), isFallThru(true), isAuxPre(false), isAuxPost(false), id(0) {
+    : genKind(argGenKind), isFallThru(true), isAuxPre(false), isAuxPost(false), isThrowable(false), id(0) {
 }
 
 void GeneralStmt::DumpImpl(const std::string &prefix) const {
@@ -54,6 +54,10 @@ std::string GeneralStmt::GetStmtKindNameImpl() const {
 }
 
 bool GeneralStmt::IsStmtInstImpl() const {
+  return false;
+}
+
+bool GeneralStmt::IsBranchImpl() const {
   return false;
 }
 }  // namespace maple

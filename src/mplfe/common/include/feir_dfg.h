@@ -21,10 +21,8 @@ class FEIRDFG {
  public:
   FEIRDFG() = default;
   ~FEIRDFG() = default;
-  static void CalculateDefUseByUseDef(std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapDefUse,
-                                      const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapUseDef);
-  static void CalculateUseDefByDefUse(std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapUseDef,
-                                      const std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>> &mapDefUse);
+  static void CalculateDefUseByUseDef(FEIRDefUseChain &mapDefUse, const FEIRUseDefChain &mapUseDef);
+  static void CalculateUseDefByDefUse(FEIRUseDefChain &mapUseDef, const FEIRDefUseChain &mapDefUse);
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FEIR_DFG_H

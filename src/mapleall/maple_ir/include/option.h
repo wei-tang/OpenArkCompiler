@@ -89,6 +89,16 @@ class Options : public MapleDriverOptionBase {
 #if MIR_JAVA
   static bool skipVirtualMethod;
 #endif
+  // Ready to be deleted.
+  static bool noRC;
+  static bool analyzeCtor;
+  static bool strictNaiveRC;
+  static bool gcOnly;
+  static bool rcOpt1;
+  static std::string classMetaProFile;
+  static std::string methodMetaProfile;
+  static std::string fieldMetaProFile;
+  static std::string reflectStringProFile;
   static bool nativeOpt;
   static bool O2;
   static bool noDot;
@@ -119,6 +129,15 @@ class Options : public MapleDriverOptionBase {
   static bool profileStaticFields;
   static bool genIRProfile;
   static bool profileTest;
+  static std::string classLoaderInvocationList;
+  static bool dumpClassLoaderInvocation;
+  static unsigned int warningLevel;
+  static bool lazyBinding;
+  static bool hotFix;
+  static bool compactMeta;
+  static bool genPGOReport;
+  static bool verify;
+  static uint32 inlineCache;
   static bool checkArrayStore;
   static bool noComment;
  private:
