@@ -32,10 +32,10 @@ void GeneralCFG::BuildBB() {
 }
 
 void GeneralCFG::BuildBasicBB() {
-  const FELinkListNode *nodeStmt = stmtHead.GetNext();
+  FELinkListNode *nodeStmt = stmtHead.GetNext();
   GeneralBB *currBB = nullptr;
   while (nodeStmt != nullptr) {
-    const GeneralStmt *stmt = static_cast<const GeneralStmt*>(nodeStmt);
+    GeneralStmt *stmt = static_cast<GeneralStmt*>(nodeStmt);
     if (stmt->GetGeneralStmtKind() == kStmtDummyEnd) {
       break;
     }
@@ -46,7 +46,7 @@ void GeneralCFG::BuildBasicBB() {
         bbTail->InsertBefore(currBB);
       }
       CHECK_FATAL(currBB != nullptr, "nullptr check of currBB");
-      currBB->AppendStmt(stmt);
+      currBB->AppendStmt(*stmt);
       // check end of BB
       if (stmt->IsFallThru() == false || stmt->GetGeneralStmtKind() == GeneralStmtKind::kStmtMultiOut) {
         currBB = nullptr;
@@ -68,7 +68,7 @@ void GeneralCFG::AppendAuxStmt() {
         break;
       }
       if (stmt->IsAuxPre()) {
-        bb->AddStmtAuxPre(stmt);
+        bb->AddStmtAuxPre(*stmt);
       } else {
         break;
       }
@@ -82,7 +82,7 @@ void GeneralCFG::AppendAuxStmt() {
         break;
       }
       if (stmt->IsAuxPost()) {
-        bb->AddStmtAuxPost(stmt);
+        bb->AddStmtAuxPost(*stmt);
       } else {
         break;
       }
@@ -117,8 +117,8 @@ bool GeneralCFG::BuildCFG() {
   while (nodeBB != nullptr && nodeBB != bbTail.get()) {
     GeneralBB *bb = static_cast<GeneralBB*>(nodeBB);
     if (firstBB) {
-      bb->AddPredBB(bbHead.get());
-      bbHead->AddSuccBB(bb);
+      bb->AddPredBB(*(bbHead.get()));
+      bbHead->AddSuccBB(*bb);
       firstBB = false;
     }
     const GeneralStmt *locStmtTail = bb->GetStmtNoAuxTail();
@@ -130,16 +130,16 @@ bool GeneralCFG::BuildCFG() {
         return false;
       }
       GeneralBB *bbNext = static_cast<GeneralBB*>(nodeBBNext);
-      bb->AddSuccBB(bbNext);
-      bbNext->AddPredBB(bb);
+      bb->AddSuccBB(*bbNext);
+      bbNext->AddPredBB(*bb);
     }
     if (locStmtTail->GetGeneralStmtKind() == GeneralStmtKind::kStmtMultiOut) {
       for (GeneralStmt *stmt : locStmtTail->GetSuccs()) {
         auto itBB = mapTargetStmtBB.find(stmt);
         CHECK_FATAL(itBB != mapTargetStmtBB.end(), "Target BB is not found");
         GeneralBB *bbNext = itBB->second;
-        bb->AddSuccBB(bbNext);
-        bbNext->AddPredBB(bb);
+        bb->AddSuccBB(*bbNext);
+        bbNext->AddPredBB(*bb);
       }
     }
     nodeBB = nodeBB->GetNext();

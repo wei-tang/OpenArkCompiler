@@ -29,13 +29,11 @@ JBCCompilerComponent::~JBCCompilerComponent() {
   mp = nullptr;
 }
 
-void JBCCompilerComponent::ReleaseMemPool() {
-  memPoolCtrler.DeleteMemPool(mp);
-  mp = nullptr;
-}
-
-bool JBCCompilerComponent::InitFromOptionsImpl() {
-  return true;
+void JBCCompilerComponent::ReleaseMemPoolImpl() {
+  if (mp != nullptr) {
+    delete mp;
+    mp = nullptr;
+  }
 }
 
 bool JBCCompilerComponent::ParseInputImpl() {
@@ -50,12 +48,16 @@ bool JBCCompilerComponent::ParseInputImpl() {
   CHECK_FATAL(success, "JBCCompilerComponent::ParseInput failed. Exit.");
   const jbc::JBCClass *klass = jbcInput.GetFirstClass();
   while (klass != nullptr) {
-    std::unique_ptr<FEInputStructHelper> structHelper = std::make_unique<JBCClass2FEHelper>(allocator, *klass);
-    structHelpers.push_back(std::move(structHelper));
+    FEInputStructHelper *structHelper = allocator.GetMemPool()->New<JBCClass2FEHelper>(allocator, *klass);
+    structHelpers.push_back(structHelper);
     klass = jbcInput.GetNextClass();
   }
   timer.StopAndDumpTimeMS("JBCCompilerComponent::ParseInput()");
   return success;
+}
+
+bool JBCCompilerComponent::LoadOnDemandTypeImpl() {
+  return false;
 }
 
 bool JBCCompilerComponent::PreProcessDeclImpl() {
@@ -63,7 +65,7 @@ bool JBCCompilerComponent::PreProcessDeclImpl() {
   timer.StartAndDump("JBCCompilerComponent::PreProcessDecl()");
   FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process JBCCompilerComponent::PreProcessDecl() =====");
   bool success = true;
-  for (const std::unique_ptr<FEInputStructHelper> &helper : structHelpers) {
+  for (FEInputStructHelper *helper : structHelpers) {
     ASSERT(helper != nullptr, "nullptr check");
     success = helper->PreProcessDecl() ? success : false;
   }
@@ -76,13 +78,15 @@ bool JBCCompilerComponent::ProcessDeclImpl() {
   timer.StartAndDump("JBCCompilerComponent::ProcessDecl()");
   FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process JBCCompilerComponent::ProcessDecl() =====");
   bool success = true;
-  for (const std::unique_ptr<FEInputStructHelper> &helper : structHelpers) {
+  for (FEInputStructHelper *helper : structHelpers) {
     ASSERT(helper != nullptr, "nullptr check");
     success = helper->ProcessDecl() ? success : false;
   }
   timer.StopAndDumpTimeMS("JBCCompilerComponent::ProcessDecl()");
   return success;
 }
+
+void JBCCompilerComponent::ProcessPragmaImpl() {}
 
 bool JBCCompilerComponent::PreProcessWithoutFunctionImpl() {
   return false;
@@ -92,7 +96,7 @@ bool JBCCompilerComponent::PreProcessWithFunctionImpl() {
   FETimer timer;
   timer.StartAndDump("JBCCompilerComponent::PreProcessWithFunction()");
   FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process JBCCompilerComponent::PreProcessWithFunction() =====");
-  for (const std::unique_ptr<FEInputStructHelper> &structHelper : structHelpers) {
+  for (FEInputStructHelper *structHelper : structHelpers) {
     ASSERT(structHelper != nullptr, "nullptr check");
     for (FEInputMethodHelper *methodHelper : structHelper->GetMethodHelpers()) {
       ASSERT(methodHelper != nullptr, "nullptr check");

@@ -222,7 +222,9 @@ class MIRSymbol {
   }
 
   bool IsFinal() const {
-    return (typeAttrs.GetAttr(ATTR_final) || typeAttrs.GetAttr(ATTR_readonly)) || IsLiteral() || IsLiteralPtr();
+    return ((typeAttrs.GetAttr(ATTR_final) || typeAttrs.GetAttr(ATTR_readonly)) &&
+            staticFinalBlackList.find(GetName()) == staticFinalBlackList.end()) ||
+           IsLiteral() || IsLiteralPtr();
   }
 
   bool IsWeak() const {
@@ -402,6 +404,8 @@ class MIRSymbol {
   bool IsMuidRangeTab() const;
   bool IsArrayClassCache() const;
   bool IsArrayClassCacheName() const;
+  bool IsForcedGlobalFunc() const;
+  bool IsForcedGlobalClassinfo() const;
   bool IsGctibSym() const;
   bool IsPrimordialObject() const;
   bool IgnoreRC() const;
@@ -448,6 +452,8 @@ class MIRSymbol {
   GStrIdx nameStrIdx{ 0 };
   SymbolType value = { nullptr };
   SrcPosition srcPosition;      // where the symbol is defined
+  // following cannot be assumed final even though they are declared final
+  static const std::set<std::string> staticFinalBlackList;
   static GStrIdx reflectClassNameIdx;
   static GStrIdx reflectMethodNameIdx;
   static GStrIdx reflectFieldNameIdx;
@@ -597,7 +603,11 @@ class MIRLabelTable {
     return labelTable;
   }
 
-  MapleUnorderedSet<LabelIdx> GetAddrTakenLabels() {
+  const MapleUnorderedSet<LabelIdx> &GetAddrTakenLabels() const {
+    return addrTakenLabels;
+  }
+
+  MapleUnorderedSet<LabelIdx> &GetAddrTakenLabels() {
     return addrTakenLabels;
   }
 

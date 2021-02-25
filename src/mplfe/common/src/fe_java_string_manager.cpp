@@ -20,10 +20,13 @@
 #include "literalstrname.h"
 #include "fe_config_parallel.h"
 #include "feir_type.h"
+#include "fe_manager.h"
+#include "fe_options.h"
 
 namespace maple {
-FEJavaStringManager::FEJavaStringManager(MIRModule &argModule)
-    : module(argModule) {}
+FEJavaStringManager::FEJavaStringManager(MIRModule &argModule, MIRBuilder &mirBuilderIn)
+    : module(argModule), mirBuilder(mirBuilderIn) {
+}
 
 FEJavaStringManager::~FEJavaStringManager() {
   typeString = nullptr;
@@ -63,13 +66,13 @@ MIRSymbol *FEJavaStringManager::GetLiteralPtrVar(const std::u16string &strU16) c
   return GetLiteralPtrVar(literalVar);
 }
 
-MIRSymbol *FEJavaStringManager::CreateLiteralVar(MIRBuilder &mirBuilder, const std::string &str, bool isFieldValue) {
+MIRSymbol *FEJavaStringManager::CreateLiteralVar(MIRBuilder &mirBuilderIn, const std::string &str, bool isFieldValue) {
   std::u16string strU16;
   (void)namemangler::UTF8ToUTF16(strU16, str);
-  return CreateLiteralVar(mirBuilder, strU16, isFieldValue);
+  return CreateLiteralVar(mirBuilderIn, strU16, isFieldValue);
 }
 
-MIRSymbol *FEJavaStringManager::CreateLiteralVar(MIRBuilder &mirBuilder, const std::u16string &strU16,
+MIRSymbol *FEJavaStringManager::CreateLiteralVar(MIRBuilder &mirBuilderIn, const std::u16string &strU16,
                                                  bool isFieldValue) {
   MPLFE_PARALLEL_FORBIDDEN();
   if (typeString == nullptr) {
@@ -84,7 +87,7 @@ MIRSymbol *FEJavaStringManager::CreateLiteralVar(MIRBuilder &mirBuilder, const s
   std::string literalGlobalName = GetLiteralGlobalName(strU16);
   bool compress = useCompressedJavaString && IsAllASCII(strU16);
   MIRArrayType *byteArrayType = ConstructArrayType4Str(strU16, compress);
-  literalVar = mirBuilder.GetOrCreateGlobalDecl(literalGlobalName.c_str(), *byteArrayType);
+  literalVar = mirBuilderIn.GetOrCreateGlobalDecl(literalGlobalName.c_str(), *byteArrayType);
   MIRAggConst *strConst = CreateByteArrayConst(strU16, *byteArrayType, compress);
   literalVar->SetKonst(strConst);
   literalVar->SetAttr(ATTR_readonly);
@@ -97,14 +100,15 @@ MIRSymbol *FEJavaStringManager::CreateLiteralVar(MIRBuilder &mirBuilder, const s
   if (isFieldValue) {
     (void)fieldValueSet.insert(literalVar);
   }
-  if (isFieldValue || isHotLiteral) {
+  if ((isFieldValue || isHotLiteral) && (!FEOptions::GetInstance().IsAOT())) {
     std::string literalGlobalPtrName = namemangler::kPtrPrefixStr + literalGlobalName;
-    MIRSymbol *literalVarPtr = mirBuilder.GetOrCreateGlobalDecl(literalGlobalPtrName.c_str(), *typeString);
+    MIRSymbol *literalVarPtr = mirBuilderIn.GetOrCreateGlobalDecl(literalGlobalPtrName.c_str(), *typeString);
     literalVarPtr->SetStorageClass(literalVar->GetStorageClass());
-    AddrofNode *expr = mirBuilder.CreateExprAddrof(0, *literalVar, module.GetMemPool());
+    AddrofNode *expr = mirBuilderIn.CreateExprAddrof(0, *literalVar, module.GetMemPool());
     MIRConst *cst = module.GetMemPool()->New<MIRAddrofConst>(
         expr->GetStIdx(), expr->GetFieldID(), *GlobalTables::GetTypeTable().GetPtr());
     literalVarPtr->SetKonst(cst);
+    literalVarPtr->SetAttr(ATTR_readonly);
     literalMap[literalVar] = literalVarPtr;
   }
   (void)GlobalTables::GetConstPool().GetConstU16StringPool().insert(std::make_pair(strU16, literalVar));
@@ -131,7 +135,7 @@ std::string FEJavaStringManager::GetLiteralGlobalName(const std::u16string &strU
   if (strU16.length() == 0) {
     literalGlobalName = LiteralStrName::GetLiteralStrName(swapped.data(), 0);
   } else {
-    literalGlobalName = LiteralStrName::GetLiteralStrName(swapped.data(), strU16.length() << 1);
+    literalGlobalName = LiteralStrName::GetLiteralStrName(swapped.data(), static_cast<uint32>(strU16.length() << 1));
   }
   return literalGlobalName;
 }
@@ -152,17 +156,18 @@ bool FEJavaStringManager::IsAllASCII(const std::u16string &strU16) {
 MIRArrayType *FEJavaStringManager::ConstructArrayType4Str(const std::u16string &strU16, bool compressible) const {
   MPLFE_PARALLEL_FORBIDDEN();
   uint32 arraySize[1];
-  int length = compressible ? strU16.length() : (strU16.length() * 2);  // use 2 bytes per char in uncompress mode
+  // use 2 bytes per char in uncompress mode
+  uint32 length = compressible ? static_cast<uint32>(strU16.length()) : static_cast<uint32>(strU16.length() * 2);
 #ifdef JAVA_OBJ_IN_MFILE
 #ifdef USE_32BIT_REF
-  int sizeInBytes = 16 + length;                // shadow(4B)+monitor(4B)+count(4B)+hash(4B)+content
-#else                                           // !USE_32BIT_REF
-  int sizeInBytes = 20 + length;                // shadow(8B)+monitor(4B)+count(4B)+hash(4B)+content
-#endif                                          // USE_32BIT_REF
-#else                                           // !JAVA_OBJ_IN_MFILE
-  int sizeInBytes = 8 + length;                 // count(4B)+hash(4B)+content
-#endif                                          // JAVA_OBJ_IN_MFILE
-  int sizeInLongs = (sizeInBytes - 1) / 8 + 1;  // round up to 8B units
+  uint32 sizeInBytes = 16 + length;                // shadow(4B)+monitor(4B)+count(4B)+hash(4B)+content
+#else                                              // !USE_32BIT_REF
+  uint32 sizeInBytes = 20 + length;                // shadow(8B)+monitor(4B)+count(4B)+hash(4B)+content
+#endif                                             // USE_32BIT_REF
+#else                                              // !JAVA_OBJ_IN_MFILE
+  uint32 sizeInBytes = 8 + length;                 // count(4B)+hash(4B)+content
+#endif                                             // JAVA_OBJ_IN_MFILE
+  uint32 sizeInLongs = (sizeInBytes - 1) / 8 + 1;  // round up to 8B units
   arraySize[0] = sizeInLongs;
   MIRArrayType *byteArrayType = static_cast<MIRArrayType*>(
       GlobalTables::GetTypeTable().GetOrCreateArrayType(*GlobalTables::GetTypeTable().GetUInt64(), 1, arraySize));
@@ -190,11 +195,12 @@ MIRAggConst *FEJavaStringManager::CreateByteArrayConst(const std::u16string &str
 #endif  // JAVA_OBJ_IN_MFILE
 
   // @count
-  uint32_t strCount = strU16.length() ? ((strU16.length() * 2) | compressible) : 0;
+  uint32 strCount = strU16.length() ? static_cast<uint32>((strU16.length() * 2) | compressible) : 0;
   AddDataIntoByteArray(*newconst, *mp, currData, strCount, *uInt64);
 
   // @hash
-  uint32_t hash = LiteralStrName::CalculateHashSwapByte(strU16.data(), strU16.length());
+  uint32 hash = static_cast<uint32>(
+      LiteralStrName::CalculateHashSwapByte(strU16.data(), static_cast<uint32>(strU16.length())));
   AddDataIntoByteArray(*newconst, *mp, currData, hash, *uInt64);
 
   // @content
@@ -249,5 +255,35 @@ void FEJavaStringManager::FinishByteArray(MIRAggConst &newConst, MemPool &mp, DW
     buf.data = 0;
     buf.pos = 0;
   }
+}
+
+void FEJavaStringManager::GenStringMetaClassVar() {
+  std::unique_ptr<MIRStructType> metaClassType = std::make_unique<MIRStructType>(kTypeStruct);
+
+  GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("dummy");
+  metaClassType->GetFields().emplace_back(
+      strIdx, TyIdxFieldAttrPair(GlobalTables::GetTypeTable().GetVoidPtr()->GetTypeIndex(), FieldAttrs()));
+
+  GStrIdx metaStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::kClassMetadataTypeName);
+  TyIdx tyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(metaClassType.get());
+  // Global?
+  module.GetTypeNameTab()->SetGStrIdxToTyIdx(metaStrIdx, tyIdx);
+  CHECK_FATAL(GlobalTables::GetTypeTable().GetTypeTable().size() > tyIdx, "empty check");
+  if (GlobalTables::GetTypeTable().GetTypeTable()[tyIdx]->GetNameStrIdx() == 0) {
+    GlobalTables::GetTypeTable().GetTypeTable()[tyIdx]->SetNameStrIdx(metaStrIdx);
+  }
+  metaClassType->SetTypeIndex(tyIdx);
+  module.AddClass(tyIdx);
+  std::string buf(CLASSINFO_PREFIX_STR);
+  (void)buf.append("Ljava_2Flang_2FString_3B");
+  stringMetaClassSymbol = mirBuilder.GetOrCreateGlobalDecl(buf.c_str(), *metaClassType);
+  GStrIdx typeNameIdxForString = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("Ljava_2Flang_2FString_3B");
+  if (FEManager::GetTypeManager().IsImportedType(typeNameIdxForString)) {
+    stringMetaClassSymbol->SetStorageClass(kScExtern);
+  }
+}
+
+void FEJavaStringManager::ClearStringMetaClassSymbolExternFlag() {
+  stringMetaClassSymbol->SetStorageClass(kScGlobal);
 }
 }  // namespace maple

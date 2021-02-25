@@ -22,7 +22,7 @@ class JBCConstPool {
  public:
   JBCConstPool(MapleAllocator &alloc);
   ~JBCConstPool() = default;
-  uint16 InsertConst(JBCConst *objConst);
+  uint16 InsertConst(JBCConst &objConst);
   void InsertConstDummyForWide();
 
   /*

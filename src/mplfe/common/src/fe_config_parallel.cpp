@@ -19,5 +19,5 @@ namespace maple {
 FEConfigParallel FEConfigParallel::instance;
 
 FEConfigParallel::FEConfigParallel()
-    : nThread(1), enableParallel(false) {}
+    : nThread(0), enableParallel(false) {}
 }  // namespace maple

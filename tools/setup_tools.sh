@@ -117,7 +117,7 @@ if [ ! -d $ANDROID_DIR/out/target/product/generic_arm64 ]; then
   echo Start clone AOSP CORE LIB ...
   git clone https://gitee.com/xlnb/aosp_core_bin.git
   cp -r aosp_core_bin/android $MAPLE_ROOT/
-  cp -r aosp_core_bin/libjava-core $MAPLE_ROOT/ 
+  cp -r aosp_core_bin/libjava-core $MAPLE_ROOT/
   echo Downloaded AOSP CORE LIB
 fi
 
@@ -155,4 +155,16 @@ if [ "$installQemu" == "true" ]; then
   # sudo apt install ./qemu-user_2.5+dfsg-5ubuntu10.48_amd64.deb
   sudo dpkg -i ./qemu-user_2.5+dfsg-5ubuntu10.48_amd64.deb || sudo apt install -f
   echo Installed qemu-aarch64
+fi
+
+if [ ! -f $TOOLS/open64_prebuilt/README.md ]; then
+  git clone https://gitee.com/open64ark/open64_prebuilt.git
+fi
+if [ ! -f $TOOLS/open64_prebuilt/x86/riscv64/bin/clangfe ]; then
+  cd $TOOLS/open64_prebuilt/x86
+  git pull
+  tar zxf open64ark-aarch64.tar.gz
+  tar zxf open64ark-riscv.tar.gz
+  mv riscv riscv64
+  echo Downloaded open64_prebuilt.
 fi

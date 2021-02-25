@@ -43,9 +43,9 @@ BaseNode &VarMeExpr::EmitExpr(SSATab &ssaTab) {
 BaseNode &RegMeExpr::EmitExpr(SSATab &ssaTab) {
   auto *regRead = ssaTab.GetModule().CurFunction()->GetCodeMemPool()->New<RegreadNode>();
   regRead->SetPrimType(GetPrimType());
-  regRead->SetRegIdx(regIdx);
-  ASSERT(regIdx < 0 ||
-         static_cast<uint32>(static_cast<int32>(regIdx)) < ssaTab.GetModule().CurFunction()->GetPregTab()->Size(),
+  regRead->SetRegIdx(GetRegIdx());
+  ASSERT(GetRegIdx() < 0 ||
+         static_cast<uint32>(static_cast<int32>(GetRegIdx())) < ssaTab.GetModule().CurFunction()->GetPregTab()->Size(),
          "RegMeExpr::EmitExpr: pregIdx exceeds preg table size");
   return *regRead;
 }
@@ -101,6 +101,13 @@ BaseNode &AddroffuncMeExpr::EmitExpr(SSATab &ssaTab) {
   auto *addroffuncNode =
       ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AddroffuncNode>(PrimType(GetPrimType()), puIdx);
   return *addroffuncNode;
+}
+
+BaseNode &AddroflabelMeExpr::EmitExpr(SSATab &ssaTab) {
+  auto *addroflabelNode =
+      ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AddroflabelNode>(labelIdx);
+  addroflabelNode->SetPrimType(PTY_ptr);
+  return *addroflabelNode;
 }
 
 BaseNode &GcmallocMeExpr::EmitExpr(SSATab &ssaTab) {
@@ -309,7 +316,7 @@ StmtNode &MaydassignMeStmt::EmitStmt(SSATab &ssaTab) {
   return *dassignStmt;
 }
 
-void MeStmt::EmitCallReturnVector(SSATab &ssaTab, CallReturnVector &nRets) {
+void MeStmt::EmitCallReturnVector(CallReturnVector &nRets) {
   MapleVector<MustDefMeNode> *mustDefs = GetMustDefList();
   if (mustDefs == nullptr || mustDefs->empty()) {
     return;
@@ -357,7 +364,7 @@ StmtNode &CallMeStmt::EmitStmt(SSATab &ssaTab) {
     callNode->SetNumOpnds(callNode->GetNopndSize());
     callNode->SetSrcPos(GetSrcPosition());
     if (kOpcodeInfo.IsCallAssigned(GetOp())) {
-      EmitCallReturnVector(ssaTab, callNode->GetReturnVec());
+      EmitCallReturnVector(callNode->GetReturnVec());
       for (size_t j = 0; j < callNode->GetReturnVec().size(); ++j) {
         CallReturnPair retPair = callNode->GetReturnVec()[j];
         if (!retPair.second.IsReg()) {
@@ -381,7 +388,7 @@ StmtNode &CallMeStmt::EmitStmt(SSATab &ssaTab) {
   icallNode->SetNumOpnds(icallNode->GetNopndSize());
   icallNode->SetSrcPos(GetSrcPosition());
   if (kOpcodeInfo.IsCallAssigned(GetOp())) {
-    EmitCallReturnVector(ssaTab, icallNode->GetReturnVec());
+    EmitCallReturnVector(icallNode->GetReturnVec());
     icallNode->SetRetTyIdx(TyIdx(PTY_void));
     for (size_t j = 0; j < icallNode->GetReturnVec().size(); ++j) {
       CallReturnPair retPair = icallNode->GetReturnVec()[j];
@@ -413,7 +420,7 @@ StmtNode &IcallMeStmt::EmitStmt(SSATab &ssaTab) {
   icallNode->SetNumOpnds(icallNode->GetNopndSize());
   icallNode->SetSrcPos(GetSrcPosition());
   if (kOpcodeInfo.IsCallAssigned(GetOp())) {
-    EmitCallReturnVector(ssaTab, icallNode->GetReturnVec());
+    EmitCallReturnVector(icallNode->GetReturnVec());
     icallNode->SetRetTyIdx(TyIdx(PTY_void));
     for (size_t j = 0; j < icallNode->GetReturnVec().size(); ++j) {
       CallReturnPair retPair = icallNode->GetReturnVec()[j];
@@ -448,7 +455,7 @@ StmtNode &IntrinsiccallMeStmt::EmitStmt(SSATab &ssaTab) {
   callNode->SetNumOpnds(callNode->GetNopndSize());
   callNode->SetSrcPos(GetSrcPosition());
   if (kOpcodeInfo.IsCallAssigned(GetOp())) {
-    EmitCallReturnVector(ssaTab, callNode->GetReturnVec());
+    EmitCallReturnVector(callNode->GetReturnVec());
     for (size_t j = 0; j < callNode->GetReturnVec().size(); ++j) {
       CallReturnPair retPair = callNode->GetReturnVec()[j];
       if (!retPair.second.IsReg()) {

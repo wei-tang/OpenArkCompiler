@@ -20,8 +20,8 @@
 namespace maple {
 class FEIRVarReg : public FEIRVar {
  public:
-  FEIRVarReg(uint32 argRegNum)
-      : FEIRVar(FEIRVarKind::kFEIRVarReg),
+  FEIRVarReg(uint32 argRegNum, FEIRVarKind kind = FEIRVarKind::kFEIRVarReg)
+      : FEIRVar(kind),
         regNum(argRegNum) {}
 
   FEIRVarReg(uint32 argRegNum, PrimType argPrimType)
@@ -29,8 +29,8 @@ class FEIRVarReg : public FEIRVar {
     type->SetPrimType(argPrimType);
   }
 
-  FEIRVarReg(uint32 argRegNum, std::unique_ptr<FEIRType> argType)
-      : FEIRVar(FEIRVarKind::kFEIRVarReg, std::move(argType)),
+  FEIRVarReg(uint32 argRegNum, std::unique_ptr<FEIRType> argType, FEIRVarKind kind = FEIRVarKind::kFEIRVarReg)
+      : FEIRVar(kind, std::move(argType)),
         regNum(argRegNum) {}
 
   ~FEIRVarReg() = default;
@@ -44,9 +44,28 @@ class FEIRVarReg : public FEIRVar {
   std::unique_ptr<FEIRVar> CloneImpl() const override;
   bool EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const override;
   size_t HashImpl() const override;
-
- private:
   uint32 regNum;
+};
+
+class FEIRVarAccumulator : public FEIRVarReg {
+ public:
+  FEIRVarAccumulator(uint32 argRegNum)
+      : FEIRVarReg(argRegNum, FEIRVarKind::kFEIRVarAccumulator) {}
+
+  FEIRVarAccumulator(uint32 argRegNum, PrimType argPrimType)
+      : FEIRVarAccumulator(argRegNum) {
+    type->SetPrimType(argPrimType);
+  }
+
+  FEIRVarAccumulator(uint32 argRegNum, std::unique_ptr<FEIRType> argType)
+      : FEIRVarReg(argRegNum, std::move(argType), FEIRVarKind::kFEIRVarAccumulator) {}
+
+  ~FEIRVarAccumulator() = default;
+
+ protected:
+  std::string GetNameImpl(const MIRType &mirType) const override;
+  std::string GetNameRawImpl() const override;
+  std::unique_ptr<FEIRVar> CloneImpl() const override;
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FEIR_VAR_REG_H

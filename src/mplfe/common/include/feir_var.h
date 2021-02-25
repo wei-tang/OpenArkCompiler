@@ -44,6 +44,10 @@ class FEIRVarTrans {
     kind = argKind;
   }
 
+  FEIRVarTransKind GetTransKind() const {
+    return kind;
+  }
+
  private:
   FEIRVarTransKind kind;
   std::unique_ptr<FEIRVar> &var;
@@ -58,6 +62,7 @@ enum FEIRVarKind : uint8 {
   kFEIRVarDefault = 0,
   kFEIRVarSpecial,
   kFEIRVarReg,
+  kFEIRVarAccumulator,
   kFEIRVarName,
   kFEIRVarNameSpec,
   kFEIRVarTypeScatter,
@@ -156,5 +161,9 @@ class FEIRVar {
 };
 
 using UniqueFEIRVar = std::unique_ptr<FEIRVar>;
+// FEIRUseDefChain key is use, value is def set
+using FEIRUseDefChain = std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>>;
+// FEIRUseDefChain key is def, value is use set
+using FEIRDefUseChain = std::map<UniqueFEIRVar*, std::set<UniqueFEIRVar*>>;
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FEIR_VAR_H

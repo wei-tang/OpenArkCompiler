@@ -38,6 +38,10 @@ void AArch64ReachingDefinition::InitStartGen() {
     }
 
     uint64 symSize = cgFunc->GetBecommon().GetTypeSize(type->GetTypeIndex());
+    if ((cgFunc->GetMirModule().GetSrcLang() == kSrcLangC) && (symSize > k8ByteSize)) {
+      /* For C structure passing in one or two registers. */
+      symSize = k8ByteSize;
+    }
     RegType regType = (pLoc.reg0 < V0) ? kRegTyInt : kRegTyFloat;
     uint32 srcBitSize = ((symSize < k4ByteSize) ? k4ByteSize : symSize) * kBitsPerByte;
 
@@ -62,6 +66,13 @@ void AArch64ReachingDefinition::InitStartGen() {
     Insn &pseudoInsn = cgFunc->GetCG()->BuildInstruction<AArch64Insn>(mOp, regOpnd);
     bb->InsertInsnBegin(pseudoInsn);
     pseudoInsns.emplace_back(&pseudoInsn);
+
+    if (pLoc.reg1) {
+      regOpnd = aarchCGFunc->GetOrCreatePhysicalRegisterOperand(pLoc.reg1, srcBitSize, regType);
+      Insn &pseudoInsn1 = cgFunc->GetCG()->BuildInstruction<AArch64Insn>(mOp, regOpnd);
+      bb->InsertInsnBegin(pseudoInsn1);
+      pseudoInsns.emplace_back(&pseudoInsn1);
+    }
 
     {
       /*

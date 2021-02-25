@@ -37,9 +37,9 @@ std::string JBCClass2FEHelper::GetStructNameMplImpl() const {
   return klass.GetClassNameMpl();
 }
 
-std::vector<std::string> JBCClass2FEHelper::GetSuperClassNamesImpl() const {
+std::list<std::string> JBCClass2FEHelper::GetSuperClassNamesImpl() const {
   std::string superName = klass.GetSuperClassName();
-  return std::vector<std::string>({ superName });
+  return std::list<std::string>({ superName });
 }
 
 std::vector<std::string> JBCClass2FEHelper::GetInterfaceNamesImpl() const {
@@ -63,6 +63,12 @@ MIRStructType *JBCClass2FEHelper::CreateMIRStructTypeImpl(bool &error) const {
   MIRStructType *type = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType(classNameMpl, klass.IsInterface(),
                                                                                     FETypeFlag::kSrcInput, isCreate);
   error = false;
+  // fill global type name table
+  GStrIdx typeNameIdx = type->GetNameStrIdx();
+  TyIdx prevTyIdx = GlobalTables::GetTypeNameTable().GetTyIdxFromGStrIdx(typeNameIdx);
+  if (prevTyIdx == TyIdx(0)) {
+    GlobalTables::GetTypeNameTable().SetGStrIdxToTyIdx(typeNameIdx, type->GetTypeIndex());
+  }
   return isCreate ? type : nullptr;
 }
 
@@ -135,14 +141,10 @@ bool JBCClassField2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   return false;
 }
 
-bool JBCClassField2FEHelper::ProcessDeclWithContainerImpl(MapleAllocator &allocator,
-                                                          const FEInputStructHelper &structHelper) {
-  ASSERT(structHelper.GetSrcLang() == kSrcLangJava, "input type check failed");
-  const JBCClass2FEHelper &klassHelper = static_cast<const JBCClass2FEHelper&>(structHelper);
-  const jbc::JBCConstPool &constPool = klassHelper.GetConstPool();
-  std::string klassName = klassHelper.GetStructNameOrin();
-  std::string fieldName = field.GetName(constPool);
-  std::string typeName = field.GetDescription(constPool);
+bool JBCClassField2FEHelper::ProcessDeclWithContainerImpl(MapleAllocator &allocator) {
+  std::string klassName = field.GetClassName();
+  std::string fieldName = field.GetName();
+  std::string typeName = field.GetDescription();
   if (fieldName.empty()) {
     ERR(kLncErr, "invalid name_index(%d) for field in class %s", field.GetNameIdx(), klassName.c_str());
     return false;
@@ -153,15 +155,14 @@ bool JBCClassField2FEHelper::ProcessDeclWithContainerImpl(MapleAllocator &alloca
   }
   FEOptions::ModeJavaStaticFieldName modeStaticField = FEOptions::GetInstance().GetModeJavaStaticFieldName();
   bool withType = (modeStaticField == FEOptions::kAllType) ||
-                  (modeStaticField == FEOptions::kSmart && klassHelper.IsStaticFieldProguard());
+                  (modeStaticField == FEOptions::kSmart && field.IsStatic());
   std::string name = field.IsStatic() ? (klassName + "|") : "";
   name += fieldName;
   name += withType ? ("|" + typeName) : "";
-  std::string fullName = klassName + "|" + fieldName + "|" + typeName;
   GStrIdx idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(name));
-  GStrIdx fullNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(fullName));
-  FEStructElemInfo *elemInfo = FEManager::GetTypeManager().RegisterStructFieldInfo(fullNameIdx, kSrcLangJava,
-                                                                                   field.IsStatic());
+  StructElemNameIdx *structElemNameIdx = allocator.GetMemPool()->New<StructElemNameIdx>(klassName, fieldName, typeName);
+  FEStructElemInfo *elemInfo = FEManager::GetTypeManager().RegisterStructFieldInfo(
+      *structElemNameIdx, kSrcLangJava, field.IsStatic());
   elemInfo->SetDefined();
   elemInfo->SetFromDex();
   FieldAttrs attrs = AccessFlag2Attribute(field.GetAccessFlag());
@@ -222,10 +223,10 @@ JBCClassMethod2FEHelper::JBCClassMethod2FEHelper(MapleAllocator &allocator, cons
 }
 
 bool JBCClassMethod2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
-  std::string methodName = GetMethodName(true);
-  GStrIdx methodNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(methodName);
-  FEStructElemInfo *elemInfo = FEManager::GetTypeManager().RegisterStructMethodInfo(methodNameIdx, kSrcLangJava,
-                                                                                    IsStatic());
+  StructElemNameIdx *structElemNameIdx = allocator.GetMemPool()->New<StructElemNameIdx>(
+      method.GetClassName(), method.GetName(), method.GetDescription());
+  FEStructElemInfo *elemInfo = FEManager::GetTypeManager().RegisterStructMethodInfo(
+       *structElemNameIdx, kSrcLangJava, IsStatic());
   elemInfo->SetDefined();
   elemInfo->SetFromDex();
   return FEInputMethodHelper::ProcessDeclImpl(allocator);
@@ -241,7 +242,7 @@ void JBCClassMethod2FEHelper::SolveReturnAndArgTypesImpl(MapleAllocator &allocat
     type->LoadFromJavaTypeName(klassName, false);
     argTypes.push_back(type);
   }
-  std::vector<std::string> returnAndArgTypeNames = FEUtilJava::SolveMethodSignature(methodName, false);
+  std::vector<std::string> returnAndArgTypeNames = FEUtilJava::SolveMethodSignature(methodName);
   bool first = true;
   for (const std::string &typeName : returnAndArgTypeNames) {
     FEIRTypeDefault *type = mp->New<FEIRTypeDefault>();
@@ -313,6 +314,7 @@ FuncAttrs JBCClassMethod2FEHelper::GetAttrsImpl() const {
       default:
         break;
     }
+    attrs.SetAttr(IsVirtual() ? FUNCATTR_virtual : static_cast<FuncAttrKind>(0));
   }
   return attrs;
 }
@@ -348,10 +350,22 @@ bool JBCClassMethod2FEHelper::IsInit() const {
   return methodName.compare("<init>") == 0;
 }
 
+bool JBCClassMethod2FEHelper::IsVirtualImpl() const {
+  return method.IsVirtual();
+}
+
+bool JBCClassMethod2FEHelper::IsNativeImpl() const {
+  return method.IsNative();
+}
+
 MIRType *JBCClassMethod2FEHelper::GetTypeForThisImpl() const {
   FEIRTypeDefault type;
   std::string klassName = method.GetClassName();
   type.LoadFromJavaTypeName(klassName, false);
   return type.GenerateMIRType(true);
+}
+
+bool JBCClassMethod2FEHelper::HasCodeImpl() const {
+  return method.HasCode();
 }
 }  // namespace maple

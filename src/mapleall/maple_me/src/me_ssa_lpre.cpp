@@ -272,7 +272,7 @@ void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr,
         break;
       }
       const MIRSymbol *sym = ost->GetMIRSymbol();
-      if (sym->IsInstrumented()) {
+      if (sym->IsInstrumented() && !(func->GetHints() & kPlacementRCed)) {
         // not doing because its SSA form is not complete
         break;
       }
@@ -325,6 +325,7 @@ void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr,
       BuildWorkListExpr(meStmt, seqStmt, *ivarMeExpr->GetBase(), false, nullptr, false);
       break;
     }
+    case kMeOpAddroflabel:
     default:
       break;
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -48,6 +48,8 @@ class VtableAnalysis : public FuncOptimizeImpl {
   void GenItableDefinition(const Klass &klass);
   void AddNullPointExceptionCheck(MIRFunction &func, StmtNode &stmt) const;
   BaseNode *GenVtabItabBaseAddr(BaseNode &obj, bool isVirtual);
+  size_t SearchWithoutRettype(const MIRFunction &callee, const MIRStructType &structType) const;
+  bool CheckInterfaceImplemented(const CallNode &stmt) const;
   void ReplaceVirtualInvoke(CallNode &stmt);
   void ReplaceInterfaceInvoke(CallNode &stmt);
   void ReplaceSuperclassInvoke(CallNode &stmt);

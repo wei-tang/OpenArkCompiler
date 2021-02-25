@@ -415,7 +415,7 @@ class SSARename2Preg {
     return &newRegExpr;
   }
 
-  const AliasElem *GetAliasElem(const AliasClass &aliasClass, OriginalSt &ost) const {
+  const AliasElem *GetAliasElem(const AliasClass &aliasClass, const OriginalSt &ost) const {
     if (ost.GetIndex() >= aliasClass.GetAliasElemCount()) {
       return nullptr;
     }

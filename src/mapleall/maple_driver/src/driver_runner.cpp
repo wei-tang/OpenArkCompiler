@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -396,6 +396,8 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgfpm, std::vector
     CG::SetCurCGFunc(*cgFunc);
 
     cgfpm.Run(*cgFunc);
+
+    cg.GetEmitter()->EmitLocalVariable(*cgFunc);
 
     // Invalid all analysis result.
     cgfpm.Emit(*cgFunc);

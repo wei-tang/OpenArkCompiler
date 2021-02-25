@@ -54,7 +54,7 @@ class FEInputContent {
  public:
   FEInputContent(MapleAllocator &alloc);
   ~FEInputContent() = default;
-  void RegisterItem(T *item);
+  void RegisterItem(T &item);
   void CheckSameName();
 
  private:

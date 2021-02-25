@@ -34,40 +34,58 @@ class GeneralBB : public FELinkListNode {
   GeneralBB();
   explicit GeneralBB(uint8 argKind);
   virtual ~GeneralBB();
-  void AppendStmt(const GeneralStmt *stmt);
-  void AddStmtAuxPre(const GeneralStmt *stmt);
-  void AddStmtAuxPost(const GeneralStmt *stmt);
+  void AppendStmt(GeneralStmt &stmt);
+  void AddStmtAuxPre(GeneralStmt &stmt);
+  void AddStmtAuxPost(GeneralStmt &stmt);
   bool IsPredBB(uint32 bbID);
   bool IsSuccBB(uint32 bbID);
   uint8 GetBBKind() const {
     return kind;
   }
 
-  const GeneralStmt *GetStmtHead() const {
+  GeneralStmt *GetStmtHead() const {
     return stmtHead;
   }
 
-  const GeneralStmt *GetStmtTail() const {
+  void SetStmtHead(GeneralStmt &stmtHeadIn) {
+    stmtHead = &stmtHeadIn;
+  }
+
+  void InsertAndUpdateNewHead(GeneralStmt &newHead) {
+    stmtHead->InsertBefore(&newHead);
+    stmtHead = &newHead;
+  }
+
+  GeneralStmt *GetStmtTail() const {
     return stmtTail;
   }
 
-  const GeneralStmt *GetStmtNoAuxHead() const {
+  void SetStmtTail(GeneralStmt &stmtTailIn) {
+    stmtTail = &stmtTailIn;
+  }
+
+  void InsertAndUpdateNewTail(GeneralStmt &newTail) {
+    stmtTail->InsertAfter(&newTail);
+    stmtTail = &newTail;
+  }
+
+  GeneralStmt *GetStmtNoAuxHead() const {
     return stmtNoAuxHead;
   }
 
-  const GeneralStmt *GetStmtNoAuxTail() const {
+  GeneralStmt *GetStmtNoAuxTail() const {
     return stmtNoAuxTail;
   }
 
-  void AddPredBB(GeneralBB *bb) {
-    if (predBBs.find(bb) == predBBs.end()) {
-      CHECK_FATAL(predBBs.insert(bb).second, "predBBs insert failed");
+  void AddPredBB(GeneralBB &bb) {
+    if (predBBs.find(&bb) == predBBs.end()) {
+      CHECK_FATAL(predBBs.insert(&bb).second, "predBBs insert failed");
     }
   }
 
-  void AddSuccBB(GeneralBB *bb) {
-    if (succBBs.find(bb) == succBBs.end()) {
-      CHECK_FATAL(succBBs.insert(bb).second, "succBBs insert failed");
+  void AddSuccBB(GeneralBB &bb) {
+    if (succBBs.find(&bb) == succBBs.end()) {
+      CHECK_FATAL(succBBs.insert(&bb).second, "succBBs insert failed");
     }
   }
 
@@ -87,12 +105,12 @@ class GeneralBB : public FELinkListNode {
     id = arg;
   }
 
-  bool IsPredBB(GeneralBB *bb) {
-    return predBBs.find(bb) != predBBs.end();
+  bool IsPredBB(GeneralBB &bb) {
+    return predBBs.find(&bb) != predBBs.end();
   }
 
-  bool IsSuccBB(GeneralBB *bb) {
-    return succBBs.find(bb) != succBBs.end();
+  bool IsSuccBB(GeneralBB &bb) {
+    return succBBs.find(&bb) != succBBs.end();
   }
 
   bool IsDead() {
@@ -113,10 +131,10 @@ class GeneralBB : public FELinkListNode {
   virtual std::string GetBBKindNameImpl() const;
 
   uint8 kind;
-  const GeneralStmt *stmtHead;
-  const GeneralStmt *stmtTail;
-  const GeneralStmt *stmtNoAuxHead;
-  const GeneralStmt *stmtNoAuxTail;
+  GeneralStmt *stmtHead;
+  GeneralStmt *stmtTail;
+  GeneralStmt *stmtNoAuxHead;
+  GeneralStmt *stmtNoAuxTail;
   std::set<GeneralBB*> predBBs;
   std::set<GeneralBB*> succBBs;
   uint32 id;

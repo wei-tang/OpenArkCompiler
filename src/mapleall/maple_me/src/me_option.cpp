@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -71,6 +71,37 @@ bool MeOption::optDirectCall = false;
 bool MeOption::propAtPhi = true;
 bool MeOption::dseKeepRef = false;
 bool MeOption::decoupleStatic = false;
+bool MeOption::dumpBefore = false;
+std::string MeOption::skipFrom = "";
+std::string MeOption::skipAfter = "";
+bool MeOption::noRC = false;
+bool MeOption::lazyDecouple = false;
+bool MeOption::strictNaiveRC = false;
+std::unordered_set<std::string> MeOption::checkRefUsedInFuncs = {};
+bool MeOption::gcOnly = false;
+bool MeOption::gcOnlyOpt = false;
+bool MeOption::noGCBar = true;
+bool MeOption::realCheckCast = false;
+bool MeOption::regNativeFunc = false;
+bool MeOption::warnNativeFunc = false;
+uint32 MeOption::parserOpt = 0;
+uint32 MeOption::threads = 1;  // set default threads number
+bool MeOption::ignoreInferredRetType = false;
+bool MeOption::checkCastOpt = false;
+bool MeOption::parmToPtr = false;
+bool MeOption::nativeOpt = true;
+bool MeOption::enableEA = false;
+bool MeOption::placementRC = false;
+bool MeOption::subsumRC = false;
+std::string MeOption::inlineFuncList = "";
+#if MIR_JAVA
+std::string MeOption::acquireFuncName = "Landroid/location/LocationManager;|requestLocationUpdates|";
+std::string MeOption::releaseFuncName = "Landroid/location/LocationManager;|removeUpdates|";
+unsigned int MeOption::warningLevel = 0;
+bool MeOption::mplToolOnly = false;
+bool MeOption::mplToolStrict = false;
+bool MeOption::skipVirtualMethod = false;
+#endif
 
 enum OptionIndex {
   kMeHelp = kCommonOptionEnd + 1,
@@ -79,6 +110,13 @@ enum OptionIndex {
   kMeDumpFunc,
   kMeQuiet,
   kMeNoDot,
+  kMeUseRc,
+  kMeStrictNaiveRc,
+  kMeStubJniFunc,
+  kMeToolOnly,
+  kMeToolStrict,
+  kMeSkipVirtual,
+  kMeNativeOpt,
   kMeSkipFrom,
   kMeSkipAfter,
   kSetCalleeHasSideEffect,
@@ -88,10 +126,19 @@ enum OptionIndex {
   kStmtNum,
   kRcLower,
   kNoRcLower,
+  kGCOnlyOpt,
+  kNoGcbar,
+  kUseGcbar,
+  kWarnNativefunc,
   kMeDumpBefore,
   kMeDumpAfter,
+  kRealCheckcast,
+  kMeAcquireFunc,
+  kMeReleaseFunc,
+  kMeWarnLevel,
   kMeOptL1,
   kMeOptL2,
+  kRefUsedCheck,
   kMeRange,
   kEpreLimit,
   kEprepuLimit,
@@ -102,6 +149,7 @@ enum OptionIndex {
   kDelrcpuLimit,
   kProfileBBHotRate,
   kProfileBBColdRate,
+  kIgnoreIpa,
   kAggressiveABCO,
   kCommonABCO,
   kConservativeABCO,
@@ -110,17 +158,45 @@ enum OptionIndex {
   kEpreLocalRefVar,
   kNoEpreLocalRefVar,
   kEprelhSivar,
+  kDseKeepRef,
+  kNoDseKeepRef,
+  kPropBase,
+  kNopropiLoadRef,
+  kPropiLoadRef,
+  kPropGloablRef,
+  kPropfinalIloadRef,
+  kPropIloadRefnonparm,
   kLessThrowAlias,
   kNodeLegateRc,
   kNocondBasedRc,
+  kCheckCastOpt,
+  kNoCheckCastOpt,
+  kParmToptr,
   kNullcheckPre,
   kClinitPre,
   kDassignPre,
   kAssign2finalPre,
+  kSubsumRC,
+  kNoSubsumRC,
   kRegReadAtReturn,
+  kProPatphi,
+  kNoProPatphi,
+  kOptInterfaceCall,
+  kNoOptInterfaceCall,
+  kOptVirtualCall,
+  kOptDirectCall,
+  kEnableEa,
   kLpreSpeculate,
   kNoLpreSpeculate,
   kSpillatCatch,
+  kPlacementRC,
+  kNoPlacementRC,
+  kLazyDecouple,
+  kEaTransRef,
+  kEaTransAlloc,
+  kMeInlineHint,
+  kMeThreads,
+  kMeIgnoreInferredRetType,
 };
 
 const Descriptor kUsage[] = {
@@ -150,6 +226,15 @@ const Descriptor kUsage[] = {
     kBuildTypeProduct,
     kArgCheckPolicyOptional,
     "  -O2                         \tDo some optimization.\n",
+    "me",
+    {} },
+  { kRefUsedCheck,
+    0,
+    "",
+    "refusedcheck",
+    kBuildTypeProduct,
+    kArgCheckPolicyRequired,
+    "  --refusedcheck=FUNCNAME,...    \tEnable ref check used in func in the comma separated list, * means all func.\n",
     "me",
     {} },
   { kMeRange,
@@ -211,6 +296,46 @@ const Descriptor kUsage[] = {
     kArgCheckPolicyBool,
     "  --nodot                     \tDisable dot file generation from cfg\n"
     "  --no-nodot                  \tEnable dot file generation from cfg\n",
+    "me",
+    {} },
+  { kMeUseRc,
+    kEnable,
+    "",
+    "userc",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --userc                     \tEnable reference counting [default]\n"
+    "  --no-userc                  \tDisable reference counting [default]\n",
+    "me",
+    {} },
+  { kMeStrictNaiveRc,
+    kEnable,
+    "",
+    "strict-naiverc",
+    kBuildTypeProduct,
+    kArgCheckPolicyBool,
+    "  --strict-naiverc            \tStrict Naive RC mode, assume no unsafe multi-thread read/write racing\n"
+    "  --no-strict-naiverc         \tDisable Strict Naive RC mode, assume no unsafe multi-thread read/write racing\n",
+    "me",
+    {} },
+  { kMeSkipFrom,
+    0,
+    "",
+    "skip-from",
+    kBuildTypeDebug,
+    kArgCheckPolicyRequired,
+    "  --skip-from                 \tSkip the rest phases from PHASENAME(included)\n"
+    "                              \t--skip-from=PHASENAME\n",
+    "me",
+    {} },
+  { kMeSkipAfter,
+    0,
+    "",
+    "skip-after",
+    kBuildTypeDebug,
+    kArgCheckPolicyRequired,
+    "  --skip-after                \tSkip the rest phases after PHASENAME(excluded)\n"
+    "                              \t--skip-after=PHASENAME\n",
     "me",
     {} },
   { kSetCalleeHasSideEffect,
@@ -276,6 +401,46 @@ const Descriptor kUsage[] = {
     "  --no-rclower                \tDisable rc lowering\n",
     "me",
     {} },
+  { kGCOnlyOpt,
+    kEnable,
+    "gconlyopt",
+    "",
+    kBuildTypeProduct,
+    kArgCheckPolicyBool,
+    "  --gconlyopt                     \tEnable write barrier optimization in gconly\n"
+    "  --no-gconlyopt                  \tDisable write barrier optimization in gconly\n",
+    "me",
+    {} },
+  { kUseGcbar,
+    kEnable,
+    "",
+    "usegcbar",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --usegcbar                  \tEnable GC barriers\n"
+    "  --no-usegcbar               \tDisable GC barriers\n",
+    "me",
+    {} },
+  { kMeStubJniFunc,
+    kEnable,
+    "",
+    "regnativefunc",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --regnativefunc             \tGenerate native stub function to support JNI registration and calling\n"
+    "  --no-regnativefunc          \tDon't generate native stub function to support JNI registration and calling\n",
+    "me",
+    {} },
+  { kWarnNativefunc,
+    kEnable,
+    "",
+    "warnemptynative",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --warnemptynative           \tGenerate warning and abort unimplemented native function\n"
+    "  --no-warnemptynative        \tDon't generate warning and abort unimplemented native function\n",
+    "me",
+    {} },
   { kMeDumpBefore,
     kEnable,
     "",
@@ -294,6 +459,16 @@ const Descriptor kUsage[] = {
     kArgCheckPolicyBool,
     "  --dump-after                \tDo extra IR dump after the specified phase in me\n"
     "  --no-dump-after             \tDo not extra IR dump after the specified phase in me\n",
+    "me",
+    {} },
+  { kRealCheckcast,
+    kEnable,
+    "",
+    "realcheckcast",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --realcheckcast\n"
+    "  --no-realcheckcast\n",
     "me",
     {} },
   { kEpreLimit,
@@ -384,6 +559,16 @@ const Descriptor kUsage[] = {
     "  --profile-bb-cold-rate=99  \tA count is regarded as cold if it is in the smallest 1%\n",
     "me",
     {} },
+  { kIgnoreIpa,
+    kEnable,
+    "",
+    "ignoreipa",
+    kBuildTypeProduct,
+    kArgCheckPolicyBool,
+    "  --ignoreipa                 \tIgnore information provided by interprocedural analysis\n"
+    "  --no-ignoreipa              \tDon't ignore information provided by interprocedural analysis\n",
+    "me",
+    {} },
   { kAggressiveABCO,
     kEnable,
     "",
@@ -444,6 +629,68 @@ const Descriptor kUsage[] = {
     "  --no-eprelhsivar            \tDisable the EPRE phase consider iassigns when optimizing ireads\n",
     "me",
     {} },
+  { kDseKeepRef,
+    kEnable,
+    "",
+    "dsekeepref",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --dsekeepref                \tPreverse dassign of local var that are of ref type to anywhere\n"
+    "  --no-dsekeepref             \tDon't preverse dassign of local var that are of ref type to anywhere\n",
+    "me",
+    {} },
+  { kPropBase,
+    kEnable,
+    "",
+    "propbase",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --propbase                  \tApply copy propagation that can change the base of indirect memory accesses\n"
+    "  --no-propbase               \tDon't apply copy propagation\n",
+    "me",
+    {} },
+  { kPropiLoadRef,
+    kEnable,
+    "",
+    "propiloadref",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --propiloadref              \tAllow copy propagating iloads that are of ref type to anywhere\n"
+    "  --no-propiloadref           \tDon't aAllow copy propagating iloads that are of ref type to anywhere\n",
+    "me",
+    {} },
+  { kPropGloablRef,
+    kEnable,
+    "",
+    "propglobalref",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --propglobalref             \tAllow copy propagating global that are of ref type to anywhere\n"
+    "  --no-propglobalref          \tDon't allow copy propagating global that are of ref type to anywhere\n",
+    "me",
+    {} },
+  { kPropfinalIloadRef,
+    kEnable,
+    "",
+    "propfinaliloadref",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --propfinaliloadref         \tAllow copy propagating iloads of\n"
+    "                              \tfinal fields that are of ref type to anywhere\n"
+    "  --no-propfinaliloadref      \tDisable propfinaliloadref\n",
+    "me",
+    {} },
+  { kPropIloadRefnonparm,
+    kEnable,
+    "",
+    "propiloadrefnonparm",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --propiloadrefnonparm       \tAllow copy propagating iloads that are of ref type to\n"
+    "                              \tanywhere except actual parameters\n"
+    "  --no-propiloadrefnonparm    \tDisbale propiloadref\n",
+    "me",
+    {} },
   { kLessThrowAlias,
     kEnable,
     "",
@@ -475,6 +722,77 @@ const Descriptor kUsage[] = {
     "  --no-nocondbasedrc          \tDisable nocondbasedrc\n",
     "me",
     {} },
+  { kSubsumRC,
+    kEnable,
+    "",
+    "subsumrc",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --subsumrc               \tDelete decrements for localrefvars whose live range is just in\n"
+    "                           \tanother which point to the same obj\n"
+    "  --no-subsumrc            \tDisable subsumrc\n",
+    "me",
+    {} },
+  { kCheckCastOpt,
+    kEnable,
+    "",
+    "checkcastopt",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --checkcastopt             \tApply template--checkcast optimization \n"
+    "  --no-checkcastopt          \tDisable checkcastopt \n",
+    "me",
+    {} },
+  { kParmToptr,
+    kEnable,
+    "",
+    "parmtoptr",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --parmtoptr                 \tAllow rcoptlocals to change actual parameters from ref to ptr type\n"
+    "  --no-parmtoptr              \tDisable parmtoptr\n",
+    "me",
+    {} },
+  { kNullcheckPre,
+    kEnable,
+    "",
+    "nullcheckpre",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --nullcheckpre              \tTurn on partial redundancy elimination of null pointer checks\n"
+    "  --no-nullcheckpre           \tDisable nullcheckpre\n",
+    "me",
+    {} },
+  { kClinitPre,
+    kEnable,
+    "",
+    "clinitpre",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --clinitpre                 \tTurn on partial redundancy elimination of class initialization checks\n"
+    "  --no-clinitpre              \tDisable clinitpre\n",
+    "me",
+    {} },
+  { kDassignPre,
+    kEnable,
+    "",
+    "dassignpre",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --dassignpre                \tTurn on partial redundancy elimination of assignments to scalar variables\n"
+    "  --no-dassignpre             \tDisable dassignpre\n",
+    "me",
+    {} },
+  { kAssign2finalPre,
+    kEnable,
+    "",
+    "assign2finalpre",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --assign2finalpre           \tTurn on partial redundancy elimination of assignments to final variables\n"
+    "  --no-assign2finalpre        \tDisable assign2finalpre\n",
+    "me",
+    {} },
   { kRegReadAtReturn,
     kEnable,
     "",
@@ -485,6 +803,176 @@ const Descriptor kUsage[] = {
     "  --no-regreadatreturn        \tDisable regreadatreturn\n",
     "me",
     {} },
+  { kProPatphi,
+    kEnable,
+    "",
+    "propatphi",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --propatphi                 \tEnable copy propagation across phi nodes\n"
+    "  --no-propatphi              \tDisable propatphi\n",
+    "me",
+    {} },
+  { kMeNativeOpt,
+    kEnable,
+    "",
+    "nativeopt",
+    kBuildTypeProduct,
+    kArgCheckPolicyBool,
+    "  --nativeopt              \tEnable native opt\n"
+    "  --no-nativeopt           \tDisable native opt\n",
+    "me",
+    {} },
+  { kOptDirectCall,
+    kEnable,
+    "",
+    "optdirectcall",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --optdirectcall             \tEnable redundancy elimination of directcalls\n"
+    "  --no-optdirectcall          \tDisable optdirectcall\n",
+    "me",
+    {} },
+  { kEnableEa,
+    kEnable,
+    "",
+    "enable-ea",
+    kBuildTypeProduct,
+    kArgCheckPolicyBool,
+    "  --enable-ea                 \tEnable escape analysis\n"
+    "  --no-enable-ea              \tDisable escape analysis\n",
+    "me",
+    {} },
+  { kLpreSpeculate,
+    kEnable,
+    "",
+    "lprespeculate",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --lprespeculate             \tEnable speculative code motion in LPRE phase\n"
+    "  --no-lprespeculate          \tDisable speculative code motion in LPRE phase\n",
+    "me",
+    {} },
+  { kSpillatCatch,
+    kEnable,
+    "",
+    "spillatcatch",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --spillatcatch              \tMinimize upward exposed preg usage in catch blocks\n"
+    "  --no-spillatcatch           \tDisable spillatcatch\n",
+    "me",
+    {} },
+  { kPlacementRC,
+    kEnable,
+    "",
+    "placementrc",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --placementrc               \tInsert RC decrements for localrefvars using\n"
+    "                              \tthe placement optimization approach\n"
+    "  --no-placementrc            \tInsert RC decrements for localrefvars using\n",
+    "me",
+    {} },
+  { kLazyDecouple,
+    kEnable,
+    "",
+    "lazydecouple",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --lazydecouple              \tDo optimized for lazy Decouple\n"
+    "  --no-lazydecouple           \tDo not optimized for lazy Decouple\n",
+    "me",
+    {} },
+  { kMeInlineHint,
+    0,
+    "",
+    "inlinefunclist",
+    kBuildTypeProduct,
+    kArgCheckPolicyRequired,
+    "  --inlinefunclist            \tInlining related configuration\n"
+    "                              \t--inlinefunclist=\n",
+    "me",
+    {} },
+  { kMeThreads,
+    0,
+    "",
+    "threads",
+    kBuildTypeExperimental,
+    kArgCheckPolicyNumeric,
+    "  --threads=n                 \tOptimizing me functions using n threads\n"
+    "                              \tIf n >= 2, ignore-inferred-return-type will be enabled default\n",
+    "me",
+    {} },
+  { kMeIgnoreInferredRetType,
+    kEnable,
+    "",
+    "ignore-inferred-ret-type",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --ignore-inferred-ret-type  \tIgnore func return type inferred by ssadevirt\n"
+    "  --no-ignore-inferred-ret-type\tDo not ignore func return type inferred by ssadevirt\n",
+    "me",
+    {} },
+#if MIR_JAVA
+  { kMeAcquireFunc,
+    0,
+    "",
+    "acquire-func",
+    kBuildTypeExperimental,
+    kArgCheckPolicyRequired,
+    "  --acquire-func              \t--acquire-func=FUNCNAME\n",
+    "me",
+    {} },
+  { kMeReleaseFunc,
+    0,
+    "",
+    "release-func",
+    kBuildTypeExperimental,
+    kArgCheckPolicyRequired,
+    "  --release-func              \t--release-func=FUNCNAME\n",
+    "me",
+    {} },
+  { kMeToolOnly,
+    kEnable,
+    "",
+    "toolonly",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --toolonly\n"
+    "  --no-toolonly\n",
+    "me",
+    {} },
+  { kMeToolStrict,
+    kEnable,
+    "",
+    "toolstrict",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --toolstrict\n"
+    "  --no-toolstrict\n",
+    "me",
+    {} },
+  { kMeSkipVirtual,
+    kEnable,
+    "",
+    "skipvirtual",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --skipvirtual\n"
+    "  --no-skipvirtual\n",
+    "me",
+    {} },
+  { kMeWarnLevel,
+    0,
+    "",
+    "warning",
+    kBuildTypeExperimental,
+    kArgCheckPolicyNumeric,
+    "  --warning=level             \t--warning=level\n",
+    "me",
+    {} },
+#endif
   { kUnknown,
     0,
     "",
@@ -516,6 +1004,8 @@ void MeOption::DecideMeRealLevel(const std::vector<mapleOption::Option> &inputOp
     optLevel = kLevelTwo;
     // Turn the followings ON only at O2
     optDirectCall = true;
+    placementRC = true;
+    subsumRC = true;
     epreIncludeRef = true;
   }
 }
@@ -540,15 +1030,27 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
       case kMeOptL2:
         // Already handled above in DecideMeRealLevel
         break;
+      case kRefUsedCheck:
+        SplitPhases(opt.Args(), checkRefUsedInFuncs);
+        break;
       case kMeRange:
         useRange = true;
         result = GetRange(opt.Args());
+        break;
+      case kMeDumpBefore:
+        dumpBefore = (opt.Type() == kEnable);
         break;
       case kMeDumpAfter:
         dumpAfter = (opt.Type() == kEnable);
         break;
       case kMeDumpFunc:
         dumpFunc = opt.Args();
+        break;
+      case kMeSkipFrom:
+        skipFrom = opt.Args();
+        break;
+      case kMeSkipAfter:
+        skipAfter = opt.Args();
         break;
       case kMeDumpPhases:
         SplitPhases(opt.Args(), dumpPhases);
@@ -607,11 +1109,43 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
       case kRcLower:
         rcLowering = (opt.Type() == kEnable);
         break;
+      case kMeUseRc:
+        noRC = (opt.Type() == kDisable);
+        break;
+      case kLazyDecouple:
+        lazyDecouple = (opt.Type() == kEnable);
+        break;
+      case kMeStrictNaiveRc:
+        strictNaiveRC = (opt.Type() == kEnable);
+        break;
+      case kGCOnly:
+        gcOnly = (opt.Type() == kEnable);
+        propIloadRef = (opt.Type() == kEnable);
+        if (isDebug) {
+          LogInfo::MapleLogger() << "--sub options: propIloadRef " << propIloadRef << '\n';
+          LogInfo::MapleLogger() << "--sub options: propGlobalRef " << propGlobalRef << '\n';
+        }
+        break;
+      case kGCOnlyOpt:
+        gcOnlyOpt = (opt.Type() == kEnable);
+        break;
+      case kUseGcbar:
+        noGCBar = (opt.Type() == kEnable) ? false : true;
+        break;
+      case kRealCheckcast:
+        realCheckCast = (opt.Type() == kEnable);
+        break;
       case kMeNoDot:
         noDot = (opt.Type() == kEnable);
         break;
       case kStmtNum:
         stmtNum = (opt.Type() == kEnable);
+        break;
+      case kMeStubJniFunc:
+        regNativeFunc = (opt.Type() == kEnable);
+        break;
+      case kWarnNativefunc:
+        warnNativeFunc = (opt.Type() == kEnable);
         break;
       case kEpreLimit:
         epreLimit = std::stoul(opt.Args(), nullptr);
@@ -640,6 +1174,9 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
       case kProfileBBColdRate:
         profileBBColdRate = std::stoul(opt.Args(), nullptr);
         break;
+      case kIgnoreIpa:
+        ignoreIPA = (opt.Type() == kEnable);
+        break;
       case kAggressiveABCO:
         aggressiveABCO = (opt.Type() == kEnable);
         break;
@@ -658,14 +1195,48 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
       case kEprelhSivar:
         epreLHSIvar = (opt.Type() == kEnable);
         break;
+      case kDseKeepRef:
+        dseKeepRef = (opt.Type() == kEnable);
+        break;
       case kLessThrowAlias:
         lessThrowAlias = (opt.Type() == kEnable);
+        break;
+      case kPropBase:
+        propBase = (opt.Type() == kEnable);
+        break;
+      case kPropiLoadRef:
+        propIloadRef = (opt.Type() == kEnable);
+        if (opt.Type() == kEnable) {
+          propIloadRefNonParm = false;  // to override previous -propIloadRefNonParm
+        }
+        if (isDebug) {
+          LogInfo::MapleLogger() << "--sub options: propIloadRefNonParm " << propIloadRefNonParm << '\n';
+        }
+        break;
+      case kPropGloablRef:
+        propGlobalRef = (opt.Type() == kEnable);
+        break;
+      case kPropfinalIloadRef:
+        propFinaliLoadRef = (opt.Type() == kEnable);
+        break;
+      case kPropIloadRefnonparm:
+        propIloadRefNonParm = (opt.Type() == kEnable);
+        propIloadRef = (opt.Type() == kEnable);
+        if (isDebug) {
+          LogInfo::MapleLogger() << "--sub options: propIloadRef " << propIloadRef << '\n';
+        }
         break;
       case kNodeLegateRc:
         noDelegateRC = (opt.Type() == kEnable);
         break;
       case kNocondBasedRc:
         noCondBasedRC = (opt.Type() == kEnable);
+        break;
+      case kCheckCastOpt:
+        checkCastOpt = (opt.Type() == kEnable);
+        break;
+      case kParmToptr:
+        parmToPtr = (opt.Type() == kEnable);
         break;
       case kNullcheckPre:
         nullCheckPre = (opt.Type() == kEnable);
@@ -682,12 +1253,71 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
       case kRegReadAtReturn:
         regreadAtReturn = (opt.Type() == kEnable);
         break;
+      case kProPatphi:
+        propAtPhi = (opt.Type() == kEnable);
+        break;
+      case kMeNativeOpt:
+        nativeOpt = (opt.Type() == kEnable);
+        break;
+      case kOptDirectCall:
+        optDirectCall = (opt.Type() == kEnable);
+        break;
+      case kEnableEa:
+        enableEA = (opt.Type() == kEnable);
+        break;
       case kLpreSpeculate:
         lpreSpeculate = (opt.Type() == kEnable);
         break;
       case kSpillatCatch:
         spillAtCatch = (opt.Type() == kEnable);
         break;
+      case kPlacementRC:
+        placementRC = (opt.Type() == kEnable);
+        if (opt.Type() == kDisable) {
+          subsumRC = false;
+          epreIncludeRef = false;
+          if (isDebug) {
+            LogInfo::MapleLogger() << "--sub options: subsumRC " << subsumRC << '\n';
+            LogInfo::MapleLogger() << "--sub options: epreIncludeRef " << epreIncludeRef << '\n';
+          }
+        }
+        break;
+      case kSubsumRC:
+        subsumRC = (opt.Type() == kEnable);
+        epreIncludeRef = (opt.Type() == kEnable);
+        break;
+      case kMeInlineHint:
+        inlineFuncList = opt.Args();
+        break;
+      case kDecoupleStatic:
+        decoupleStatic = (opt.Type() == kEnable);
+        break;
+      case kMeThreads:
+        threads = std::stoul(opt.Args(), nullptr);
+        break;
+      case kMeIgnoreInferredRetType:
+        ignoreInferredRetType = (opt.Type() == kEnable);
+        break;
+#if MIR_JAVA
+      case kMeAcquireFunc:
+        acquireFuncName = opt.Args();
+        break;
+      case kMeReleaseFunc:
+        releaseFuncName = opt.Args();
+        break;
+      case kMeWarnLevel:
+        warningLevel = std::stoul(opt.Args());
+        break;
+      case kMeToolOnly:
+        mplToolOnly = (opt.Type() == kEnable);
+        break;
+      case kMeToolStrict:
+        mplToolStrict = (opt.Type() == kEnable);
+        break;
+      case kMeSkipVirtual:
+        skipVirtualMethod = (opt.Type() == kEnable);
+        break;
+#endif
       default:
         WARN(kLncWarn, "input invalid key for me " + opt.OptionKey());
         break;
@@ -705,6 +1335,29 @@ MeOption::MeOption() {
   CreateUsages(kUsage);
 }
 
+void MeOption::ParseOptions(int argc, char **argv, std::string &fileName) {
+  OptionParser optionParser;
+  optionParser.RegisteUsages(DriverOptionCommon::GetInstance());
+  optionParser.RegisteUsages(MeOption::GetInstance());
+  int ret = optionParser.Parse(argc, argv, "me");
+  CHECK_FATAL(ret == kErrorNoError, "option parser error");
+  bool result = SolveOptions(optionParser.GetOptions(), false);
+  if (!result) {
+    return;
+  }
+  if (optionParser.GetNonOptionsCount() != 1) {
+    LogInfo::MapleLogger() << "expecting one .mpl file as last argument, found: ";
+    for (std::string optionArg : optionParser.GetNonOptions()) {
+      LogInfo::MapleLogger() << optionArg << " ";
+    }
+    LogInfo::MapleLogger() << '\n';
+    CHECK_FATAL(false, "option parser error");
+  }
+  fileName = optionParser.GetNonOptions().front();
+#ifdef DEBUG_OPTION
+  LogInfo::MapleLogger() << "mpl file : " << fileName << "\t";
+#endif
+}
 
 void MeOption::SplitPhases(const std::string &str, std::unordered_set<std::string> &set) const {
   std::string s{ str };

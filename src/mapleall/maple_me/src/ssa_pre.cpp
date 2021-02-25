@@ -80,7 +80,7 @@ MeExpr *SSAPre::CreateNewCurTemp(const MeExpr &meExpr) {
     }
     curTemp = regVar;
     if (preKind == kLoadPre) {
-      irMap->SetLpreTmps(static_cast<const VarMeExpr*>(&meExpr)->GetOst()->GetIndex(), *regVar);
+      irMap->SetLpreTmps(static_cast<const VarMeExpr*>(&meExpr)->GetOstIdx(), *regVar);
     }
     return regVar;
   } else {
@@ -104,7 +104,7 @@ VarMeExpr *SSAPre::CreateNewCurLocalRefVar() {
     FieldID fieldID = ivarMeExpr->GetFieldID();
     curLocalRefVar = irMap->CreateNewLocalRefVarTmp(NewTempStrIdx(), realMIRType->GetPointedTyIdxWithFieldID(fieldID));
     ASSERT_NOT_NULL(curLocalRefVar);
-    ssaTab->SetEPreLocalRefVar(curLocalRefVar->GetOst()->GetIndex(), true);
+    ssaTab->SetEPreLocalRefVar(curLocalRefVar->GetOstIdx(), true);
     SetAddedNewLocalRefVars(true);
     return curLocalRefVar;
   }
@@ -132,7 +132,7 @@ void SSAPre::GenerateSaveInsertedOcc(MeInsertedOcc &insertedOcc) {
     newMeStmt = irMap->CreateDassignMeStmt(*localRefVar, *insertedOcc.GetMeExpr(), *insertedOcc.GetBB());
     localRefVar->SetDefByStmt(*newMeStmt);
     insertedOcc.GetBB()->InsertMeStmtLastBr(newMeStmt);
-    EnterCandsForSSAUpdate(localRefVar->GetOst()->GetIndex(), *insertedOcc.GetBB());
+    EnterCandsForSSAUpdate(localRefVar->GetOstIdx(), *insertedOcc.GetBB());
     newMeStmt = irMap->CreateRegassignMeStmt(*regOrVar, *localRefVar, *insertedOcc.GetBB());
     regOrVar->SetDefByStmt(*newMeStmt);
     insertedOcc.GetBB()->InsertMeStmtLastBr(newMeStmt);
@@ -167,7 +167,7 @@ void SSAPre::GenerateSavePhiOcc(MePhiOcc &phiOcc) {
     phiVar->SetDefBB(phiOcc.GetBB());
     phiOcc.SetVarPhi(*phiVar);
     // update the phi opnds later
-    EnterCandsForSSAUpdate(localRefVar->GetOst()->GetIndex(), *phiOcc.GetBB());
+    EnterCandsForSSAUpdate(localRefVar->GetOstIdx(), *phiOcc.GetBB());
   }
 }
 
@@ -188,7 +188,7 @@ void SSAPre::UpdateInsertedPhiOccOpnd() {
         }
         phiReg->GetOpnds().push_back(regOpnd);
       }
-      (void)phiOcc->GetBB()->GetMePhiList().insert(std::make_pair(phiReg->GetOpnd(0)->GetOst()->GetIndex(), phiReg));
+      (void)phiOcc->GetBB()->GetMePhiList().insert(std::make_pair(phiReg->GetOpnd(0)->GetOstIdx(), phiReg));
       if (workCand->NeedLocalRefVar() && phiOcc->GetVarPhi() != nullptr) {
         MePhiNode *phiVar = phiOcc->GetVarPhi();
         for (MePhiOpndOcc *phiOpnd : phiOcc->GetPhiOpnds()) {
@@ -211,7 +211,7 @@ void SSAPre::UpdateInsertedPhiOccOpnd() {
           }
           phiVar->GetOpnds().push_back(localRefVarOpnd);
         }
-        (void)phiOcc->GetBB()->GetMePhiList().insert(std::make_pair(phiVar->GetOpnd(0)->GetOst()->GetIndex(), phiVar));
+        (void)phiOcc->GetBB()->GetMePhiList().insert(std::make_pair(phiVar->GetOpnd(0)->GetOstIdx(), phiVar));
       }
     } else {
       MePhiNode *phiVar = phiOcc->GetVarPhi();
@@ -223,7 +223,7 @@ void SSAPre::UpdateInsertedPhiOccOpnd() {
         }
         phiVar->GetOpnds().push_back(varOpnd);
       }
-      (void)phiOcc->GetBB()->GetMePhiList().insert(std::make_pair(phiVar->GetOpnd(0)->GetOst()->GetIndex(), phiVar));
+      (void)phiOcc->GetBB()->GetMePhiList().insert(std::make_pair(phiVar->GetOpnd(0)->GetOstIdx(), phiVar));
     }
   }
 }
@@ -1169,7 +1169,7 @@ bool SSAPre::DefVarDominateOcc(const MeExpr *meExpr, const MeOccur &meOcc) const
     switch (varMeExpr->GetDefBy()) {
       case kDefByNo:
         // zero version vst dominate everything
-        return ssaTab->IsInitVersion(varMeExpr->GetVstIdx(), varMeExpr->GetOst()->GetIndex());
+        return ssaTab->IsInitVersion(varMeExpr->GetVstIdx(), varMeExpr->GetOstIdx());
       case kDefByStmt: {
         MeStmt *meStmt = varMeExpr->GetDefStmt();
         CHECK_FATAL(meStmt != nullptr, "should have a def meStmt");
@@ -1455,6 +1455,7 @@ void SSAPre::BuildWorkListStmt(MeStmt &stmt, uint32 seqStmt, bool isRebuilt, MeE
     case OP_incref:
     case OP_decrefreset:
     case OP_eval:
+    case OP_igoto:
     case OP_assertnonnull:
     case OP_free: {
       auto *unaryStmt = static_cast<UnaryMeStmt*>(meStmt);

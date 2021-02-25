@@ -135,7 +135,7 @@ bool AnalyzeRC::NeedIncref(const MeStmt &stmt) const {
   }
   MeExpr *rhs = stmt.GetRHS();
   CHECK_NULL_FATAL(rhs);
-  return rhs->PointsToSomethingThatNeedsIncRef(ssaTab);
+  return rhs->PointsToSomethingThatNeedsIncRef();
 }
 
 // identify assignments to ref pointers and insert decref before it and incref
@@ -145,7 +145,7 @@ void AnalyzeRC::IdentifyRCStmts() {
   for (auto bIt = func.valid_begin(); bIt != eIt; ++bIt) {
     auto &bb = **bIt;
     for (auto &stmt : bb.GetMeStmts()) {
-      MeExpr *lhsRef = stmt.GetLHSRef(ssaTab, skipLocalRefVars);
+      MeExpr *lhsRef = stmt.GetLHSRef(skipLocalRefVars);
       if (lhsRef != nullptr) {
         OriginalSt *ost = GetOriginalSt(*lhsRef);
         ASSERT(ost != nullptr, "IdentifyRCStmts: cannot get SymbolOriginalSt");
@@ -220,7 +220,7 @@ void AnalyzeRC::TraverseStmt(BB &bb) {
         static_cast<IntrinsiccallMeStmt&>(meStmt).GetIntrinsic() == INTRN_MPL_CLEANUP_LOCALREFVARS)) {
       RenameUses(meStmt);
     } else {
-      MeExpr *lhsRef = meStmt.GetLHSRef(ssaTab, skipLocalRefVars);
+      MeExpr *lhsRef = meStmt.GetLHSRef(skipLocalRefVars);
       if (lhsRef == nullptr) {
         continue;
       }
@@ -417,7 +417,11 @@ void AnalyzeRC::RemoveUnneededCleanups() {
 }
 
 void AnalyzeRC::Run() {
-  func.SetHints(func.GetHints() | kAnalyzeRCed);
+  if (func.GetHints() & kPlacementRCed) {
+    skipLocalRefVars = true;
+  } else {
+    func.SetHints(func.GetHints() | kAnalyzeRCed);
+  }
   IdentifyRCStmts();
   if (!skipLocalRefVars) {
     CreateCleanupIntrinsics();

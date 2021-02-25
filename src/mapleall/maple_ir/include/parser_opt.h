@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -24,6 +24,7 @@ enum ParserOptions : uint8 {
   kKeepFirst = 0x2,    // ignore second type def, not emit error
   kWithProfileInfo = 0x4,
   kParseOptFunc = 0x08,    // parse optimized function mpl file
+  kParseInlineFuncBody = 0x10    // parse to-be-inlined function bodies
 };
 }  // namespace maple
 #endif  // MAPLE_IR_INCLUDE_PARSER_OPT_H

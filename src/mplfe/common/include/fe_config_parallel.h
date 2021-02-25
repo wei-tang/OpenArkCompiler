@@ -59,6 +59,10 @@ class FEConfigParallel {
     return runThreadIDs.find(tid) != runThreadIDs.end();
   }
 
+  void RunThreadIDCleanUp() {
+    runThreadIDs.clear();
+  }
+
  private:
   static FEConfigParallel instance;
   uint32 nThread;

@@ -117,7 +117,7 @@ RegMeExpr *MeStorePre::EnsureRHSInCurTemp(BB &bb) {
       regPhi->GetOpnds().push_back(regPhiOpnd);
     }
     // insert the regPhi
-    (void)bb.GetMePhiList().insert(std::make_pair(lhsReg->GetOst()->GetIndex(), regPhi));
+    (void)bb.GetMePhiList().insert(std::make_pair(lhsReg->GetOstIdx(), regPhi));
     return lhsReg;
   }
   // continue at immediate dominator
@@ -198,7 +198,7 @@ void MeStorePre::CreateRealOcc(const OStIdx &ostIdx, MeStmt &meStmt) {
   if (mapIt != workCandMap.end()) {
     wkCand = mapIt->second;
   } else {
-    const OriginalSt *ost = ssaTab->GetSymbolOriginalStFromID(ostIdx);
+    OriginalSt *ost = ssaTab->GetSymbolOriginalStFromID(ostIdx);
     wkCand = spreMp->New<SpreWorkCand>(spreAllocator, *ost);
     workCandMap[ostIdx] = wkCand;
     // if it is local symbol, insert artificial real occ at common_exit_bb
@@ -263,7 +263,7 @@ void MeStorePre::FindAndCreateSpreUseOccs(const MeExpr &meExpr, BB &bb) const {
     auto *var = static_cast<const VarMeExpr*>(&meExpr);
     const OriginalSt *ost = var->GetOst();
     if (!ost->IsVolatile()) {
-      CreateUseOcc(var->GetOst()->GetIndex(), bb);
+      CreateUseOcc(var->GetOstIdx(), bb);
     }
     return;
   }
@@ -308,7 +308,7 @@ void MeStorePre::BuildWorkListBB(BB *bb) {
     if (stmt->GetOp() == OP_dassign) {
       auto *dass = static_cast<DassignMeStmt*>(to_ptr(stmt));
       if (dass->GetLHS()->GetPrimType() != PTY_ref) {
-        lhsOstIdx = dass->GetVarLHS()->GetOst()->GetIndex();
+        lhsOstIdx = dass->GetVarLHS()->GetOstIdx();
       }
     } else if (kOpcodeInfo.IsCallAssigned(stmt->GetOp())) {
       MapleVector<MustDefMeNode> *mustDefList = stmt->GetMustDefList();
@@ -316,7 +316,7 @@ void MeStorePre::BuildWorkListBB(BB *bb) {
       if (!mustDefList->empty()) {
         MeExpr *mdLHS = mustDefList->front().GetLHS();
         if (mdLHS->GetMeOp() == kMeOpVar && mdLHS->GetPrimType() != PTY_ref) {
-          lhsOstIdx = static_cast<VarMeExpr*>(mdLHS)->GetOst()->GetIndex();
+          lhsOstIdx = static_cast<VarMeExpr*>(mdLHS)->GetOstIdx();
         }
       }
     }

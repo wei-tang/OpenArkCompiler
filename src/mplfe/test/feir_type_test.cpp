@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -114,13 +114,15 @@ TEST_F(FEIRTypeDefaultTest, FEIRTypeDefaultTest_ref) {
 }
 
 TEST_F(FEIRTypeDefaultTest, FEIRTypeDefaultTest_refArray) {
-  FEIRTypeDefault type(PTY_ref, GStrIdx(0), 1);
+  std::string typeName = "Ljava_2Flang_2FString_3B";
+  GStrIdx gStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(typeName);
+  FEIRTypeDefault type(PTY_ref, gStrIdx, 1);
   RedirectCout();
   type.GenerateMIRType(kSrcLangJava, false)->Dump(0);
-  EXPECT_EQ(GetBufferString(), "<[] ref>");
+  EXPECT_EQ(GetBufferString(), "<[] <* <$Ljava_2Flang_2FString_3B>>>");
   ClearBufferString();
   type.GenerateMIRType(kSrcLangJava, true)->Dump(0);
-  EXPECT_EQ(GetBufferString(), "<* <[] ref>>");
+  EXPECT_EQ(GetBufferString(), "<* <[] <* <$Ljava_2Flang_2FString_3B>>>>");
   RestoreCout();
 }
 
