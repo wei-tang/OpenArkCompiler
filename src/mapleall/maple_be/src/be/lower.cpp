@@ -830,12 +830,8 @@ BlockNode *CGLowerer::GenBlockNode(StmtNode &newCall, const CallReturnVector &p2
       } else {
         sym = GetCurrentFunc()->GetSymbolTabItem(stIdx.Idx());
       }
-<<<<<<
       bool sizeIs0 = false;
-      if (sym) {
-=======
       if (sym != nullptr) {
->>>>>>> master
         retType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(sym->GetTyIdx());
         if (beCommon.GetTypeSize(retType->GetTypeIndex().GetIdx()) == 0) {
           sizeIs0 = true;
