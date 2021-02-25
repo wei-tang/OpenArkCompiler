@@ -558,6 +558,9 @@ void EliminateSpecifcUXTAArch64::Run(BB &bb, Insn &insn) {
       !prevInsn->IsMachineInstruction()) {
     return;
   }
+  if (cgFunc.GetMirModule().GetSrcLang() == kSrcLangC && prevInsn->IsCall() && prevInsn->GetIsCallReturnSigned()) {
+    return;
+  }
   if (thisMop == MOP_xuxtb32) {
     if (prevInsn->GetMachineOpcode() == MOP_xmovri32 || prevInsn->GetMachineOpcode() == MOP_xmovri64) {
       auto &dstMovOpnd = static_cast<RegOperand&>(prevInsn->GetOperand(kInsnFirstOpnd));
