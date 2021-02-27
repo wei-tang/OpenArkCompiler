@@ -21,6 +21,8 @@
 
 #include "base/macros.h"
 #include "dex/utf-inl.h"
+#include <string.h>
+#include <algorithm>
 
 namespace art {
 

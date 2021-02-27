@@ -17,21 +17,21 @@
 #ifndef ART_LIBARTBASE_BASE_STRING_VIEW_CPP20_H_
 #define ART_LIBARTBASE_BASE_STRING_VIEW_CPP20_H_
 
-#include <string_view>
+#include "string_view_format.h"
 
 namespace art {
 
-// Replacement functions for std::string_view::starts_with(), ends_with()
+// Replacement functions for StringView::starts_with(), ends_with()
 // which shall be available in C++20.
 #if __cplusplus >= 202000L
 #error "When upgrading to C++20, remove this error and file a bug to remove this workaround."
 #endif
 
-inline bool StartsWith(std::string_view sv, std::string_view prefix) {
+inline bool StartsWith(StringView sv, StringView prefix) {
   return sv.substr(0u, prefix.size()) == prefix;
 }
 
-inline bool EndsWith(std::string_view sv, std::string_view suffix) {
+inline bool EndsWith(StringView sv, StringView suffix) {
   return sv.size() >= suffix.size() && sv.substr(sv.size() - suffix.size()) == suffix;
 }
 

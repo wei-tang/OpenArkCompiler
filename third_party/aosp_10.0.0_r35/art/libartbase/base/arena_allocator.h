@@ -25,6 +25,7 @@
 #include "dchecked_vector.h"
 #include "macros.h"
 #include "memory_tool.h"
+#include <string.h>
 
 namespace art {
 

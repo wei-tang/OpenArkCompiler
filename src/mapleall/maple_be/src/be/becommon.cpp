@@ -117,7 +117,12 @@ void BECommon::ComputeStructTypeSizesAligns(MIRType &ty, const TyIdx &tyIdx) {
   SetStructFieldCount(structType.GetTypeIndex(), fields.size());
   if (fields.size() == 0 && mirModule.IsCModule()) {
     SetTypeAlign(tyIdx.GetIdx(), 1);
-    SetTypeSize(tyIdx.GetIdx(), 1);
+    if (structType.IsCPlusPlus()) {
+      SetTypeSize(tyIdx.GetIdx(), 1);
+    } else {
+      /* empty struct is not supported in C, but gcc allows for it as size 0 */
+      SetTypeSize(tyIdx.GetIdx(), 0);
+    }
     return;
   }
   for (size_t j = 0; j < fields.size(); ++j) {
@@ -633,6 +638,15 @@ MIRType *BECommon::BeGetOrCreateFunctionType(TyIdx tyIdx, const std::vector<TyId
   }
   AddAndComputeSizeAlign(*newType);
   return newType;
+}
+
+void BECommon::FinalizeTypeTable() {
+  if (mirModule.GetSrcLang() == kSrcLangC && (GlobalTables::GetTypeTable().GetTypeTableSize() > GetSizeOfTypeSizeTable())) {
+    for (uint32 i = GetSizeOfTypeSizeTable(); i < GlobalTables::GetTypeTable().GetTypeTableSize(); ++i) {
+      MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(i);
+      AddAndComputeSizeAlign(*ty);
+    }
+  }
 }
 
 BaseNode *BECommon::GetAddressOfNode(const BaseNode &node) {
