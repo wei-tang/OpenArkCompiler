@@ -158,6 +158,7 @@ if [ "$installQemu" == "true" ]; then
 fi
 
 if [ ! -f $TOOLS/open64_prebuilt/README.md ]; then
+  cd $TOOLS
   git clone https://gitee.com/open64ark/open64_prebuilt.git
 fi
 if [ ! -f $TOOLS/open64_prebuilt/x86/riscv64/bin/clangfe ]; then
