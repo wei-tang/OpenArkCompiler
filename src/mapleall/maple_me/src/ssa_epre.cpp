@@ -372,6 +372,14 @@ void SSAEPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, b
         break;
       }
       if (!base->IsLeaf()) {
+        if (!isRebuild || base->IsUseSameSymbol(*tempVar)) {
+          if (base->GetOp() == OP_add &&
+              (base->GetOpnd(0)->GetOp() == OP_dread || base->GetOpnd(0)->GetOp() == OP_regread) &&
+              base->GetOpnd(1)->GetOp() == OP_constval) {
+            (void)CreateRealOcc(meStmt, seqStmt, meExpr, isRebuild);
+            break;
+          }
+        }
         BuildWorkListExpr(meStmt, seqStmt, *ivarMeExpr->GetBase(), isRebuild, tempVar, false);
       } else if (ivarMeExpr->IsVolatile()) {
         break;
@@ -460,10 +468,13 @@ void SSAEPre::CollectVarForMeExpr(MeExpr &meExpr, std::vector<MeExpr*> &varVec) 
     case kMeOpIvar: {
       auto *ivarMeExpr = static_cast<IvarMeExpr*>(&meExpr);
       CHECK_FATAL(ivarMeExpr->GetBase()->GetMeOp() == kMeOpVar || ivarMeExpr->GetBase()->GetMeOp() == kMeOpConst ||
-                  ivarMeExpr->GetBase()->GetMeOp() == kMeOpAddrof || ivarMeExpr->GetBase()->GetMeOp() == kMeOpReg,
+                  ivarMeExpr->GetBase()->GetMeOp() == kMeOpAddrof || ivarMeExpr->GetBase()->GetMeOp() == kMeOpReg ||
+                  ivarMeExpr->GetBase()->GetOp() == OP_add,
                   "ivarMeExpr not first order expr");
       if (ivarMeExpr->GetBase()->GetMeOp() == kMeOpVar || ivarMeExpr->GetBase()->GetMeOp() == kMeOpReg) {
         varVec.push_back(ivarMeExpr->GetBase());
+      } else if (ivarMeExpr->GetBase()->GetOp() == OP_add) {
+        CollectVarForMeExpr(*ivarMeExpr->GetOpnd(0), varVec);
       }
       // in case of lhs occurrence, mu can be nullptr, and can use nullptr as value
       varVec.push_back(ivarMeExpr->GetMu());
