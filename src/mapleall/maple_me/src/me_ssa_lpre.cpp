@@ -260,8 +260,12 @@ void MeSSALPre::BuildWorkListLHSOcc(MeStmt &meStmt, int32 seqStmt) {
 
 void MeSSALPre::CreateMembarOccAtCatch(BB &bb) {
   // go thru all workcands and insert a membar occurrence for each of them
-  for (size_t i = 0; i < workList.size() && i <= preLimit; ++i) {
-    PreWorkCand *workCand = workList[i];
+  uint32 cnt = 0;
+  for (PreWorkCand *workCand : workList) {
+    ++cnt;
+    if (cnt > preLimit) {
+      break;
+    }
     MeRealOcc *newOcc = ssaPreMemPool->New<MeRealOcc>(nullptr, 0, workCand->GetTheMeExpr());
     newOcc->SetOccType(kOccMembar);
     newOcc->SetBB(bb);
