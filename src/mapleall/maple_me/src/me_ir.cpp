@@ -390,7 +390,8 @@ bool IvarMeExpr::IsRCWeak() const {
 // (argument expr), then update its mu: expr->mu = this->mu.
 bool IvarMeExpr::IsIdentical(IvarMeExpr &expr, bool inConstructor) const {
   CHECK_FATAL(expr.base != nullptr, "null ptr check");
-  if (base->GetExprID() != expr.base->GetExprID() || fieldID != expr.fieldID || tyIdx != expr.tyIdx) {
+  if (base->GetExprID() != expr.base->GetExprID() || fieldID != expr.fieldID ||
+      offset != expr.offset || tyIdx != expr.tyIdx) {
     return false;
   }
 
@@ -914,6 +915,9 @@ void IvarMeExpr::Dump(const IRMap *irMap, int32 indent) const {
   LogInfo::MapleLogger() << "base = ";
   CHECK_FATAL(base != nullptr, "base is null");
   base->Dump(irMap, indent + 1);
+  if (op == OP_ireadoff) {
+    LogInfo::MapleLogger() << "  (offset)" << offset;
+  }
   LogInfo::MapleLogger() << '\n';
   PrintIndentation(indent + 1);
   LogInfo::MapleLogger() << "- MU: {";
