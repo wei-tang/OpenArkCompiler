@@ -453,7 +453,7 @@ class AArch64CGFunc : public CGFunc {
   RegOperand *GetBaseRegForSplit(uint32 baseRegNum);
   AArch64MemOperand &SplitOffsetWithAddInstruction(const AArch64MemOperand &memOpnd, uint32 bitLen,
                                                    uint32 baseRegNum = AArch64reg::kRinvalid, bool isDest = false,
-                                                   Insn *insn = nullptr);
+                                                   Insn *insn = nullptr, bool forPair = false);
   AArch64MemOperand &CreateReplacementMemOperand(uint32 bitLen, RegOperand &baseReg, int32 offset);
 
   bool HasStackLoadStore();
