@@ -912,6 +912,9 @@ void IvarMeExpr::Dump(const IRMap *irMap, int32 indent) const {
   mirType->Dump(0);
   LogInfo::MapleLogger() << " (field)" << fieldID << '\n';
   PrintIndentation(indent + 1);
+  if (op == OP_ireadoff) {
+    LogInfo::MapleLogger() << "  (offset)" << offset << '\n';
+  }
   LogInfo::MapleLogger() << "base = ";
   CHECK_FATAL(base != nullptr, "base is null");
   base->Dump(irMap, indent + 1);
