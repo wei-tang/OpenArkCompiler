@@ -310,6 +310,30 @@ MeExpr *IRMapBuild::BuildNaryMeExprForIntrinsicWithType(const BaseNode &mirNode)
   return meExpr;
 }
 
+static std::pair<BaseNode*, OffsetType> SimplifyBaseAddressOfIvar(BaseNode *base) {
+  if (base->GetOpCode() == OP_add || base->GetOpCode() == OP_sub) {
+    auto offsetNode = base->Opnd(1);
+    if (offsetNode->IsConstval()) {
+      // get offset value
+      auto *mirConst = static_cast<ConstvalNode*>(offsetNode)->GetConstVal();
+      auto offsetInByte = static_cast<MIRIntConst*>(mirConst)->GetValue();
+      OffsetType offset(kOffsetUnknown);
+      offset.Set(base->GetOpCode() == OP_add ? offsetInByte : -offsetInByte);
+      if (offset.IsInvalid()) {
+        return std::make_pair(base, offset);
+      }
+
+      const auto &baseNodeAndOffset = SimplifyBaseAddressOfIvar(base->Opnd(0));
+      auto newOffset = offset + baseNodeAndOffset.second;
+      if (newOffset.IsInvalid()) {
+        return std::make_pair(baseNodeAndOffset.first, newOffset);
+      }
+      return std::make_pair(baseNodeAndOffset.first, newOffset);
+    }
+  }
+  return std::make_pair(base, OffsetType::InvalidOffset());
+}
+
 MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
   Opcode op = mirNode.GetOpCode();
   if (op == OP_dread) {
@@ -362,7 +386,12 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
   if (op == OP_iread) {
     IvarMeExpr *ivarMeExpr = static_cast<IvarMeExpr*>(meExpr);
     IreadSSANode &iReadSSANode = static_cast<IreadSSANode&>(mirNode);
-    ivarMeExpr->SetBase(BuildExpr(*iReadSSANode.Opnd(0), atParm, true));
+    const auto &newBaseAndOffset = SimplifyBaseAddressOfIvar(iReadSSANode.Opnd(0));
+    ivarMeExpr->SetBase(BuildExpr(*newBaseAndOffset.first, atParm, true));
+    if (!newBaseAndOffset.second.IsInvalid() && newBaseAndOffset.second.val != 0) {
+      ivarMeExpr->SetOffset(newBaseAndOffset.second.val);
+      ivarMeExpr->SetOp(OP_ireadoff);
+    }
     VersionSt *verSt = iReadSSANode.GetSSAVar();
     if (verSt != nullptr) {
       VarMeExpr *varMeExpr = GetOrCreateVarFromVerSt(*verSt);
@@ -578,7 +607,12 @@ MeStmt *IRMapBuild::BuildIassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
   IassignMeStmt *meStmt = irMap->NewInPool<IassignMeStmt>(&stmt);
   meStmt->SetTyIdx(iasNode.GetTyIdx());
   meStmt->SetRHS(BuildExpr(*iasNode.GetRHS(), false, false));
-  meStmt->SetLHSVal(irMap->BuildLHSIvar(*BuildExpr(*iasNode.Opnd(0), false, false), *meStmt, iasNode.GetFieldID()));
+  const auto &newBaseAddrAndOffset = SimplifyBaseAddressOfIvar(iasNode.Opnd(0));
+  meStmt->SetLHSVal(irMap->BuildLHSIvar(*BuildExpr(*newBaseAddrAndOffset.first, false, false), *meStmt, iasNode.GetFieldID()));
+  if (!newBaseAddrAndOffset.second.IsInvalid() && newBaseAddrAndOffset.second.val != 0) {
+    meStmt->SetOp(OP_iassignoff);
+    meStmt->GetLHSVal()->SetOffset(newBaseAddrAndOffset.second.val);
+  }
   if (mirModule.IsCModule()) {
     bool isVolt = false;
     for (MayDefNode maydef : ssaPart.GetMayDefNodes()) {

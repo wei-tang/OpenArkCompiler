@@ -431,6 +431,9 @@ struct OffsetType {
   }
 
   OffsetType operator+(int64 offset) const {
+    if (this->IsInvalid()) {
+      return *this;
+    }
     int64 sum = this->val + offset;
     if (sum >= kOffsetMin && sum <= kOffsetMax) {
       return OffsetType(static_cast<int32>(sum));
