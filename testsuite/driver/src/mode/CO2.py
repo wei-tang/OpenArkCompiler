@@ -26,8 +26,9 @@ CO2 = {
         ),
         Maple(
             maple="${OUT_ROOT}/${MAPLE_BUILD_TYPE}/bin/maple",
-            run=["mplcg"],
+            run=["me","mplcg"],
             option={
+		"me": "-O2 --quiet",
                 "mplcg": "-O2 --quiet"
             },
             global_option="",
@@ -43,14 +44,14 @@ CO2 = {
     "run": [
         QemuRun(
             qemu_libc=[
-                "${MAPLE_ROOT}/tools/gcc-linaro-7.5.0/aarch64-linux-gnu/libc"                            
+                "${MAPLE_ROOT}/tools/gcc-linaro-7.5.0/aarch64-linux-gnu/libc"
             ],
             infile="${APP}.out",
-            redirection="output.log"                                
+            redirection="output.log"
         ),
         CheckFileEqual(
             file1="output.log",
-            file2="expected.txt"                                         
+            file2="expected.txt"
         )
     ]
 }
