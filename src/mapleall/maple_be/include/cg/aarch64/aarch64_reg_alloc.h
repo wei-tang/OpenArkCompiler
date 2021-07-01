@@ -30,8 +30,6 @@ class AArch64RegAllocator : public RegAllocator {
         liveReg(std::less<uint8>(), alloc.Adapter()),
         allocatedSet(std::less<Operand*>(), alloc.Adapter()),
         regLiveness(std::less<Operand*>(), alloc.Adapter()),
-        visitedBBs(alloc.Adapter()),
-        sortedBBs(alloc.Adapter()),
         rememberRegs(alloc.Adapter()) {
     for (int32 i = 0; i != kAllRegNum; i++) {
       availRegSet[i] = false;
@@ -51,12 +49,6 @@ class AArch64RegAllocator : public RegAllocator {
   bool IsSpecialReg(AArch64reg reg) const;
   bool IsUntouchableReg(uint32 regNO) const;
   void SaveCalleeSavedReg(RegOperand &opnd);
-
-  bool AllPredBBVisited(BB &bb) const;
-  BB *MarkStraightLineBBInBFS(BB*);
-  BB *SearchForStraightLineBBs(BB&);
-  void BFS(BB &bb);
-  void ComputeBlockOrder();
 
   std::string PhaseName() const {
     return "regalloc";
@@ -78,8 +70,6 @@ class AArch64RegAllocator : public RegAllocator {
   MapleSet<uint8> liveReg;              /* a set of currently live physical registers */
   MapleSet<Operand*> allocatedSet;      /* already allocated */
   MapleMap<Operand*, uint32> regLiveness;
-  MapleVector<bool> visitedBBs;
-  MapleVector<BB*> sortedBBs;
   MapleVector<AArch64reg> rememberRegs;
 };
 
