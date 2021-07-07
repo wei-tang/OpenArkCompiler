@@ -80,7 +80,7 @@ ScalarMeExpr *SSAEPre::FindScalarVersion(ScalarMeExpr *scalar, MeStmt *stmt) {
 //            RETURN: regorvar < 100 + p (need to find p's SSA version there)
 //            100 + p is added to EPRE work list
 OpMeExpr *SSAEPre::FormLFTRCompare(MeRealOcc *compOcc, MeExpr *regorvar) {
-  MeExpr *compare = compOcc->GetMeExpr();
+  auto *compare = static_cast<OpMeExpr*>(compOcc->GetMeExpr());
   // determine the ith operand of workCand that is the jth operand of compare
   OpMeExpr *x = static_cast<OpMeExpr *>(workCand->GetTheMeExpr());
   size_t i;
@@ -138,6 +138,15 @@ OpMeExpr *SSAEPre::FormLFTRCompare(MeRealOcc *compOcc, MeExpr *regorvar) {
   } else {
     hashedSide = irMap->HashMeExpr(newSide);
     BuildWorkListExpr(*compOcc->GetMeStmt(), compOcc->GetSequence(), *hashedSide, false, nullptr, true, true);
+  }
+  // when compare with 0, signed/unsigned integers have different behaviour
+  if (hashedSide->IsZero() &&
+      IsSignedInteger(regorvar->GetPrimType()) != IsSignedInteger(compare->GetOpndType()) &&
+      compare->GetOp() != OP_ne && compare->GetOp() != OP_eq) {
+    auto cmpType = IsSignedInteger(regorvar->GetPrimType()) ? GetUnsignedPrimType(regorvar->GetPrimType()) :
+                                                              GetSignedPrimType(regorvar->GetPrimType())
+    regorvar = irMap->CreateMeExprTypeCvt(cmpType, regorvar->GetPrimType(), *regorvar);
+    hashedSide->SetPtyp(cmpType);
   }
   OpMeExpr newcompare(-1, compare->GetOp(), compare->GetPrimType(), 2);
   newcompare.SetOpndType(regorvar->GetPrimType());
