@@ -15,11 +15,6 @@
 from api import *
 
 MFEO0 = {
-    "clean": [
-        Shell(
-            "rm -rf *.mpl *.mplt *.ast *.s *.out *.log"
-        )
-    ],
     "compile": [
         C2ast(
             clang="${MAPLE_ROOT}/tools/bin/clang",

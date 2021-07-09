@@ -15,11 +15,6 @@
 from api import *
 
 MFEO0_SUP = {
-    "clean": [
-        Shell(
-            "rm -rf *.mpl *.s *.out *.mplt *.log *.ast"
-        )
-    ],
     "compile": [
         C2ast(
             clang="${MAPLE_ROOT}/tools/bin/clang",

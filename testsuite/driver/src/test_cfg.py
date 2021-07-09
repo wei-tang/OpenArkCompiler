@@ -16,11 +16,12 @@ import re
 
 from basic_tools.file import read_file
 from basic_tools.string_list import *
-from basic_tools.string import split_string_by_comma_not_in_double_quotes, get_string_in_outermost_brackets
+from basic_tools.string import split_string_by_comma_not_in_bracket_and_quote, get_string_in_outermost_brackets
 
 class TestCFG(object):
 
     mode_phase_pattern = re.compile('^[0-9a-zA-Z_]+$')
+    global_var_pattern = re.compile(r"^[\w]+=[\"\'][-\w\/\\=\. ]+[\"\']$|^[\w]+=[-\w\/\\\.]+$")
 
     def __init__(self, test_cfg_path):
         self.test_cfg_content = read_file(test_cfg_path)
@@ -41,7 +42,7 @@ class TestCFG(object):
                     if "(" in line and line[-1] == ")" and TestCFG.mode_phase_pattern.match(line.split("(")[0]):
                         phase = line.split("(")[0]
                         variable_table = {}
-                        variables_list = split_string_by_comma_not_in_double_quotes(get_string_in_outermost_brackets(line))
+                        variables_list = split_string_by_comma_not_in_bracket_and_quote(get_string_in_outermost_brackets(line))
                         for variable in variables_list:
                             if "=" in variable:
                                 variable_name = variable.split("=")[0]
@@ -52,7 +53,7 @@ class TestCFG(object):
                             else:
                                 variable_table["APP"] = variable
                         self.test_cfg[mode].append((phase, variable_table))
-                    elif "=" in line and " " not in line:
+                    elif TestCFG.global_var_pattern.match(line):
                         global_variable_name = line.split("=")[0]
                         global_variable_value = "=".join(line.split("=")[1:])
                         if global_variable_value.startswith('"') and global_variable_value.endswith('"'):

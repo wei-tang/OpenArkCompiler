@@ -15,11 +15,6 @@
 from api import *
 
 CO2 = {
-    "clean": [
-        Shell(
-            "rm -rf *.mpl *.s *.out *.B"
-        )
-    ],
     "compile": [
         Clang2mpl(
             infile="${APP}.c"

@@ -27,17 +27,6 @@ class Task(object):
         pass
 
 
-
-class CleanCaseTask(Task):
-
-    def __init__(self, case):
-        super().__init__(case)
-        self.case = case
-
-    def run(self):
-        self.case.parse_config_file()
-        self.case.clean()
-
 class GenShellScriptTask(Task):
 
     def __init__(self, cases):

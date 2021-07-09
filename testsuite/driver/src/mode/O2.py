@@ -15,11 +15,6 @@
 from api import *
 
 O2 = {
-    "clean": [
-        Shell(
-            "rm -rf *.mpl *.dex *.class *.mplt *.s *.so *.o *.log *.jar"
-        )
-    ],
     "compile": [
         Java2dex(
             jar_file=[
