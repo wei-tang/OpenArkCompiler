@@ -338,7 +338,7 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
 
       auto *opnd = expr.Opnd(1);
       if (!opnd->IsConstval() || !IsAddress(expr.GetPrimType())) {
-        return AliasInfo(aliasInfo.ae, aliasInfo.fieldID, OffsetType::InvalidOffset());
+        return AliasInfo(aliasInfo.ae, 0, OffsetType::InvalidOffset());
       }
       auto mirConst = static_cast<ConstvalNode*>(opnd)->GetConstVal();
       CHECK_FATAL(mirConst->GetKind() == kConstInt, "array index must be integer");
@@ -350,7 +350,7 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
       }
       constexpr int64 bitsPerByte = 8;
       OffsetType newOffset = aliasInfo.offset + constVal * bitsPerByte;
-      return AliasInfo(aliasInfo.ae, aliasInfo.fieldID, newOffset);
+      return AliasInfo(aliasInfo.ae, 0, newOffset);
     }
     case OP_array: {
       for (size_t i = 1; i < expr.NumOpnds(); ++i) {
