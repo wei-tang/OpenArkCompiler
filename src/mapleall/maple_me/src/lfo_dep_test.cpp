@@ -385,7 +385,7 @@ void DoloopInfo::TestDependences(MapleVector<DepTestPair> *depTestList, bool bot
 
 bool DoloopInfo::Parallelizable() {
   if (hasPtrAccess || hasCall || hasScalarAssign || hasMayDef) {
-    return true;
+    return false;
   }
   for (size_t i = 0; i < outputDepTestList.size(); i++) {
     DepTestPair *testPair = &outputDepTestList[i];
