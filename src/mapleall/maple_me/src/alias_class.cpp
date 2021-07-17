@@ -171,8 +171,7 @@ AliasElem *AliasClass::FindOrCreateAliasElem(OriginalSt &ost) {
   }
   id2Elem.push_back(aliasElem);
   osym2Elem[ostIdx] = aliasElem;
-  unionFindAssignSet.NewMember();
-  unionFindAliasSet.NewMember();
+  unionFind.NewMember();
   return aliasElem;
 }
 
@@ -459,7 +458,7 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
       }
       AliasElem *aeOfLHSField = FindOrCreateAliasElem(*lhsFieldOst);
       AliasElem *aeOfRHSField = FindOrCreateAliasElem(*rhsFieldOst);
-      unionFindAssignSet.Union(aeOfLHSField->id, aeOfRHSField->id);
+      unionFind.Union(aeOfLHSField->id, aeOfRHSField->id);
     }
   } else if (lhsost->GetIndirectLev() == 0) {
     // make any field in this struct that has appeared NADS
@@ -557,7 +556,7 @@ void AliasClass::ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, Ba
     return;
   }
   if (rhsAe->GetOriginalSt().GetIndirectLev() > 0 || rhsAe->IsNotAllDefsSeen()) {
-    unionFindAssignSet.Union(lhsAe.GetClassID(), rhsAe->GetClassID());
+    unionFind.Union(lhsAe.GetClassID(), rhsAe->GetClassID());
     lhsAe.SetNextLevNotAllDefsSeen(true);
     return;
   }
@@ -576,7 +575,7 @@ void AliasClass::ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, Ba
       (rhs.GetOpCode() == OP_addrof && IsReadOnlyOst(rhsAe->GetOriginalSt()))) {
     return;
   }
-  unionFindAssignSet.Union(lhsAe.GetClassID(), rhsAe->GetClassID());
+  unionFind.Union(lhsAe.GetClassID(), rhsAe->GetClassID());
 }
 
 void AliasClass::SetPtrOpndNextLevNADS(const BaseNode &opnd, AliasElem *aliasElem, bool hasNoPrivateDefEffect) {
@@ -618,7 +617,7 @@ void AliasClass::CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *o
       ssaTab.GetVersionStTable().CreateZeroVersionSt(nextLevelOst2);
     }
     AliasElem *ae2 = FindOrCreateAliasElem(*nextLevelOst2);
-    unionFindAssignSet.Union(ae1->GetClassID(), ae2->GetClassID());
+    unionFind.Union(ae1->GetClassID(), ae2->GetClassID());
     CreateMirroringAliasElems(nextLevelOst1, nextLevelOst2); // recursive call
   }
 }
@@ -748,7 +747,7 @@ void AliasClass::UnionAddrofOstOfUnionFields() {
     StIdx stIdx = ost.GetMIRSymbol()->GetStIdx();
     auto it = sym2AddrofOstAE.find(stIdx);
     if (it != sym2AddrofOstAE.end()) {
-      unionFindAssignSet.Union(it->second->id, aliasElem->id);
+      unionFind.Union(it->second->id, aliasElem->id);
     } else {
       sym2AddrofOstAE[stIdx] = aliasElem;
     }
@@ -759,21 +758,21 @@ void AliasClass::CreateAssignSets() {
   // iterate through all the alias elems
   for (auto *aliasElem : id2Elem) {
     unsigned int id = aliasElem->GetClassID();
-    unsigned int rootID = unionFindAssignSet.Root(id);
-    if (unionFindAssignSet.GetElementsNumber(rootID) > 1) {
+    unsigned int rootID = unionFind.Root(id);
+    if (unionFind.GetElementsNumber(rootID) > 1) {
       // only root id's have assignset
       if (id2Elem[rootID]->GetAssignSet() == nullptr) {
         id2Elem[rootID]->assignSet = acMemPool.New<MapleSet<unsigned int>>(acAlloc.Adapter());
       }
+      id2Elem[rootID]->assignSet = id2Elem[id]->assignSet;
       id2Elem[rootID]->AddAssignToSet(id);
-    }
   }
 }
 
 void AliasClass::DumpAssignSets() {
   LogInfo::MapleLogger() << "/////// assign sets ///////\n";
   for (auto *aliasElem : id2Elem) {
-    if (unionFindAssignSet.Root(aliasElem->GetClassID()) != aliasElem->GetClassID()) {
+    if (unionFind.Root(aliasElem->GetClassID()) != aliasElem->GetClassID()) {
       continue;
     }
 
@@ -801,7 +800,7 @@ void AliasClass::UnionAllPointedTos() {
     }
   }
   for (size_t i = 1; i < pointedTos.size(); ++i) {
-    unionFindAliasSet.Union(pointedTos[0]->GetClassID(), pointedTos[i]->GetClassID());
+    unionFind.Union(pointedTos[0]->GetClassID(), pointedTos[i]->GetClassID());
   }
 }
 
@@ -811,21 +810,20 @@ void AliasClass::UnionNextLevelOfAliasOst(std::set<AliasElem *> &aesToUnionNextL
     aesToUnionNextLev.clear();
     for (auto *aliasElem : tmpSet) {
       auto aeId = aliasElem->GetClassID();
-      if (unionFindAliasSet.Root(aeId) != aeId) {
+      if (unionFind.Root(aeId) != aeId) {
         continue;
       }
 
       std::set<OriginalSt *> mayAliasOsts;
       for (uint32 id = 0; id < id2Elem.size(); ++id) {
-        if (unionFindAliasSet.Root(id) != aeId) {
+        if (unionFind.Root(id) != aeId) {
           continue;
         }
         auto *ost = id2Elem[id]->GetOst();
         auto &nextLevOsts = ost->GetNextLevelOsts();
         (void)mayAliasOsts.insert(nextLevOsts.begin(), nextLevOsts.end());
 
-        auto rootIdInAssignSet = unionFindAssignSet.Root(id);
-        auto *assignSet = id2Elem[rootIdInAssignSet]->GetAssignSet();
+        auto *assignSet = id2Elem[id]->GetAssignSet();
         if (assignSet == nullptr) {
           continue;
         }
@@ -857,9 +855,9 @@ void AliasClass::UnionNextLevelOfAliasOst(std::set<AliasElem *> &aesToUnionNextL
 
           auto idA = FindAliasElem(*ostA)->GetClassID();
           auto idB = FindAliasElem(*ostB)->GetClassID();
-          if (unionFindAliasSet.Root(idA) != unionFindAliasSet.Root(idB)) {
-            unionFindAliasSet.Union(idA, idB);
-            aesToUnionNextLev.insert(id2Elem[unionFindAliasSet.Root(idA)]);
+          if (unionFind.Root(idA) != unionFind.Root(idB)) {
+            unionFind.Union(idA, idB);
+            aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
           }
         }
       }
@@ -899,9 +897,10 @@ void AliasClass::ApplyUnionForPointedTos() {
     UnionForAggAndFields();
   }
 
+  std::vector<bool> aliasElemProcessed(id2Elem.size(), false);
   MapleSet<uint> tempset(std::less<uint>(), acAlloc.Adapter());
   for (AliasElem *aliaselem : id2Elem) {
-    if (aliaselem->GetAssignSet() == nullptr) {
+    if (aliaselem->GetAssignSet() == nullptr || aliasElemProcessed[aliaselem->GetClassID()]) {
       continue;
     }
 
@@ -915,6 +914,7 @@ void AliasClass::ApplyUnionForPointedTos() {
         hasNextLevNotAllDefsSeen = true;
         break;
       }
+      aliasElemProcessed[*setit] = true;
     }
     if (hasNextLevNotAllDefsSeen) {
       // make all pointedto's in this assignSet notAllDefsSeen
@@ -953,9 +953,9 @@ void AliasClass::ApplyUnionForPointedTos() {
             }
             uint32 idA = FindAliasElem(**ost1it)->GetClassID();
             uint32 idB = FindAliasElem(**ost2it)->GetClassID();
-            if (unionFindAliasSet.Root(idA) != unionFindAliasSet.Root(idB)) {
-              unionFindAliasSet.Union(idA, idB);
-              aesToUnionNextLev.insert(id2Elem[unionFindAliasSet.Root(idA)]);
+            if (unionFind.Root(idA) != unionFind.Root(idB)) {
+              unionFind.Union(idA, idB);
+              aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
             }
           }
         }
@@ -972,7 +972,7 @@ void AliasClass::CollectRootIDOfNextLevelNodes(const OriginalSt &ost,
   for (OriginalSt *nextLevelNode : ost.GetNextLevelOsts()) {
     if (!nextLevelNode->IsFinal()) {
       uint32 id = FindAliasElem(*nextLevelNode)->GetClassID();
-      (void)rootIDOfNADSs.insert(unionFindAliasSet.Root(id));
+      (void)rootIDOfNADSs.insert(unionFind.Root(id));
     }
   }
 }
@@ -1001,14 +1001,14 @@ void AliasClass::UnionForNotAllDefsSeen() {
     rootIDOfNADSs.erase(rootIDOfNADSs.begin());
     std::set<AliasElem *> aesToUnionNextLev;
     for (size_t elemIdB : rootIDOfNADSs) {
-      if (unionFindAliasSet.Root(elemIdA) != unionFindAliasSet.Root(elemIdB)) {
-        unionFindAliasSet.Union(elemIdA, elemIdB);
-        aesToUnionNextLev.insert(id2Elem[unionFindAliasSet.Root(elemIdA)]);
+      if (unionFind.Root(elemIdA) != unionFind.Root(elemIdB)) {
+        unionFind.Union(elemIdA, elemIdB);
+        aesToUnionNextLev.insert(id2Elem[unionFind.Root(elemIdA)]);
       }
     }
     UnionNextLevelOfAliasOst(aesToUnionNextLev);
     for (auto *aliasElem : id2Elem) {
-      if (unionFindAliasSet.Root(aliasElem->GetClassID()) == unionFindAliasSet.Root(elemIdA)) {
+      if (unionFind.Root(aliasElem->GetClassID()) == unionFind.Root(elemIdA)) {
         aliasElem->SetNotAllDefsSeen(true);
       }
     }
@@ -1035,16 +1035,16 @@ void AliasClass::UnionForNotAllDefsSeenCLang() {
   for (AliasElem *ae : notAllDefsSeenAes) {
     auto idA = notAllDefsSeenAe->GetClassID();
     auto idB = ae->GetClassID();
-    if (unionFindAliasSet.Root(idA) != unionFindAliasSet.Root(idB)) {
-      unionFindAliasSet.Union(idA, idB);
-      aesToUnionNextLev.insert(id2Elem[unionFindAliasSet.Root(idA)]);
+    if (unionFind.Root(idA) != unionFind.Root(idB)) {
+      unionFind.Union(idA, idB);
+      aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
     }
   }
   UnionNextLevelOfAliasOst(aesToUnionNextLev);
 
-  uint rootIdOfNotAllDefsSeenAe = unionFindAliasSet.Root(notAllDefsSeenAe->GetClassID());
+  uint rootIdOfNotAllDefsSeenAe = unionFind.Root(notAllDefsSeenAe->GetClassID());
   for (AliasElem *ae : id2Elem) {
-    if (unionFindAliasSet.Root(ae->GetClassID()) == rootIdOfNotAllDefsSeenAe) {
+    if (unionFind.Root(ae->GetClassID()) == rootIdOfNotAllDefsSeenAe) {
       ae->SetNotAllDefsSeen(true);
     }
   }
@@ -1080,7 +1080,7 @@ void AliasClass::UnionForNotAllDefsSeenCLang() {
         AliasElem *nextLevAE = osym2Elem[nextLevelNode->GetIndex()];
         if (nextLevAE != nullptr) {
           nextLevAE->SetNotAllDefsSeen(true);
-          unionFindAliasSet.Union(notAllDefsSeenAe->GetClassID(), nextLevAE->GetClassID());
+          unionFind.Union(notAllDefsSeenAe->GetClassID(), nextLevAE->GetClassID());
         }
       }
     }
@@ -1106,7 +1106,7 @@ void AliasClass::UnionForAggAndFields() {
       if (id2Elem[idA]->GetOriginalSt().GetFieldID() == 0 && aesWithSameSymbol.size() > 1) {
         (void)aesWithSameSymbol.erase(idA);
         for (auto idB : aesWithSameSymbol) {
-          unionFindAliasSet.Union(idA, idB);
+          unionFind.Union(idA, idB);
         }
         break;
       }
@@ -1130,8 +1130,7 @@ AliasElem *AliasClass::FindOrCreateDummyNADSAe() {
     dummyAe->SetNotAllDefsSeen(true);
     id2Elem.push_back(dummyAe);
     osym2Elem.push_back(dummyAe);
-    unionFindAssignSet.NewMember();
-    unionFindAliasSet.NewMember();
+    unionFind.NewMember();
     return dummyAe;
   }
 }
@@ -1148,7 +1147,7 @@ void AliasClass::UnionAllNodes(MapleVector<OriginalSt *> *nextLevOsts) {
   for (; it != nextLevOsts->end(); ++it) {
     OriginalSt *ostB = *it;
     AliasElem *aeB = FindAliasElem(*ostB);
-    unionFindAliasSet.Union(aeA->GetClassID(), aeB->GetClassID());
+    unionFind.Union(aeA->GetClassID(), aeB->GetClassID());
   }
 }
 
@@ -1190,7 +1189,7 @@ void AliasClass::CollectAliasGroups(std::map<unsigned int, std::set<unsigned int
   // key is the root id. The set contains ids of aes that alias with the root.
   for (AliasElem *aliasElem : id2Elem) {
     unsigned int id = aliasElem->GetClassID();
-    unsigned int rootID = unionFindAliasSet.Root(id);
+    unsigned int rootID = unionFind.Root(id);
     if (id == rootID) {
       continue;
     }
@@ -1280,7 +1279,7 @@ void AliasClass::ProcessIdsAliasWithRoot(const std::set<unsigned int> &idsAliasW
       OriginalSt &ostB = id2Elem[idB]->GetOriginalSt();
       if (AliasAccordingToType(ostA.GetPrevLevelOst()->GetTyIdx(), ostB.GetPrevLevelOst()->GetTyIdx()) &&
           AliasAccordingToFieldID(ostA, ostB)) {
-        unionFindAliasSet.Union(idA, idB);
+        unionFind.Union(idA, idB);
         unioned = true;
         break;
       }
@@ -1295,7 +1294,7 @@ void AliasClass::ReconstructAliasGroups() {
   // map the root id to the set contains the aliasElem-id that alias with the root.
   std::map<unsigned int, std::set<unsigned int>> aliasGroups;
   CollectAliasGroups(aliasGroups);
-  unionFindAliasSet.Reinit();
+  unionFind.Reinit();
   // kv.first is the root id. kv.second is the id the alias with the root.
   for (auto oneGroup : aliasGroups) {
     std::vector<unsigned int> newGroups;  // contains one id of each new alias group.
@@ -1308,7 +1307,7 @@ void AliasClass::ReconstructAliasGroups() {
 
 void AliasClass::CollectNotAllDefsSeenAes() {
   for (AliasElem *aliasElem : id2Elem) {
-    if (aliasElem->IsNotAllDefsSeen() && aliasElem->GetClassID() == unionFindAliasSet.Root(aliasElem->GetClassID())) {
+    if (aliasElem->IsNotAllDefsSeen() && aliasElem->GetClassID() == unionFind.Root(aliasElem->GetClassID())) {
       notAllDefsSeenClassSetRoots.push_back(aliasElem);
     }
   }
@@ -1318,7 +1317,7 @@ void AliasClass::UnionNextLevelOfAliasOst() {
   std::map<uint32, std::vector<OriginalSt*>> rootId2AliasedOsts;
   for (AliasElem *aliasElem : id2Elem) {
     uint32 id = aliasElem->GetClassID();
-    uint32 rootID = unionFindAliasSet.Root(id);
+    uint32 rootID = unionFind.Root(id);
     if (id != rootID) {
       auto &ost = aliasElem->GetOriginalSt();
       auto &nextLevelOsts = ost.GetNextLevelOsts();
@@ -1348,7 +1347,7 @@ void AliasClass::UnionNextLevelOfAliasOst() {
         }
         AliasElem *indaeA = FindAliasElem(*ostA);
         AliasElem *indaeB = FindAliasElem(*ostB);
-        unionFindAliasSet.Union(indaeA->GetClassID(), indaeB->GetClassID());
+        unionFind.Union(indaeA->GetClassID(), indaeB->GetClassID());
       }
     }
   }
@@ -1358,8 +1357,8 @@ void AliasClass::CreateClassSets() {
   // iterate through all the alias elems
   for (AliasElem *aliasElem : id2Elem) {
     unsigned int id = aliasElem->GetClassID();
-    unsigned int rootID = unionFindAliasSet.Root(id);
-    if (unionFindAliasSet.GetElementsNumber(rootID) > 1) {
+    unsigned int rootID = unionFind.Root(id);
+    if (unionFind.GetElementsNumber(rootID) > 1) {
       if (id2Elem[rootID]->GetClassSet() == nullptr) {
         id2Elem[rootID]->classSet = acMemPool.New<MapleSet<unsigned int>>(acAlloc.Adapter());
       }
@@ -1371,8 +1370,8 @@ void AliasClass::CreateClassSets() {
 #if DEBUG
   for (AliasElem *aliasElem : id2Elem) {
     if (aliasElem->GetClassSet() != nullptr && aliasElem->IsNotAllDefsSeen() == false &&
-        unionFindAliasSet.Root(aliasElem->GetClassID()) == aliasElem->GetClassID()) {
-      ASSERT(aliasElem->GetClassSet()->size() == unionFindAliasSet.GetElementsNumber(aliasElem->GetClassID()),
+        unionFind.Root(aliasElem->GetClassID()) == aliasElem->GetClassID()) {
+      ASSERT(aliasElem->GetClassSet()->size() == unionFind.GetElementsNumber(aliasElem->GetClassID()),
              "AliasClass::CreateClassSets: wrong result");
     }
   }
@@ -1387,7 +1386,7 @@ void AliasElem::Dump() const {
 void AliasClass::DumpClassSets() {
   LogInfo::MapleLogger() << "/////// class sets ///////\n";
   for (AliasElem *aliaselem : id2Elem) {
-    if (unionFindAliasSet.Root(aliaselem->GetClassID()) != aliaselem->GetClassID()) {
+    if (unionFind.Root(aliaselem->GetClassID()) != aliaselem->GetClassID()) {
       continue;
     }
 
