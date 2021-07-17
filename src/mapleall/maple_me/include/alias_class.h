@@ -108,7 +108,8 @@ class AliasClass : public AnalysisResult {
         acMemPool(memPool),
         acAlloc(&memPool),
         ssaTab(ssaTabParam),
-        unionFind(memPool),
+        unionFindAssignSet(memPool),
+        unionFindAliasSet(memPool),
         osym2Elem(ssaTabParam.GetOriginalStTableSize(), nullptr, acAlloc.Adapter()),
         id2Elem(acAlloc.Adapter()),
         notAllDefsSeenClassSetRoots(acAlloc.Adapter()),
@@ -144,7 +145,8 @@ class AliasClass : public AnalysisResult {
   }
 
   void ReinitUnionFind() {
-    unionFind.Reinit();
+    unionFindAssignSet.Reinit();
+    unionFindAliasSet.Reinit();
   }
 
   void ApplyUnionForCopies(StmtNode &stmt);
@@ -196,6 +198,7 @@ class AliasClass : public AnalysisResult {
   void ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, BaseNode &rhs);
   bool SetNextLevNADSForEscapePtr(AliasElem &lhsAe, BaseNode &rhs);
   void CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *ost2);
+  void UnionNextLevelOfAliasOst(std::set<AliasElem *> &aesToUnionNextLev);
   AliasElem *FindOrCreateDummyNADSAe();
   AliasElem &FindOrCreateAliasElemOfAddrofOSt(OriginalSt &oSt);
   void CollectMayDefForMustDefs(const StmtNode &stmt, std::set<OriginalSt*> &mayDefOsts);
@@ -233,7 +236,8 @@ class AliasClass : public AnalysisResult {
   MemPool &acMemPool;
   MapleAllocator acAlloc;
   SSATab &ssaTab;
-  UnionFind unionFind;
+  UnionFind unionFindAssignSet;
+  UnionFind unionFindAliasSet;
   MapleVector<AliasElem*> osym2Elem;                    // index is OStIdx
   MapleVector<AliasElem*> id2Elem;                      // index is the id
   MapleVector<AliasElem*> notAllDefsSeenClassSetRoots;  // root of the not_all_defs_seen class sets
