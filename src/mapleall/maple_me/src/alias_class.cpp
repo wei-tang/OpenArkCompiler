@@ -963,65 +963,7 @@ void AliasClass::ApplyUnionForPointedTos() {
     }
 
     // union next-level-osts of aliased osts
-    while (!aesToUnionNextLev.empty()) {
-      auto tmpSet = aesToUnionNextLev;
-      aesToUnionNextLev.clear();
-      for (auto *aliasElem : tmpSet) {
-        auto aeId = aliasElem->GetClassID();
-        if (unionFindAliasSet.Root(aeId) != aeId) {
-          continue;
-        }
-
-        std::set<OriginalSt *> mayAliasOsts;
-        for (uint32 id = 0; id < id2Elem.size(); ++id) {
-          if (unionFindAliasSet.Root(id) != aeId) {
-            continue;
-          }
-          auto *ost = id2Elem[id]->GetOst();
-          auto &nextLevOsts = ost->GetNextLevelOsts();
-          (void)mayAliasOsts.insert(nextLevOsts.begin(), nextLevOsts.end());
-
-          auto rootIdInAssignSet = unionFindAssignSet.Root(id);
-          auto *assignSet = id2Elem[rootIdInAssignSet]->GetAssignSet();
-          if (assignSet == nullptr) {
-            continue;
-          }
-          for (auto valAliasId : *assignSet) {
-            if (valAliasId == id) {
-              continue;
-            }
-            auto &nextLevOsts = id2Elem[valAliasId]->GetOst()->GetNextLevelOsts();
-            (void)mayAliasOsts.insert(nextLevOsts.begin(), nextLevOsts.end());
-          }
-        }
-
-        if (mayAliasOsts.empty()) {
-          continue;
-        }
-
-        for (auto itA = mayAliasOsts.begin(); itA != mayAliasOsts.end(); ++itA) {
-          auto *ostA = *itA;
-          if (ostA->IsFinal()) {
-            continue;
-          }
-          auto itB = itA;
-          ++itB;
-          for (; itB != mayAliasOsts.end(); ++itB) {
-            auto *ostB = *itB;
-            if (ostB->IsFinal()) {
-              continue;
-            }
-
-            auto idA = FindAliasElem(*ostA)->GetClassID();
-            auto idB = FindAliasElem(*ostB)->GetClassID();
-            if (unionFindAliasSet.Root(idA) != unionFindAliasSet.Root(idB)) {
-              unionFindAliasSet.Union(idA, idB);
-              aesToUnionNextLev.insert(id2Elem[unionFindAliasSet.Root(idA)]);
-            }
-          }
-        }
-      }
-    }
+    UnionNextLevelOfAliasOst(aesToUnionNextLev);
   }
 }
 
