@@ -108,7 +108,8 @@ class AliasClass : public AnalysisResult {
         acMemPool(memPool),
         acAlloc(&memPool),
         ssaTab(ssaTabParam),
-        unionFind(memPool),
+        unionFindAssignSet(memPool),
+        unionFindAliasSet(memPool),
         osym2Elem(ssaTabParam.GetOriginalStTableSize(), nullptr, acAlloc.Adapter()),
         id2Elem(acAlloc.Adapter()),
         notAllDefsSeenClassSetRoots(acAlloc.Adapter()),
@@ -144,7 +145,8 @@ class AliasClass : public AnalysisResult {
   }
 
   void ReinitUnionFind() {
-    unionFind.Reinit();
+    unionFindAssignSet.Reinit();
+    unionFindAliasSet.Reinit();
   }
 
   void ApplyUnionForCopies(StmtNode &stmt);
@@ -233,7 +235,8 @@ class AliasClass : public AnalysisResult {
   MemPool &acMemPool;
   MapleAllocator acAlloc;
   SSATab &ssaTab;
-  UnionFind unionFind;
+  UnionFind unionFindAssignSet;
+  UnionFind unionFindAliasSet;
   MapleVector<AliasElem*> osym2Elem;                    // index is OStIdx
   MapleVector<AliasElem*> id2Elem;                      // index is the id
   MapleVector<AliasElem*> notAllDefsSeenClassSetRoots;  // root of the not_all_defs_seen class sets
