@@ -357,17 +357,98 @@ void LoopVectorization::TransformLoop() {
   }
 }
 
+bool LoopVectorization::ExprVectorizable(BaseNode *x) {
+  if (!IsPrimitiveInteger(x->GetPrimType())) {
+    return false;
+  }
+  switch (x->GetOpCode()) {
+    // supported leaf ops
+    case OP_constval:
+    case OP_dread:
+      return true;
+    // supported binary ops
+    case OP_add:
+    case OP_sub:
+    case OP_mul:
+    case OP_band:
+    case OP_bior:
+    case OP_shl:
+    case OP_lshr:
+    case OP_ashr:
+    case OP_eq:
+    case OP_ne:
+    case OP_lt:
+    case OP_gt:
+    case OP_le:
+    case OP_ge:
+    case OP_cmpg:
+    case OP_cmpl:
+      return ExprVectorizable(x->Opnd(0)) && ExprVectorizable(x->Opnd(1));
+    // supported unary ops
+    case OP_iread:
+    case OP_bnot:
+    case OP_lnot:
+    case OP_neg:
+      return ExprVectorizable(x->Opnd(0));
+    // supported n-ary ops
+    case OP_array: {
+      for (size_t i = 0; i < x->NumOpnds(); i++) {
+        if (!ExprVectorizable(x->Opnd(i))) {
+          return false;
+        }
+      }
+      return true;
+    }
+    default: ;
+  }
+  return false;
+}
+
+// assumed to be inside innermost loop
+bool LoopVectorization::Vectorizable(BlockNode *block) {
+  StmtNode *stmt = block->GetFirst();
+  while (stmt != nullptr) {
+    switch (stmt->GetOpCode()) {
+      case OP_doloop:
+      case OP_dowhile:
+      case OP_while: {
+        CHECK_FATAL(false, "Vectorizable: cannot handle non-innermost loop");
+        break;
+      }
+      case OP_block:
+        return Vectorizable(static_cast<DoloopNode *>(stmt)->GetDoBody());
+      case OP_iassign:
+        return ExprVectorizable(static_cast<IassignNode *>(stmt)->GetRHS());
+      default: return false;
+    }
+    stmt = stmt->GetNext();
+  }
+  return false;
+}
+
 void LoopVectorization::Perform() {
   // step 2: collect information, legality check and generate transform plan
   MapleMap<DoloopNode *, DoloopInfo *>::iterator mapit = depInfo->doloopInfoMap.begin();
   for (; mapit != depInfo->doloopInfoMap.end(); mapit++) {
-    // if current doloop is innest loop and parallelizable, generate vectorize plan;
-    if (mapit->second && mapit->second->children.empty() && mapit->second->Parallelizable()) {
-      // hack code here, tranform plan
-      LoopTransPlan *tplan = localMP->New<LoopTransPlan>(codeMP, localMP);
-      tplan->Generate(mapit->first, mapit->second);
-      vecPlans[mapit->first] = tplan;
+    if (!mapit->second->children.empty() || !mapit->second->Parallelizable()) {
+      continue;
     }
+    bool vectorizable = Vectorizable(mapit->first->GetDoBody());
+    if (DEBUGFUNC(meFunc)) {
+      LogInfo::MapleLogger() << "\nInnermost Doloop:";
+      if (!vectorizable) {
+        LogInfo::MapleLogger() << " NOT";
+      }
+      LogInfo::MapleLogger() << " VECTORIZABLE\n";
+      mapit->first->Dump(0);
+    }
+    if (!vectorizable) {
+      continue;
+    }
+    // generate vectorize plan;
+    LoopTransPlan *tplan = localMP->New<LoopTransPlan>(codeMP, localMP);
+    tplan->Generate(mapit->first, mapit->second);
+    vecPlans[mapit->first] = tplan;
   }
   // step 3: do transform
   // transform plan map to each doloop

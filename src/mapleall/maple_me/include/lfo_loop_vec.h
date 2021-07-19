@@ -59,6 +59,7 @@ class LoopVectorization {
   LoopVectorization(MemPool *localmp, LfoPreEmitter *lfoEmit, LfoDepInfo *depinfo) :
       localAlloc(localmp),
       vecPlans(localAlloc.Adapter()) {
+    meFunc = depInfo->lfoFunc->meFunc;
     mirFunc = lfoEmit->GetMirFunction();
     lfoStmtParts = lfoEmit->GetLfoStmtMap();
     lfoExprParts = lfoEmit->GetLfoExprMap();
@@ -75,14 +76,17 @@ class LoopVectorization {
   void VectorizeNode(BaseNode *, uint8_t);
   MIRType *GenVecType(PrimType, uint8_t);
   StmtNode *GenIntrinNode(BaseNode *scalar, PrimType vecPrimType);
-  bool CanVectorizeStmt(StmtNode *stmt);
+  bool ExprVectorizable(BaseNode *x);
+  bool Vectorizable(BlockNode *block);
   void widenDoloop(DoloopNode *doloop, LoopTransPlan *);
   DoloopNode *PrepareDoloop(DoloopNode *, LoopTransPlan *);
   DoloopNode *GenEpilog(DoloopNode *);
   MemPool *GetLocalMp() { return localMP; }
   MapleMap<DoloopNode *, LoopTransPlan *> *GetVecPlans() { return &vecPlans; }
+  std::string PhaseName() const { return "lfoloopvec"; }
 
  private:
+  MeFunction *meFunc;
   MIRFunction *mirFunc;
   MapleMap<uint32_t, LfoPart*>  *lfoStmtParts; // point to lfoStmtParts of lfopreemit, map lfoinfo for StmtNode, key is stmtID
   MapleMap<BaseNode*, LfoPart*> *lfoExprParts; // point to lfoexprparts of lfopreemit, map lfoinfo for exprNode, key is mirnode
