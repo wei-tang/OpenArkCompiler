@@ -766,6 +766,7 @@ void AliasClass::CreateAssignSets() {
       }
       id2Elem[rootID]->assignSet = id2Elem[id]->assignSet;
       id2Elem[rootID]->AddAssignToSet(id);
+    }
   }
 }
 
