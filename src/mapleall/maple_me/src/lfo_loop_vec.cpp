@@ -31,13 +31,19 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
   BaseNode *initNode = doloop->GetStartExpr();
   BaseNode *incrNode = doloop->GetIncrExpr();
   BaseNode *condNode = doloop->GetCondExpr();
+  bool condOpHasEqual = ((condNode->GetOpCode() == OP_le) || (condNode->GetOpCode() == OP_ge));
+  ConstvalNode *constOnenode = nullptr;
+  MIRType *typeInt = GlobalTables::GetTypeTable().GetInt32();
+  if (condOpHasEqual) {
+    MIRIntConst *constOne = GlobalTables::GetIntConstTable().GetOrCreateIntConst(1, *typeInt);
+    constOnenode = codeMP->New<ConstvalNode>(PTY_i32, constOne);
+  }
   ASSERT(incrNode->IsConstval(), "too complex, incrNode should be const");
   ConstvalNode *icn = static_cast<ConstvalNode*>(incrNode);
   MIRIntConst *incrConst = static_cast<MIRIntConst*>(icn->GetConstVal());
   ASSERT(condNode->IsBinaryNode(), "cmp node should be binary node");
   BaseNode *upNode = condNode->Opnd(1); // TODO:: verify opnd(1) is upper while opnd(0) is index variable
-  ASSERT((condNode->GetOpCode() != OP_le && condNode->GetOpCode() != OP_ge), "compare condition has equal part");
-  MIRType *typeInt = GlobalTables::GetTypeTable().GetInt32();
+
   MIRIntConst *newIncr = GlobalTables::GetIntConstTable().GetOrCreateIntConst(vecFactor*incrConst->GetValue(), *typeInt);
   ConstvalNode *newIncrNode = codeMP->New<ConstvalNode>(PTY_i32, newIncr);
   // check initNode is alignment
@@ -50,6 +56,9 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
       ConstvalNode *ucn = static_cast<ConstvalNode*>(upNode);
       MIRIntConst *upConst = static_cast<MIRIntConst*>(ucn->GetConstVal());
       int64 upvalue = upConst->GetValue();
+      if (condOpHasEqual) {
+        upvalue += 1;
+      }
       if (((upvalue - lowvalue) % (newIncr->GetValue())) == 0) {
         // early return, change vbound->stride only
         vBound = localMP->New<LoopBound>(nullptr, nullptr, newIncrNode);
@@ -70,11 +79,15 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
       AddrofNode *dreadnode = static_cast<AddrofNode*>(upNode);
       // upNode of vBound is uppnode / newIncr * newIncr
       BinaryNode *divnode;
+      BaseNode *addnode = upNode;
+      if (condOpHasEqual) {
+        addnode = codeMP->New<BinaryNode>(OP_add, PTY_i32, dreadnode, constOnenode);
+      }
       if (lowvalue != 0) {
-        BinaryNode *subnode = codeMP->New<BinaryNode>(OP_sub, PTY_i32, dreadnode, initNode);
+        BinaryNode *subnode = codeMP->New<BinaryNode>(OP_sub, PTY_i32, addnode, initNode);
         divnode = codeMP->New<BinaryNode>(OP_div, PTY_i32, subnode, newIncrNode);
       } else {
-        divnode = codeMP->New<BinaryNode>(OP_div, PTY_i32, dreadnode, newIncrNode);
+        divnode = codeMP->New<BinaryNode>(OP_div, PTY_i32, addnode, newIncrNode);
       }
       BinaryNode *mulnode = codeMP->New<BinaryNode>(OP_mul, PTY_i32, divnode, newIncrNode);
       vBound = localMP->New<LoopBound>(nullptr, mulnode, newIncrNode);
@@ -86,7 +99,13 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
   } else if (initNode->GetOpCode() == OP_dread) {
     // initnode is not constant
     // set bound of vectorized loop
-    BinaryNode *subnode = codeMP->New<BinaryNode>(OP_sub, PTY_i32, upNode, initNode);
+    BinaryNode *subnode;
+    if (condOpHasEqual) {
+      BinaryNode *addnode = codeMP->New<BinaryNode>(OP_add, PTY_i32, upNode, constOnenode);
+      subnode = codeMP->New<BinaryNode>(OP_sub, PTY_i32, addnode, initNode);
+    } else {
+      subnode = codeMP->New<BinaryNode>(OP_sub, PTY_i32, upNode, initNode);
+    }
     BinaryNode *divnode = codeMP->New<BinaryNode>(OP_div, PTY_i32, subnode, newIncrNode);
     BinaryNode *mulnode = codeMP->New<BinaryNode>(OP_mul, PTY_i32, divnode, newIncrNode);
     vBound = localMP->New<LoopBound>(nullptr, mulnode, newIncrNode);
