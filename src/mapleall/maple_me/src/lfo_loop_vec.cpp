@@ -148,6 +148,62 @@ MIRType* LoopVectorization::GenVecType(PrimType sPrimType, uint8 lanes) {
        }
        break;
      }
+     case PTY_i16: {
+       if (lanes == 4) {
+         vecType = GlobalTables::GetTypeTable().GetV4Int16();
+       } else if (lanes == 8) {
+         vecType = GlobalTables::GetTypeTable().GetV8Int16();
+       } else {
+         ASSERT(0, "unsupported int16 vector lanes");
+       }
+       break;
+     }
+     case PTY_u16: {
+       if (lanes == 4) {
+         vecType = GlobalTables::GetTypeTable().GetV4UInt16();
+       } else if (lanes == 8) {
+         vecType = GlobalTables::GetTypeTable().GetV8UInt16();
+       } else {
+         ASSERT(0, "unsupported uint16 vector lanes");
+       }
+       break;
+     }
+     case PTY_i8: {
+       if (lanes == 16) {
+         vecType = GlobalTables::GetTypeTable().GetV16Int8();
+       } else if (lanes == 8) {
+         vecType = GlobalTables::GetTypeTable().GetV8Int8();
+       } else {
+         ASSERT(0, "unsupported int8 vector lanes");
+       }
+       break;
+     }
+     case PTY_u8: {
+       if (lanes == 16) {
+         vecType = GlobalTables::GetTypeTable().GetV16UInt8();
+       } else if (lanes == 8) {
+         vecType = GlobalTables::GetTypeTable().GetV8UInt8();
+       } else {
+         ASSERT(0, "unsupported uint8 vector lanes");
+       }
+       break;
+     }
+     case PTY_i64:  {
+       if (lanes == 2) {
+         vecType = GlobalTables::GetTypeTable().GetV2Int64();
+       } else {
+         ASSERT(0, "unsupported int64 vector lanes");
+       }
+       break;
+     }
+     case PTY_u64:  {
+       if (lanes == 2) {
+         vecType = GlobalTables::GetTypeTable().GetV2UInt64();
+       } else {
+         ASSERT(0, "unsupported uint64 vector lanes");
+       }
+       break;
+     }
      default:
        ASSERT(0, "NIY");
    }
@@ -365,6 +421,7 @@ bool LoopVectorization::ExprVectorizable(BaseNode *x) {
     // supported leaf ops
     case OP_constval:
     case OP_dread:
+    case OP_addrof:
       return true;
     // supported binary ops
     case OP_add:
@@ -430,11 +487,11 @@ void LoopVectorization::Perform() {
   // step 2: collect information, legality check and generate transform plan
   MapleMap<DoloopNode *, DoloopInfo *>::iterator mapit = depInfo->doloopInfoMap.begin();
   for (; mapit != depInfo->doloopInfoMap.end(); mapit++) {
-    if (!mapit->second->children.empty() || !mapit->second->Parallelizable()) {
+    if (!mapit->second->children.empty() || mapit->second->hasInnerWhile || !mapit->second->Parallelizable()) {
       continue;
     }
     bool vectorizable = Vectorizable(mapit->first->GetDoBody());
-    if (DEBUGFUNC(meFunc)) {
+    if (enableDebug) {
       LogInfo::MapleLogger() << "\nInnermost Doloop:";
       if (!vectorizable) {
         LogInfo::MapleLogger() << " NOT";
@@ -469,7 +526,7 @@ AnalysisResult *DoLfoLoopVectorization::Run(MeFunction *func, MeFuncResultMgr *m
   }
 
   // run loop vectorization
-  LoopVectorization loopVec(NewMemPool(), lfoemit, lfodepInfo);
+  LoopVectorization loopVec(NewMemPool(), lfoemit, lfodepInfo, DEBUGFUNC(func));
   loopVec.Perform();
 
   // invalid analysis result

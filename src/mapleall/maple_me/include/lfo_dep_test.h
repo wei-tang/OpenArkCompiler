@@ -73,6 +73,7 @@ class DoloopInfo {
   bool hasCall = false;                         // give up dep testing if true
   bool hasScalarAssign = false;                 // give up dep testing if true
   bool hasMayDef = false;                       // give up dep testing if true
+  bool hasInnerWhile = false;                   // give up dep testing if true
   MapleVector<DepTestPair> outputDepTestList;   // output dependence only
   MapleVector<DepTestPair> flowDepTestList;     // include both true and anti dependences
 

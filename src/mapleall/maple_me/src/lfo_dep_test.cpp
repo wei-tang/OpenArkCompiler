@@ -51,6 +51,9 @@ void LfoDepInfo::CreateDoloopInfo(BlockNode *block, DoloopInfo *parent) {
       }
       case OP_dowhile:
       case OP_while: {
+        if (parent) {
+          parent->hasInnerWhile = true;
+        }
         CreateDoloopInfo(static_cast<WhileStmtNode *>(stmt)->GetBody(), parent);
         break;
       }
@@ -407,7 +410,7 @@ void LfoDepInfo::PerformDepTest() {
   MapleMap<DoloopNode *, DoloopInfo *>::iterator mapit = doloopInfoMap.begin();
   for (; mapit != doloopInfoMap.end(); mapit++) {
     DoloopInfo *doloopInfo = mapit->second;
-    if (!doloopInfo->children.empty()) {
+    if (!doloopInfo->children.empty() || doloopInfo->hasInnerWhile) {
       continue;  // only handling innermost doloops
     }
     doloopInfo->CreateArrayAccessDesc(doloopInfo->doloop->GetDoBody());
@@ -424,6 +427,9 @@ void LfoDepInfo::PerformDepTest() {
       }
       if (doloopInfo->hasMayDef) {
         LogInfo::MapleLogger() << " hasMayDef";
+      }
+      if (doloopInfo->hasInnerWhile) {
+        LogInfo::MapleLogger() << " hasInnerWhileLoop";
       }
       LogInfo::MapleLogger() << std::endl;
       doloopInfo->doloop->Dump(0);

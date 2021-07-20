@@ -56,10 +56,9 @@ public:
 
 class LoopVectorization {
  public:
-  LoopVectorization(MemPool *localmp, LfoPreEmitter *lfoEmit, LfoDepInfo *depinfo) :
+  LoopVectorization(MemPool *localmp, LfoPreEmitter *lfoEmit, LfoDepInfo *depinfo, bool debug = false) :
       localAlloc(localmp),
       vecPlans(localAlloc.Adapter()) {
-    meFunc = depInfo->lfoFunc->meFunc;
     mirFunc = lfoEmit->GetMirFunction();
     lfoStmtParts = lfoEmit->GetLfoStmtMap();
     lfoExprParts = lfoEmit->GetLfoExprMap();
@@ -67,6 +66,7 @@ class LoopVectorization {
     codeMP = lfoEmit->GetCodeMP();
     codeMPAlloc = lfoEmit->GetCodeMPAlloc();
     localMP = localmp;
+    enableDebug = debug;
   }
   ~LoopVectorization() = default;
 
@@ -86,7 +86,6 @@ class LoopVectorization {
   std::string PhaseName() const { return "lfoloopvec"; }
 
  private:
-  MeFunction *meFunc;
   MIRFunction *mirFunc;
   MapleMap<uint32_t, LfoPart*>  *lfoStmtParts; // point to lfoStmtParts of lfopreemit, map lfoinfo for StmtNode, key is stmtID
   MapleMap<BaseNode*, LfoPart*> *lfoExprParts; // point to lfoexprparts of lfopreemit, map lfoinfo for exprNode, key is mirnode
@@ -96,12 +95,11 @@ class LoopVectorization {
   MemPool     *localMP;   // local mempool
   MapleAllocator localAlloc;
   MapleMap<DoloopNode *, LoopTransPlan *> vecPlans; // each vectoriable loopnode has its best vectorization plan
+  bool enableDebug;
 };
 
 class DoLfoLoopVectorization: public MeFuncPhase {
  public:
-  static bool enableDebug;
-  static bool enableDump;
   explicit DoLfoLoopVectorization(MePhaseID id) : MeFuncPhase(id) {}
   ~DoLfoLoopVectorization() = default;
 

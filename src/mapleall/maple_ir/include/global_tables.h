@@ -370,6 +370,14 @@ class TypeTable {
     ASSERT(PTY_v16u8 < typeTable.size(), "array index out of range");
     return typeTable.at(PTY_v16u8);
   }
+  MIRType *GetV2Int64() const {
+    ASSERT(PTY_v2i64 < typeTable.size(), "array index out of range");
+    return typeTable.at(PTY_v2i64);
+  }
+  MIRType *GetV2UInt64() const {
+    ASSERT(PTY_v2u64 < typeTable.size(), "array index out of range");
+    return typeTable.at(PTY_v2u64);
+  }
 
   // Get or Create derived types.
   MIRType *GetOrCreatePointerType(const TyIdx &pointedTyIdx, PrimType primType = PTY_ptr,
