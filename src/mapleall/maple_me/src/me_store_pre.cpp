@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "me_store_pre.h"
+#include "me_ssa_update.h"
 
 namespace maple {
 // ================ Step 6: Code Motion ================
@@ -159,6 +160,7 @@ void MeStorePre::CodeMotion() {
       } else {
         insertBB->InsertMeStmtBefore(curStmt, newDass);
       }
+      AddCandsForSSAUpdate(lhsVar->GetOstIdx(), insertBB->GetBBId());
     }
   }
   // pass 2 only doing deletion
@@ -375,6 +377,12 @@ AnalysisResult *MeDoStorePre::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRe
   }
   MeStorePre storePre(*func, *dom, *aliasClass, *NewMemPool(), DEBUGFUNC(func));
   storePre.ApplySSUPre();
+  auto &candsForSSAUpdate = storePre.CandsForSSAUpdate();
+  if (!candsForSSAUpdate.empty()) {
+    MemPool *mp = NewMemPool();
+    MeSSAUpdate ssaUpdator(*func, *func->GetMeSSATab(), *dom, candsForSSAUpdate, *mp);
+    ssaUpdator.Run();
+  }
   if (DEBUGFUNC(func)) {
     func->Dump(false);
   }
