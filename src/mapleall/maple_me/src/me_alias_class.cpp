@@ -52,6 +52,7 @@ void MeAliasClass::DoAliasAnalysis() {
   if (enabledDebug) {
     DumpAssignSets();
   }
+  ReinitUnionFind();
   if (MeOption::noSteensgaard) {
     UnionAllPointedTos();
   } else {

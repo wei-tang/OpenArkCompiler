@@ -349,7 +349,7 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
         ASSERT(expr.GetOpCode() == OP_add, "Wrong operation!");
       }
       constexpr int64 bitsPerByte = 8;
-      OffsetType newOffset = aliasInfo.offset + constVal * bitsPerByte;
+      OffsetType newOffset = aliasInfo.offset + static_cast<uint64>(constVal) * bitsPerByte;
       return AliasInfo(aliasInfo.ae, 0, newOffset);
     }
     case OP_array: {
@@ -560,6 +560,11 @@ void AliasClass::ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, Ba
     lhsAe.SetNextLevNotAllDefsSeen(true);
     return;
   }
+  if (rhsAe->GetOriginalSt().GetIndirectLev() < 0) {
+    for (auto *ost : rhsAe->GetOriginalSt().GetNextLevelOsts()) {
+      osym2Elem[ost->GetIndex()]->SetNextLevNotAllDefsSeen(true);
+    }
+  }
   if (mirModule.IsCModule()) {
     TyIdx lhsTyIdx = lhsAe.GetOriginalSt().GetTyIdx();
     TyIdx rhsTyIdx = rhsAe->GetOriginalSt().GetTyIdx();
@@ -764,7 +769,7 @@ void AliasClass::CreateAssignSets() {
       if (id2Elem[rootID]->GetAssignSet() == nullptr) {
         id2Elem[rootID]->assignSet = acMemPool.New<MapleSet<unsigned int>>(acAlloc.Adapter());
       }
-      id2Elem[rootID]->assignSet = id2Elem[id]->assignSet;
+      id2Elem[id]->assignSet = id2Elem[rootID]->assignSet;
       id2Elem[rootID]->AddAssignToSet(id);
     }
   }
