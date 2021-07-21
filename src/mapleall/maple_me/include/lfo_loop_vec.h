@@ -32,11 +32,27 @@ public:
   BaseNode *incrNode;  // incr node
 };
 
+class LoopVecInfo {
+public:
+  LoopVecInfo(MapleAllocator &alloc) : vecStmtIDs(alloc.Adapter()) {
+   // smallestPrimType = PTY_i64;
+    largestPrimType = PTY_i8;
+  }
+  void UpdatePrimType(PrimType ctype);
+
+  //PrimType smallestPrimType; // smallest size type in vectorizable stmtnodes
+  PrimType largestPrimType;  // largest size type in vectorizable stmtnodes
+  // list of vectorizable stmtnodes in current loop, others can't be vectorized
+  MapleSet<uint32_t> vecStmtIDs;
+  //MapleMap<stidx, uint32_t> scalarStmt; // dup scalar to vector stmt may insert before stmt
+  //MapleMap<stidx, uint32_t> uniformStmt; // loop invariable scalar
+};
+
 // tranform plan for current loop
 class LoopTransPlan {
 public:
-  LoopTransPlan(MemPool *mp, MemPool *localmp) : vBound(nullptr), eBound(nullptr),
-                                                 codeMP(mp), localMP(localmp) {
+  LoopTransPlan(MemPool *mp, MemPool *localmp, LoopVecInfo *info) : vBound(nullptr), eBound(nullptr),
+                                                 codeMP(mp), localMP(localmp), vecInfo(info) {
     vecFactor = 1;
   }
   ~LoopTransPlan() = default;
@@ -48,6 +64,7 @@ public:
   LoopBound *eBound;   // bound of Epilog part
   MemPool *codeMP;     // use to generate new bound node
   MemPool *localMP;    // use to generate local info
+  LoopVecInfo *vecInfo; // collect loop information
 
   // function
   void Generate(DoloopNode *, DoloopInfo*);
@@ -77,7 +94,7 @@ class LoopVectorization {
   MIRType *GenVecType(PrimType, uint8_t);
   StmtNode *GenIntrinNode(BaseNode *scalar, PrimType vecPrimType);
   bool ExprVectorizable(BaseNode *x);
-  bool Vectorizable(BlockNode *block);
+  bool Vectorizable(BlockNode *block, LoopVecInfo *);
   void widenDoloop(DoloopNode *doloop, LoopTransPlan *);
   DoloopNode *PrepareDoloop(DoloopNode *, LoopTransPlan *);
   DoloopNode *GenEpilog(DoloopNode *);

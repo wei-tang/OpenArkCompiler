@@ -22,6 +22,12 @@
 
 namespace maple {
 
+void LoopVecInfo::UpdatePrimType(PrimType cptype) {
+  if (GetPrimTypeSize(largestPrimType) < GetPrimTypeSize(cptype)) {
+    largestPrimType = cptype;
+  }
+}
+
 // generate new bound for vectorization loop and epilog loop
 // original bound info <initnode, uppernode, incrnode>, condNode doesn't include equal
 // limitation now:  initNode and incrNode are const and initnode is vectorLane aligned.
@@ -119,14 +125,15 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
 // generate best plan for current doloop
 void LoopTransPlan::Generate(DoloopNode *doloop, DoloopInfo* li) {
   // hack values of vecFactor and vecLanes
-  vecFactor = 4;
-  vecLanes = 4; // vectory length / type
+  vecLanes = 128 / ((GetPrimTypeSize(vecInfo->largestPrimType)) * 8);
+  vecFactor = vecLanes; // vectory length / type
   // generate bound information
   GenerateBoundInfo(doloop, li);
 }
 
 MIRType* LoopVectorization::GenVecType(PrimType sPrimType, uint8 lanes) {
    MIRType *vecType = nullptr;
+   CHECK_FATAL(IsPrimitiveInteger(sPrimType), "primtype should be integer");
    switch(sPrimType) {
      case PTY_i32:  {
        if (lanes == 4) {
@@ -242,7 +249,9 @@ StmtNode *LoopVectorization::GenIntrinNode(BaseNode *scalar, PrimType vecPrimTyp
 //  +, -, *, &, |, <<, >>, compares, ~, !
 // iassign, iread, dassign, dread
 void LoopVectorization::VectorizeNode(BaseNode *node, uint8 count) {
-  node->Dump(0);
+  if (enableDebug) {
+    node->Dump(0);
+  }
   switch (node->GetOpCode()) {
     case OP_iassign: {
       IassignNode *iassign = static_cast<IassignNode *>(node);
@@ -307,6 +316,7 @@ void LoopVectorization::VectorizeNode(BaseNode *node, uint8 count) {
       break;
     }
     // unary op
+    case OP_neg:
     case OP_bnot:
     case OP_lnot: {
       ASSERT(node->IsUnaryNode(), "should be unarynode");
@@ -421,8 +431,15 @@ bool LoopVectorization::ExprVectorizable(BaseNode *x) {
     // supported leaf ops
     case OP_constval:
     case OP_dread:
-    case OP_addrof:
-      return true;
+    case OP_addrof: {
+      LfoPart* lfopart = (*lfoExprParts)[x];
+      CHECK_FATAL(lfopart, "nullptr check");
+      BaseNode *parent = lfopart->GetParent();
+      if (parent && parent->GetOpCode() == OP_array) {
+        return true;
+      }
+      return false; // TODO::NIY
+    }
     // supported binary ops
     case OP_add:
     case OP_sub:
@@ -462,7 +479,7 @@ bool LoopVectorization::ExprVectorizable(BaseNode *x) {
 }
 
 // assumed to be inside innermost loop
-bool LoopVectorization::Vectorizable(BlockNode *block) {
+bool LoopVectorization::Vectorizable(BlockNode *block, LoopVecInfo* vecInfo) {
   StmtNode *stmt = block->GetFirst();
   while (stmt != nullptr) {
     switch (stmt->GetOpCode()) {
@@ -473,9 +490,21 @@ bool LoopVectorization::Vectorizable(BlockNode *block) {
         break;
       }
       case OP_block:
-        return Vectorizable(static_cast<DoloopNode *>(stmt)->GetDoBody());
-      case OP_iassign:
-        return ExprVectorizable(static_cast<IassignNode *>(stmt)->GetRHS());
+        return Vectorizable(static_cast<DoloopNode *>(stmt)->GetDoBody(), vecInfo);
+      case OP_iassign: {
+        bool vecRHS = ExprVectorizable(static_cast<IassignNode *>(stmt)->GetRHS());
+        if (vecRHS) {
+          IassignNode *iassign = static_cast<IassignNode *>(stmt);
+          MIRType &mirType = GetTypeFromTyIdx(iassign->GetTyIdx());
+          CHECK_FATAL(mirType.GetKind() == kTypePointer, "iassign must have pointer type");
+          MIRPtrType *ptrType = static_cast<MIRPtrType*>(&mirType);
+          PrimType stmtpt = ptrType->GetPointedType()->GetPrimType();
+          CHECK_FATAL(IsPrimitiveInteger(stmtpt) && (!IsPrimitivePoint(stmtpt)), "iassign ptr type should be integer now");
+          vecInfo->UpdatePrimType(stmtpt);
+          vecInfo->vecStmtIDs.insert((stmt)->GetStmtID());
+        }
+        return vecRHS;
+      }
       default: return false;
     }
     stmt = stmt->GetNext();
@@ -490,7 +519,8 @@ void LoopVectorization::Perform() {
     if (!mapit->second->children.empty() || mapit->second->hasInnerWhile || !mapit->second->Parallelizable()) {
       continue;
     }
-    bool vectorizable = Vectorizable(mapit->first->GetDoBody());
+    LoopVecInfo *vecInfo = localMP->New<LoopVecInfo>(localAlloc);
+    bool vectorizable = Vectorizable(mapit->first->GetDoBody(), vecInfo);
     if (enableDebug) {
       LogInfo::MapleLogger() << "\nInnermost Doloop:";
       if (!vectorizable) {
@@ -503,7 +533,7 @@ void LoopVectorization::Perform() {
       continue;
     }
     // generate vectorize plan;
-    LoopTransPlan *tplan = localMP->New<LoopTransPlan>(codeMP, localMP);
+    LoopTransPlan *tplan = localMP->New<LoopTransPlan>(codeMP, localMP, vecInfo);
     tplan->Generate(mapit->first, mapit->second);
     vecPlans[mapit->first] = tplan;
   }
