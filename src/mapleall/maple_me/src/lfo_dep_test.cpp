@@ -52,11 +52,26 @@ void LfoDepInfo::CreateDoloopInfo(BlockNode *block, DoloopInfo *parent) {
       case OP_dowhile:
       case OP_while: {
         if (parent) {
-          parent->hasInnerWhile = true;
+          parent->hasOtherCtrlFlow = true;
         }
         CreateDoloopInfo(static_cast<WhileStmtNode *>(stmt)->GetBody(), parent);
         break;
       }
+      case OP_goto:
+      case OP_igoto:
+      case OP_brtrue:
+      case OP_brfalse:
+      case OP_switch:
+      case OP_call:
+      case OP_callassigned:
+      case OP_icall:
+      case OP_icallassigned:
+      case OP_return:
+      case OP_throw:
+        if (parent) {
+          parent->hasOtherCtrlFlow = true;
+        }
+        break;
       default:
         break;
     }
@@ -291,13 +306,6 @@ void DoloopInfo::CreateArrayAccessDesc(BlockNode *block) {
         CreateRHSArrayAccessDesc(stmt->Opnd(0));
         break;
       }
-      case OP_call:
-      case OP_callassigned:
-      case OP_icall:
-      case OP_icallassigned: {
-        hasCall = true;
-        // fall thru
-      }
       [[clang::fallthrough]];
       default: {
         for (size_t i = 0; i < stmt->NumOpnds(); i++) {
@@ -387,7 +395,7 @@ void DoloopInfo::TestDependences(MapleVector<DepTestPair> *depTestList, bool bot
 }
 
 bool DoloopInfo::Parallelizable() {
-  if (hasPtrAccess || hasCall || hasScalarAssign || hasMayDef) {
+  if (hasPtrAccess || hasOtherCtrlFlow || hasScalarAssign || hasMayDef) {
     return false;
   }
   for (size_t i = 0; i < outputDepTestList.size(); i++) {
@@ -410,7 +418,7 @@ void LfoDepInfo::PerformDepTest() {
   MapleMap<DoloopNode *, DoloopInfo *>::iterator mapit = doloopInfoMap.begin();
   for (; mapit != doloopInfoMap.end(); mapit++) {
     DoloopInfo *doloopInfo = mapit->second;
-    if (!doloopInfo->children.empty() || doloopInfo->hasInnerWhile) {
+    if (!doloopInfo->children.empty()) {
       continue;  // only handling innermost doloops
     }
     doloopInfo->CreateArrayAccessDesc(doloopInfo->doloop->GetDoBody());
@@ -419,17 +427,14 @@ void LfoDepInfo::PerformDepTest() {
       if (doloopInfo->hasPtrAccess) {
         LogInfo::MapleLogger() << " hasPtrAccess";
       }
-      if (doloopInfo->hasCall) {
-        LogInfo::MapleLogger() << " hasCall";
+      if (doloopInfo->hasOtherCtrlFlow) {
+        LogInfo::MapleLogger() << " hasOtherCtrlFlow";
       }
       if (doloopInfo->hasScalarAssign) {
         LogInfo::MapleLogger() << " hasScalarAssign";
       }
       if (doloopInfo->hasMayDef) {
         LogInfo::MapleLogger() << " hasMayDef";
-      }
-      if (doloopInfo->hasInnerWhile) {
-        LogInfo::MapleLogger() << " hasInnerWhileLoop";
       }
       LogInfo::MapleLogger() << std::endl;
       doloopInfo->doloop->Dump(0);

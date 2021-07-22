@@ -93,8 +93,8 @@ class LoopVectorization {
   void VectorizeNode(BaseNode *, uint8_t);
   MIRType *GenVecType(PrimType, uint8_t);
   StmtNode *GenIntrinNode(BaseNode *scalar, PrimType vecPrimType);
-  bool ExprVectorizable(BaseNode *x);
-  bool Vectorizable(BlockNode *block, LoopVecInfo *);
+  bool ExprVectorizable(DoloopInfo *doloopInfo, BaseNode *x);
+  bool Vectorizable(DoloopInfo *doloopInfo, BlockNode *block, LoopVecInfo *);
   void widenDoloop(DoloopNode *doloop, LoopTransPlan *);
   DoloopNode *PrepareDoloop(DoloopNode *, LoopTransPlan *);
   DoloopNode *GenEpilog(DoloopNode *);

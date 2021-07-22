@@ -423,7 +423,7 @@ void LoopVectorization::TransformLoop() {
   }
 }
 
-bool LoopVectorization::ExprVectorizable(BaseNode *x) {
+bool LoopVectorization::ExprVectorizable(DoloopInfo *doloopInfo, BaseNode *x) {
   if (!IsPrimitiveInteger(x->GetPrimType())) {
     return false;
   }
@@ -457,17 +457,27 @@ bool LoopVectorization::ExprVectorizable(BaseNode *x) {
     case OP_ge:
     case OP_cmpg:
     case OP_cmpl:
-      return ExprVectorizable(x->Opnd(0)) && ExprVectorizable(x->Opnd(1));
+      return ExprVectorizable(doloopInfo, x->Opnd(0)) && ExprVectorizable(doloopInfo, x->Opnd(1));
     // supported unary ops
-    case OP_iread:
     case OP_bnot:
     case OP_lnot:
     case OP_neg:
-      return ExprVectorizable(x->Opnd(0));
+      return ExprVectorizable(doloopInfo, x->Opnd(0));
+    case OP_iread: {
+      bool canVec = ExprVectorizable(doloopInfo, x->Opnd(0));
+      if (canVec) {
+        IreadNode *iread = static_cast<IreadNode *>(x);
+        if (iread->GetFieldID() != 0 && iread->Opnd(0)->GetOpCode() == OP_array) {
+          MeExpr *meExpr = depInfo->preEmit->GetLfoExprPart(iread->Opnd(0))->GetMeExpr();
+          canVec = doloopInfo->IsLoopInvariant(meExpr);
+        }
+      }
+      return canVec;
+    }
     // supported n-ary ops
     case OP_array: {
       for (size_t i = 0; i < x->NumOpnds(); i++) {
-        if (!ExprVectorizable(x->Opnd(i))) {
+        if (!ExprVectorizable(doloopInfo, x->Opnd(i))) {
           return false;
         }
       }
@@ -479,7 +489,7 @@ bool LoopVectorization::ExprVectorizable(BaseNode *x) {
 }
 
 // assumed to be inside innermost loop
-bool LoopVectorization::Vectorizable(BlockNode *block, LoopVecInfo* vecInfo) {
+bool LoopVectorization::Vectorizable(DoloopInfo *doloopInfo, BlockNode *block, LoopVecInfo* vecInfo) {
   StmtNode *stmt = block->GetFirst();
   while (stmt != nullptr) {
     switch (stmt->GetOpCode()) {
@@ -490,11 +500,15 @@ bool LoopVectorization::Vectorizable(BlockNode *block, LoopVecInfo* vecInfo) {
         break;
       }
       case OP_block:
-        return Vectorizable(static_cast<DoloopNode *>(stmt)->GetDoBody(), vecInfo);
+        return Vectorizable(doloopInfo, static_cast<DoloopNode *>(stmt)->GetDoBody(), vecInfo);
       case OP_iassign: {
-        bool vecRHS = ExprVectorizable(static_cast<IassignNode *>(stmt)->GetRHS());
-        if (vecRHS) {
-          IassignNode *iassign = static_cast<IassignNode *>(stmt);
+        IassignNode *iassign = static_cast<IassignNode *>(stmt);
+        bool canVec = ExprVectorizable(doloopInfo, iassign->GetRHS());
+        if (canVec && iassign->GetFieldID() != 0) {  // check base of iassign
+          MeExpr *meExpr = depInfo->preEmit->GetLfoExprPart(iassign->Opnd(0))->GetMeExpr();
+          canVec = doloopInfo->IsLoopInvariant(meExpr);
+        }
+        if (canVec) {
           MIRType &mirType = GetTypeFromTyIdx(iassign->GetTyIdx());
           CHECK_FATAL(mirType.GetKind() == kTypePointer, "iassign must have pointer type");
           MIRPtrType *ptrType = static_cast<MIRPtrType*>(&mirType);
@@ -503,7 +517,7 @@ bool LoopVectorization::Vectorizable(BlockNode *block, LoopVecInfo* vecInfo) {
           vecInfo->UpdatePrimType(stmtpt);
           vecInfo->vecStmtIDs.insert((stmt)->GetStmtID());
         }
-        return vecRHS;
+        return canVec;
       }
       default: return false;
     }
@@ -516,11 +530,11 @@ void LoopVectorization::Perform() {
   // step 2: collect information, legality check and generate transform plan
   MapleMap<DoloopNode *, DoloopInfo *>::iterator mapit = depInfo->doloopInfoMap.begin();
   for (; mapit != depInfo->doloopInfoMap.end(); mapit++) {
-    if (!mapit->second->children.empty() || mapit->second->hasInnerWhile || !mapit->second->Parallelizable()) {
+    if (!mapit->second->children.empty() || !mapit->second->Parallelizable()) {
       continue;
     }
     LoopVecInfo *vecInfo = localMP->New<LoopVecInfo>(localAlloc);
-    bool vectorizable = Vectorizable(mapit->first->GetDoBody(), vecInfo);
+    bool vectorizable = Vectorizable(mapit->second, mapit->first->GetDoBody(), vecInfo);
     if (enableDebug) {
       LogInfo::MapleLogger() << "\nInnermost Doloop:";
       if (!vectorizable) {
