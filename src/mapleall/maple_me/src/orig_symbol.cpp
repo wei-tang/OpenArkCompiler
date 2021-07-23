@@ -204,6 +204,9 @@ OriginalSt *OriginalStTable::FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *
     if (mirType->GetKind() == kTypePointer) {
       const auto *ptType = static_cast<const MIRPtrType*>(mirType);
       typeOfExtraLevOst = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptType->GetPointedTyIdxWithFieldID(fld));
+      if (typeOfExtraLevOst == nullptr) {
+        typeOfExtraLevOst = ptType->GetPointedType();
+      }
       if (fld <= ptType->NumberOfFieldIDs()) {
         offsetOfNextLevOst = offset + ptType->GetPointedType()->GetBitOffsetFromBaseAddr(fld);
       }
