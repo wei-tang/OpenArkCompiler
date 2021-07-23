@@ -24,6 +24,7 @@ MFEO0_SUP = {
         C2ast(
             clang="${MAPLE_ROOT}/tools/bin/clang",
             include_path=[
+                "${OUT_ROOT}/${MAPLE_BUILD_TYPE}/lib/include",
                 "${MAPLE_ROOT}/tools/gcc-linaro-7.5.0/aarch64-linux-gnu/libc/usr/include",
                 "${MAPLE_ROOT}/tools/gcc-linaro-7.5.0/lib/gcc/aarch64-linux-gnu/7.5.0/include",
                 "../lib/include"

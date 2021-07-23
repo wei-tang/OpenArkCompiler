@@ -23,7 +23,9 @@ MFEO0 = {
     "compile": [
         C2ast(
             clang="${MAPLE_ROOT}/tools/bin/clang",
-            include_path=[],
+            include_path=[
+                "${OUT_ROOT}/${MAPLE_BUILD_TYPE}/lib/include"
+            ],
             option="--target=aarch64 -U __SIZEOF_INT128__",
             infile="${APP}.c",
             outfile="${APP}.ast"
